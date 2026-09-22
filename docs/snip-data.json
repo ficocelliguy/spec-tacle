@@ -1,0 +1,59 @@
+{
+  "title": "Snip — a lean URL shortener",
+  "subtitle": "GitHub Pages demo — everything editable in-browser, nothing saved",
+  "specPath": "snip-spec.md",
+  "serverUrl": null,
+  "sectionMap": {
+    "summaryWhat": "summary:what",
+    "summaryWhy": "summary:why"
+  },
+  "summary": {
+    "what": [
+      "One HTTP service with two surfaces: a create-link API and a redirect endpoint at the short host",
+      "**Postgres** stores the short code, target URL, owner, and expiration; a click log table backs the analytics rollup",
+      "A worker rolls per-click rows into hourly and daily aggregates so dashboards read one row per link per day",
+      "Two roles: authenticated creators (via API token) and anonymous viewers who follow the short link"
+    ],
+    "why": [
+      "Existing shorteners are either bloated dashboards or bare hosted forms with no owner history",
+      "Snip picks a **narrow shape** (one code → one target, plus a click log) so the storage and the analytics stay boring",
+      "Analytics separated from the redirect path so the redirect stays fast under load",
+      "Custom domains are v2 — v1 assumes one shared short host so the storage schema doesn't need a tenant column"
+    ]
+  },
+  "diagrams": [
+    {
+      "id": "architecture",
+      "kind": "architecture",
+      "title": "Service shape and data flow",
+      "caption": "Two entry paths (**create** and **redirect**) share Postgres; a background worker builds the analytics rollup from the click log so the redirect never blocks on aggregation.",
+      "detail": "- **Create path**: authenticated client → API `POST /links` → Postgres `links`\n- **Redirect path**: anonymous browser → short host `GET /:code` → Postgres `links` lookup → 301 → append a row to `click_log`\n- **Analytics**: rollup worker reads `click_log` on a schedule, upserts hourly/daily aggregates into `link_stats`\n- **How to read**: the create/redirect paths sit on top of Postgres; the worker branches off `click_log` and writes back to a separate table so the analytics load never touches the redirect path",
+      "source": "flowchart LR\n  Client[\"API client\\n(with token)\"]\n  Browser([Anonymous browser])\n  API[\"Snip API\"]\n  PG[(Postgres)]\n  Log[(click_log table)]\n  Worker[\"Rollup worker\"]\n  Stats[(link_stats table)]\n  Dash[\"Owner dashboard\"]\n\n  Client -->|\"POST /links\"| API\n  API -->|\"insert link\"| PG\n  Browser -->|\"GET /:code\"| API\n  API -->|\"lookup code\"| PG\n  API -->|\"append click\"| Log\n  API -->|\"301 redirect\"| Browser\n  Worker -->|\"scan\"| Log\n  Worker -->|\"upsert\"| Stats\n  Dash -->|\"read\"| Stats"
+    },
+    {
+      "id": "create-flow",
+      "kind": "user flow",
+      "title": "User flow — create a short link",
+      "caption": "How an authenticated client turns a target URL into a short code, from token check through duplicate handling to the returned URL.",
+      "detail": "- Client sends `POST /links` with the target URL and its API token\n- API validates the token and the target URL is a real absolute URL\n- API checks whether this owner already shortened the same target:\n  - Yes: return the existing code (idempotent for the same owner + target)\n  - No: generate a new 7-character code, insert into `links`, return the new short URL\n- Collisions on the generated code retry up to 5 times before failing with 503",
+      "source": "flowchart LR\n  Start([Client wants to shorten a URL])\n  Post[\"POST /links\\n(target, token)\"]\n  AuthOK{\"Token valid?\"}\n  ValidURL{\"Target is a real URL?\"}\n  Existing{\"Owner already\\nshortened this?\"}\n  Return[\"Return existing code\"]\n  Gen[\"Generate 7-char code\"]\n  Insert[\"INSERT into links\"]\n  Retry{\"Insert succeeded?\"}\n  Fail[\"503 with retry-after\"]\n  Done[\"Return new short URL\"]\n\n  Start --> Post --> AuthOK\n  AuthOK -- no --> Reject[\"401\"]\n  AuthOK -- yes --> ValidURL\n  ValidURL -- no --> Reject422[\"422\"]\n  ValidURL -- yes --> Existing\n  Existing -- yes --> Return\n  Existing -- no --> Gen --> Insert --> Retry\n  Retry -- yes --> Done\n  Retry -- no --> Gen"
+    },
+    {
+      "id": "redirect-flow",
+      "kind": "user flow",
+      "title": "User flow — anonymous redirect",
+      "caption": "The hot path: a click on a short link hits the API, gets a target back from Postgres, appends a click row, and 301s the browser. Total latency budget is 50ms.",
+      "detail": "- Browser hits `GET /:code` on the short host\n- API looks up the code in the `links` table\n- Not found → 404\n- Found + expired → 410 (gone)\n- Found + live:\n  - Append a row to `click_log` with the code, timestamp, and coarse geo bucket from IP\n  - Return a 301 with the target URL\n- Rollup happens asynchronously; the redirect never waits on it",
+      "source": "flowchart LR\n  Hit([Browser hits /:code])\n  Lookup[\"Look up code in links\"]\n  Found{\"Code found?\"}\n  NotFound[\"404\"]\n  Live{\"Not expired?\"}\n  Gone[\"410\"]\n  Log[\"Append row to click_log\"]\n  Redirect[\"301 to target URL\"]\n\n  Hit --> Lookup --> Found\n  Found -- no --> NotFound\n  Found -- yes --> Live\n  Live -- no --> Gone\n  Live -- yes --> Log --> Redirect"
+    },
+    {
+      "id": "decisions",
+      "kind": "dependency map",
+      "title": "v1 decisions and what they shape",
+      "caption": "Every early decision has one or two downstream constraints. Read left-to-right for consequences, right-to-left for what to revisit.",
+      "detail": "- Five load-bearing v1 decisions on the left\n- Three shapes of consequence on the right:\n  - **Required implementation** we're committed to\n  - **Out-of-scope** for v1\n  - **Open question** we still owe an answer on",
+      "source": "flowchart LR\n  D1[\"7-character random code\"]\n  D2[\"Idempotent per owner+target\"]\n  D3[\"Async analytics rollup\"]\n  D4[\"One shared short host\"]\n  D5[\"Rate-limit per token\"]\n\n  D1 --> R1[\"Handle insert collisions with retries\"]\n  D2 --> R2[\"Unique index on (owner_id, target_url)\"]\n  D3 --> R3[\"Redirect never waits on aggregation\"]\n  D3 --> OQ1[\"Open question:\\nrollup lag SLA\"]\n  D4 --> OOS1[\"Out of scope v1:\\ncustom domains, tenant column\"]\n  D5 --> R4[\"Sliding-window counter in Redis\"]\n  D5 --> OQ2[\"Open question:\\nlimit per token or per owner\"]"
+    }
+  ],
+  "demoMode": true
+}

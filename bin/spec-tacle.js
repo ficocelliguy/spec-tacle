@@ -14,6 +14,7 @@
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
+const { spawn } = require('child_process');
 
 const ROOT = path.resolve(__dirname, '..');
 const LIB = path.join(ROOT, 'lib');
@@ -35,8 +36,10 @@ function usage() {
     '      Render a data JSON into an HTML visualizer.',
     '      Output defaults to <data-basename>-visualizer.html next to the input.',
     '',
-    '  npx spec-tacle serve [--port N] [--root DIR]',
-    '      Start the round-trip server. Root defaults to the current directory.',
+    '  npx spec-tacle serve [--port N] [--root DIR] [--open PATH] [--no-open]',
+    '      Start the round-trip server and open the root in your browser.',
+    '      Root defaults to the current directory. Pass --open PATH to open a',
+    '      specific file instead of the root, or --no-open to skip opening.',
     '',
     '  npx spec-tacle skill',
     '      Print the skill instructions (for use with Claude or other AI editors).',
@@ -44,8 +47,9 @@ function usage() {
     '  npx spec-tacle example [dir]',
     '      Copy the bundled example spec + data JSON into <dir> (default: cwd).',
     '',
-    '  npx spec-tacle demo [--port N]',
-    '      Copy the example into a temp dir, render it, and start the server.',
+    '  npx spec-tacle demo [--port N] [--no-open]',
+    '      Copy the example into a temp dir, render it, start the server, and',
+    '      open the visualizer in your browser. Pass --no-open to skip opening.',
     ''
   ].join('\n'));
 }
@@ -58,6 +62,22 @@ function copyFile(src, dst) {
 function argFlag(args, name) {
   const i = args.indexOf(name);
   return i < 0 ? null : args[i + 1];
+}
+
+function hasFlag(args, name) {
+  return args.indexOf(name) >= 0;
+}
+
+function openInBrowser(url) {
+  let cmd, cmdArgs;
+  if (process.platform === 'darwin')      { cmd = 'open';     cmdArgs = [url]; }
+  else if (process.platform === 'win32')  { cmd = 'cmd';      cmdArgs = ['/c', 'start', '""', url]; }
+  else                                    { cmd = 'xdg-open'; cmdArgs = [url]; }
+  try {
+    const child = spawn(cmd, cmdArgs, { detached: true, stdio: 'ignore' });
+    child.on('error', () => {}); // no browser opener available — stay silent
+    child.unref();
+  } catch (_) { /* ignored */ }
 }
 
 function cmdRender(args) {
@@ -88,7 +108,21 @@ function cmdServe(args) {
   const portArg = argFlag(args, '--port');
   const port = portArg ? parseInt(portArg, 10) : 8765;
   const root = argFlag(args, '--root') || process.cwd();
-  startServer({ root: path.resolve(root), port });
+  const noOpen = hasFlag(args, '--no-open');
+  const openArg = argFlag(args, '--open');
+  // Treat --open PATH as a specific path to open; bare --open (or none) means root.
+  const rel = openArg && !openArg.startsWith('--') ? openArg.replace(/^\/+/, '') : '';
+  startServer({
+    root: path.resolve(root),
+    port,
+    onListen: (actualPort) => {
+      const url = `http://localhost:${actualPort}/${rel}`;
+      console.log('');
+      if (noOpen) console.log(`spec-tacle: open ${url}`);
+      else        console.log(`spec-tacle: opening ${url}`);
+      if (!noOpen) openInBrowser(url);
+    },
+  });
 }
 
 function cmdSkill() {
@@ -119,6 +153,7 @@ function cmdExample(args) {
 function cmdDemo(args) {
   const portArg = argFlag(args, '--port');
   const port = portArg ? parseInt(portArg, 10) : 8765;
+  const noOpen = hasFlag(args, '--no-open');
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spec-tacle-demo-'));
   console.log(`spec-tacle: staging demo in ${tmpDir}`);
   for (const f of fs.readdirSync(EXAMPLE_DIR)) copyFile(path.join(EXAMPLE_DIR, f), path.join(tmpDir, f));
@@ -126,11 +161,18 @@ function cmdDemo(args) {
   const outHtml = path.join(tmpDir, 'example-visualizer.html');
   try { render(TEMPLATE, dataJson, outHtml); }
   catch (err) { console.error(`render error: ${err.message}`); process.exit(2); }
-  console.log('');
-  console.log(`spec-tacle: open http://localhost:${port}/example-visualizer.html once the server prints its banner.`);
-  console.log('spec-tacle: Update spec / Undo will round-trip into the copy of example-spec.md in the temp dir.');
-  console.log('');
-  startServer({ root: tmpDir, port });
+  startServer({
+    root: tmpDir,
+    port,
+    onListen: (actualPort) => {
+      const url = `http://localhost:${actualPort}/example-visualizer.html`;
+      console.log('');
+      if (noOpen) console.log(`spec-tacle: open ${url}`);
+      else        console.log(`spec-tacle: opening ${url}`);
+      console.log('spec-tacle: Update spec / Undo will round-trip into the copy of example-spec.md in the temp dir.');
+      if (!noOpen) openInBrowser(url);
+    },
+  });
 }
 
 function main() {

@@ -29,6 +29,29 @@ The project lives at `_project-management/personal/mike/spec-tacle/`. It contain
 
 Do **not** invoke unprompted — this produces a real artifact on disk, not chat output.
 
+**If invoked with no target** ("spec-tacle this", "/spec-tacle" with nothing after, a bare skill call), stop and ask what to visualize before doing anything else. Use `AskUserQuestion` (or a plain question if the tool isn't available) to gather inputs. Accept any combination of:
+
+- a spec, design doc, or markdown file already on disk (path)
+- multiple files at once — merge them into one spec in Step 0
+- a transcript (meeting, interview, sales call, Slack thread) — pasted inline or a file path
+- one or more images (whiteboard photos, screenshots, hand-drawn flow) — attach them and read them in
+- a PDF, DOCX, Google Doc export, or other bundled format
+- freeform text describing the system
+
+Once you have inputs, proceed to Step 0. Never fabricate content to fill a naked invocation — ask.
+
+## What the skill does end-to-end (nothing for the user to type)
+
+The skill runs the full workflow itself using its own shell commands:
+
+1. Writes/updates the markdown spec (Step 0).
+2. Drafts summary and diagrams and writes the data JSON (Steps 1–5).
+3. Runs `npx spec-tacle render …` to produce the HTML (Step 6).
+4. Inserts marker anchors into the spec (Step 7).
+5. Runs `npx spec-tacle serve --root … --open …` in the background, which auto-opens the visualizer in the user's default browser (Step 8).
+
+The user should never need to run `npx spec-tacle render` or `npx spec-tacle serve` by hand. If the skill can't run those commands in this environment, say so plainly rather than asking the user to run them.
+
 ## Generate a visualizer from a spec
 
 **Step 0 — make sure the input is a markdown spec file.** The round-trip only works when the source is an editable markdown document with anchor markers. If the user hands you something else — a PDF, a call transcript, a design doc in a Google Doc export, a Word file, a Slack thread pasted as text, an image of a whiteboard, multiple files — your first job is to write a fresh markdown spec that captures the substance.
@@ -130,7 +153,7 @@ Notes on the shape:
 
 **Nested markdown lists** are supported in captions, details, per-node/edge descriptions, and user notes. Use `- ` for a top-level bullet and `  - ` (two-space indent) for a nested sub-bullet, arbitrarily deep. Details in particular read much better as a bulleted list than a paragraph — draft them that way by default.
 
-**Step 6 — render.** Turn the data JSON into an HTML file next to it:
+**Step 6 — render.** Run the render command yourself (do not just print it and ask the user to run it):
 
 ```
 npx spec-tacle render <path/to/spec-slug-data.json>
@@ -151,25 +174,18 @@ That writes `<spec-slug>-visualizer.html` next to the data JSON.
 
 The order within a diagram section is caption, then detail, then notes, then the mermaid block, with a human-readable `### Diagram title` heading above the caption. `example-spec.md` in the spec-tacle project directory is the reference — copy its shape.
 
-**Step 8 — always start the round-trip server, then open the visualizer.** Both parts, every time. Without the server running the Update spec / Undo buttons in the visualizer disable themselves (the page detects `file://` and won't accept edits), so if you skip the server step the user gets a read-only page and thinks the tool is broken.
+**Step 8 — start the round-trip server (it auto-opens the visualizer).** Without the server running the Update spec / Undo buttons in the visualizer disable themselves (the page detects `file://` and won't accept edits), so if you skip this step the user gets a read-only page and thinks the tool is broken.
 
-1. **Start the server as a long-running background process** so it accepts Update spec POSTs while the user edits. Root it at the directory that contains the spec so it can find and rewrite the spec file:
+Run this yourself as a long-running background process:
 
-   ```
-   npx spec-tacle serve --root <path/to/spec-dir> --port 8765
-   ```
+```
+npx spec-tacle serve --root <path/to/spec-dir> --open <relative/path/to/spec-slug-visualizer.html>
+```
 
-   Run it in the background (e.g., with your tool's `run_in_background` option, or `&` in a plain shell). Don't wait for it to exit — it stays up until the user stops it. If port 8765 is already in use (another spec-tacle session, another dev server), pick a free port and use it below.
-
-   If a spec-tacle server is already running on that port and covers the same root, reuse it. Don't start a second one.
-
-2. **Open the visualizer in the user's default browser** — through the server, not via `file://`:
-
-   ```
-   open http://localhost:8765/<relative/path/to/spec-slug-visualizer.html>
-   ```
-
-   Use `xdg-open` on Linux and `start` on Windows.
+- Run it in the background (your tool's `run_in_background` option, or `&` in a plain shell). Don't wait for it to exit — it stays up until the user stops it.
+- `--open` fires the visualizer in the user's default browser once the server binds. No separate `open` / `xdg-open` / `start` step is needed, and no need to ask the user to click a link.
+- If port 8765 is taken the server auto-increments (up to +10). The actual URL is in the server's banner.
+- If a spec-tacle server is already running on the same root, reuse it — don't start a second one. Just tell the user where to look.
 
 Tell the user, in one short line, what you opened, the port the server is on, and where their edits will be written. Don't recap the whole workflow.
 

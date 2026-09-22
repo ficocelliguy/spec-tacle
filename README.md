@@ -2,7 +2,11 @@
 
 spec-tacle turns any technical document into a page that is actually readable and understandable - and visually editable. Summary at the top in short bullets. Diagrams laid out for reading. Every node and arrow has a description that appears on hover. Every text field is editable in place. Hit **Update spec** and the changes flow back into the spec file with a timestamped backup, so the visualizer and the source stay the same document.
 
-## Try it
+## See it live
+
+**[michaelficocelli.github.io/spec-tacle](https://michaelficocelli.github.io/spec-tacle/)** — a static example visualizing a spec for "Snip" (a URL-shortener) . Everything is editable in the browser so you can feel the shape of the tool: drag nodes, bend arrows, rewrite captions. Note there is no backend on that demo for undo or saving — that's what `npx spec-tacle demo` (below) adds.
+
+## Full local demo
 
 ```sh
 npx spec-tacle demo
@@ -25,14 +29,11 @@ Then in a session:
 
 > spec-tacle this: docs/product-brief.md
 
-The skill reads the spec, drafts the summary bullets, picks the diagrams, writes the mermaid, and produces a data JSON next to your spec. It also inserts HTML-comment marker anchors into the spec itself so the round-trip works. You review what it proposed, correct anything wrong, and render:
+The skill does the whole workflow itself — drafts the summary bullets, picks the diagrams, writes the mermaid, produces a data JSON next to your spec, inserts marker anchors into the spec, renders the visualizer, starts the local server, and opens the visualizer in your default browser. You don't need to type `npx spec-tacle render` or `npx spec-tacle serve` — the skill runs those for you.
 
-```sh
-npx spec-tacle render docs/product-brief-data.json
-npx spec-tacle serve --root docs
-```
+Invoke it naked ("spec-tacle this") and it'll ask what to include. Point it at a markdown file, a stack of files, a transcript, one or more images of a whiteboard, or a mix — it merges them into one spec first, then produces the visualizer.
 
-Open the URL, edit anything you want, hit Update spec. Your spec file now reflects your edits.
+Edit anything you want in the browser, hit Update spec. Your spec file now reflects your edits.
 
 ## Round-trip, in one paragraph
 
