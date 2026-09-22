@@ -1,4 +1,5 @@
-# spec-tacle
+
+<img src="assets/spactacle_logo_transparent.png" alt="spec-tacle logo" width="500px">
 
 spec-tacle turns any technical document into a page that is actually readable and understandable - and visually editable. Summary at the top in short bullets. Diagrams laid out for reading. Every node and arrow has a description that appears on hover. Every text field is editable in place. Hit **Update spec** and the changes flow back into the spec file with a timestamped backup, so the visualizer and the source stay the same document.
 

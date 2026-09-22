@@ -104,9 +104,27 @@ function cmdRender(args) {
   }
 }
 
+function parsePortArg(args, defaultPort) {
+  const i = args.indexOf('--port');
+  if (i < 0) return defaultPort;
+  const raw = args[i + 1];
+  // Reject bare --port and --port --other-flag: both leave us with no value,
+  // and the fallback parseInt(undefined) would silently listen on a random port
+  // that doesn't match the URL we print for the user.
+  if (raw == null || raw.startsWith('--')) {
+    console.error(`spec-tacle: --port needs an integer between 1 and 65535`);
+    process.exit(1);
+  }
+  const n = parseInt(raw, 10);
+  if (!Number.isFinite(n) || n < 1 || n > 65535 || String(n) !== String(raw).trim()) {
+    console.error(`spec-tacle: --port needs an integer between 1 and 65535 (got "${raw}")`);
+    process.exit(1);
+  }
+  return n;
+}
+
 function cmdServe(args) {
-  const portArg = argFlag(args, '--port');
-  const port = portArg ? parseInt(portArg, 10) : 8765;
+  const port = parsePortArg(args, 8765);
   const root = argFlag(args, '--root') || process.cwd();
   const noOpen = hasFlag(args, '--no-open');
   const openArg = argFlag(args, '--open');
@@ -132,14 +150,17 @@ function cmdSkill() {
 function cmdExample(args) {
   const targetDir = args[0] ? path.resolve(args[0]) : process.cwd();
   fs.mkdirSync(targetDir, { recursive: true });
-  for (const f of fs.readdirSync(EXAMPLE_DIR)) {
-    const src = path.join(EXAMPLE_DIR, f);
-    const dst = path.join(targetDir, f);
-    if (fs.existsSync(dst)) {
-      console.error(`spec-tacle: refusing to overwrite existing file: ${dst}`);
-      process.exit(1);
-    }
-    fs.copyFileSync(src, dst);
+  const files = fs.readdirSync(EXAMPLE_DIR);
+  // Check every conflict up front — otherwise we'd copy some files then bail
+  // on the first conflict, leaving the target dir in a half-populated state.
+  const conflicts = files.filter(f => fs.existsSync(path.join(targetDir, f)));
+  if (conflicts.length) {
+    console.error(`spec-tacle: refusing to overwrite existing file(s) in ${targetDir}:`);
+    for (const f of conflicts) console.error(`  ${f}`);
+    process.exit(1);
+  }
+  for (const f of files) {
+    fs.copyFileSync(path.join(EXAMPLE_DIR, f), path.join(targetDir, f));
     console.log(`Copied ${f}`);
   }
   console.log('');
@@ -151,8 +172,7 @@ function cmdExample(args) {
 }
 
 function cmdDemo(args) {
-  const portArg = argFlag(args, '--port');
-  const port = portArg ? parseInt(portArg, 10) : 8765;
+  const port = parsePortArg(args, 8765);
   const noOpen = hasFlag(args, '--no-open');
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spec-tacle-demo-'));
   console.log(`spec-tacle: staging demo in ${tmpDir}`);

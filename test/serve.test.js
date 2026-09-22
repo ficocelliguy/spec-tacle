@@ -13,31 +13,45 @@ const { applyUpdates, replaceBetweenMarkers, start, makeServer } =
 
 test('replaceBetweenMarkers rewrites content between spec-tacle markers', () => {
   const src = 'prefix\n<!-- spec-tacle:foo -->\nold body\n<!-- /spec-tacle:foo -->\nsuffix';
-  const out = replaceBetweenMarkers(src, 'foo', 'new body');
-  assert.match(out, /prefix/);
-  assert.match(out, /suffix/);
-  assert.match(out, /new body/);
-  assert.doesNotMatch(out, /old body/);
+  const { text, created } = replaceBetweenMarkers(src, 'foo', 'new body');
+  assert.equal(created, false);
+  assert.match(text, /prefix/);
+  assert.match(text, /suffix/);
+  assert.match(text, /new body/);
+  assert.doesNotMatch(text, /old body/);
 });
 
-test('replaceBetweenMarkers appends a new section when the marker is missing', () => {
+test('replaceBetweenMarkers appends a new section when the marker is missing and flags it as created', () => {
   const src = 'only prefix';
-  const out = replaceBetweenMarkers(src, 'new', 'first save');
-  assert.match(out, /<!-- spec-tacle:new -->\nfirst save\n<!-- \/spec-tacle:new -->/);
+  const { text, created } = replaceBetweenMarkers(src, 'new', 'first save');
+  assert.equal(created, true);
+  assert.match(text, /<!-- spec-tacle:new -->\nfirst save\n<!-- \/spec-tacle:new -->/);
 });
 
 test('applyUpdates rewrites sections and diagram mermaid blocks', () => {
   const src =
     '<!-- spec-tacle:summary:what -->\nold what\n<!-- /spec-tacle:summary:what -->\n\n' +
     '<!-- spec-tacle:diagram:arch -->\n```mermaid\nold mermaid\n```\n<!-- /spec-tacle:diagram:arch -->';
-  const out = applyUpdates(src, {
+  const { text, created } = applyUpdates(src, {
     sections: { 'summary:what': '- new what bullet' },
     diagrams: { 'arch': 'flowchart LR\n  A --> B' }
   });
-  assert.match(out, /- new what bullet/);
-  assert.match(out, /flowchart LR\n {2}A --> B/);
-  assert.doesNotMatch(out, /old what/);
-  assert.doesNotMatch(out, /old mermaid/);
+  assert.deepEqual(created, []);
+  assert.match(text, /- new what bullet/);
+  assert.match(text, /flowchart LR\n {2}A --> B/);
+  assert.doesNotMatch(text, /old what/);
+  assert.doesNotMatch(text, /old mermaid/);
+});
+
+test('applyUpdates reports every missing marker as created', () => {
+  const src = '# Spec\n\nno markers here';
+  const { text, created } = applyUpdates(src, {
+    sections: { 'summary:what': '- bullet', 'diagram:arch:caption': 'cap' },
+    diagrams: { 'arch': 'flowchart LR\n  A --> B' }
+  });
+  assert.deepEqual(created.sort(), ['diagram:arch', 'diagram:arch:caption', 'summary:what'].sort());
+  assert.match(text, /- bullet/);
+  assert.match(text, /flowchart LR\n {2}A --> B/);
 });
 
 test('HTTP round-trip: POST /update-spec writes a backup and rewrites the spec', async () => {

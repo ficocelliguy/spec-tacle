@@ -1256,7 +1256,12 @@
         setServerStatus(`update failed: ${body.error || res.statusText || res.status}`, 'err');
         return;
       }
-      // Adopt the new baseline so further edits diff against the freshly-saved spec.
+      // Adopt the new baseline for the fields the server actually wrote, so
+      // further edits diff against the freshly-saved spec. Descriptions are
+      // NOT round-tripped by /update-spec (they only leave the browser via
+      // Export JSON), so we deliberately leave originalDescriptions alone —
+      // otherwise the "edited" indicator would go off and the user would
+      // think their tooltip edits were saved when a refresh would drop them.
       state.summary.originalWhat = state.summary.currentWhat.slice();
       state.summary.originalWhy = state.summary.currentWhy.slice();
       state.diagrams.forEach(d => {
@@ -1264,11 +1269,18 @@
         d.originalCaption = d.currentCaption;
         d.originalDetail = d.currentDetail;
         d.originalNotes = d.currentNotes;
-        d.originalDescriptions = JSON.parse(JSON.stringify(d.descriptions));
       });
       state.diagrams.forEach((_, i) => markDirty(i));
       markGlobalDirty();
-      setServerStatus(body.changed ? `saved · backup ${body.backup}` : 'saved (no changes)', 'ok');
+      const created = Array.isArray(body.created) ? body.created : [];
+      if (body.changed && created.length) {
+        setServerStatus(
+          `saved · backup ${body.backup} · appended ${created.length} orphan section(s): ${created.join(', ')} — your spec was missing those <!-- spec-tacle:… --> markers, so the edit landed at the end of the file`,
+          'err'
+        );
+      } else {
+        setServerStatus(body.changed ? `saved · backup ${body.backup}` : 'saved (no changes)', 'ok');
+      }
     } catch (err) {
       setServerStatus(`update failed: ${err.message}. Is \`npx spec-tacle serve\` running?`, 'err');
     }
