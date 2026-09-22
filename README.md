@@ -1,11 +1,11 @@
 
-<img src="https://raw.githubusercontent.com/michaelficocelli/spec-tacle/master/assets/spactacle_logo_transparent.png" alt="spec-tacle logo" width="500px">
+<img src="https://raw.githubusercontent.com/ficocelliguy/spec-tacle/refs/heads/master/assets/spactacle_logo_transparent.png" alt="spec-tacle logo" width="500px">
 
 spec-tacle turns any technical document into a page that is actually readable and understandable - and visually editable. The page is laid out for reading, and every part of it is editable in place. Hit **Update spec** and the changes are reflected in the spec file.
 
 ## See it live
 
-**[michaelficocelli.github.io/spec-tacle](https://michaelficocelli.github.io/spec-tacle/)** — a static example visualizing a spec for "Snip" (a URL-shortener) . Everything is editable in the browser so you can feel the shape of the tool: drag nodes, bend arrows, rewrite captions. Note there is no backend on that demo for undo or saving — that's what `npx spec-tacle_skill demo` (below) adds.
+**[ficocelliguy.github.io/spec-tacle](https://ficocelliguy.github.io/spec-tacle/)** — a static example visualizing a spec for "Snip" (a URL-shortener) . Everything is editable in the browser so you can feel the shape of the tool: drag nodes, bend arrows, rewrite captions. Note there is no backend on that demo for undo or saving — that's what `npx spec-tacle_skill demo` (below) adds.
 
 ## Full local demo
 
@@ -47,7 +47,7 @@ The skill embeds a strict subset of the [no-ai-slop](https://github.com/petergya
 ## Development
 
 ```sh
-git clone https://github.com/michaelficocelli/spec-tacle
+git clone https://github.com/ficocelliguy/spec-tacle
 cd spec-tacle
 npm test
 node bin/spec-tacle.js demo

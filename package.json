@@ -40,10 +40,10 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/michaelficocelli/spec-tacle"
+    "url": "https://github.com/ficocelliguy/spec-tacle"
   },
-  "homepage": "https://github.com/michaelficocelli/spec-tacle#readme",
+  "homepage": "https://github.com/ficocelliguy/spec-tacle#readme",
   "bugs": {
-    "url": "https://github.com/michaelficocelli/spec-tacle/issues"
+    "url": "https://github.com/ficocelliguy/spec-tacle/issues"
   }
 }
