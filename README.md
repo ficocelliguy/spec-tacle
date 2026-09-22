@@ -1,16 +1,16 @@
 
-<img src="assets/spactacle_logo_transparent.png" alt="spec-tacle logo" width="500px">
+<img src="https://raw.githubusercontent.com/michaelficocelli/spec-tacle/master/assets/spactacle_logo_transparent.png" alt="spec-tacle logo" width="500px">
 
-spec-tacle turns any technical document into a page that is actually readable and understandable - and visually editable. Summary at the top in short bullets. Diagrams laid out for reading. Every node and arrow has a description that appears on hover. Every text field is editable in place. Hit **Update spec** and the changes flow back into the spec file with a timestamped backup, so the visualizer and the source stay the same document.
+spec-tacle turns any technical document into a page that is actually readable and understandable - and visually editable. The page is laid out for reading, and every part of it is editable in place. Hit **Update spec** and the changes are reflected in the spec file.
 
 ## See it live
 
-**[michaelficocelli.github.io/spec-tacle](https://michaelficocelli.github.io/spec-tacle/)** — a static example visualizing a spec for "Snip" (a URL-shortener) . Everything is editable in the browser so you can feel the shape of the tool: drag nodes, bend arrows, rewrite captions. Note there is no backend on that demo for undo or saving — that's what `npx spec-tacle demo` (below) adds.
+**[michaelficocelli.github.io/spec-tacle](https://michaelficocelli.github.io/spec-tacle/)** — a static example visualizing a spec for "Snip" (a URL-shortener) . Everything is editable in the browser so you can feel the shape of the tool: drag nodes, bend arrows, rewrite captions. Note there is no backend on that demo for undo or saving — that's what `npx spec-tacle_skill demo` (below) adds.
 
 ## Full local demo
 
 ```sh
-npx spec-tacle demo
+npx spec-tacle_skill demo
 ```
 
 That stages the bundled Tasky example (a fictional shared to-do app spec) in a temp directory, renders it, and starts a local server. Open the URL it prints. Drag nodes around, rewrite a caption, add a note under a diagram, watch the source file change.
@@ -20,17 +20,17 @@ That stages the bundled Tasky example (a fictional shared to-do app spec) in a t
 Install the skill for Claude Code:
 
 ```sh
-mkdir -p ~/.claude/skills/spec-tacle
-npx spec-tacle skill > ~/.claude/skills/spec-tacle/SKILL.md
+mkdir -p ~/.claude/skills/spec-tacle_skill
+npx spec-tacle_skill skill > ~/.claude/skills/spec-tacle_skill/SKILL.md
 ```
 
-For Codex or any other editor with named skills, drop the same file wherever it picks skills up.
+For Codex (or any other editor with named skills), drop the same file wherever it picks skills up.
 
 Then in a session:
 
 > spec-tacle this: docs/product-brief.md
 
-The skill does the whole workflow itself — drafts the summary bullets, picks the diagrams, writes the mermaid, produces a data JSON next to your spec, inserts marker anchors into the spec, renders the visualizer, starts the local server, and opens the visualizer in your default browser. You don't need to type `npx spec-tacle render` or `npx spec-tacle serve` — the skill runs those for you.
+The skill does the whole workflow itself — drafts the summary bullets, picks the diagrams, writes the mermaid, produces a data JSON next to your spec, inserts marker anchors into the spec, renders the visualizer, starts the local server, and opens the visualizer in your default browser. You don't need to type `npx spec-tacle_skill render` or `npx spec-tacle_skill serve` — the skill runs those for you.
 
 Invoke it naked ("spec-tacle this") and it'll ask what to include. Point it at a markdown file, a stack of files, a transcript, one or more images of a whiteboard, or a mix — it merges them into one spec first, then produces the visualizer.
 

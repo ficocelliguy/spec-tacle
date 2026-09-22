@@ -765,7 +765,7 @@
   <strong>Static demo.</strong>
   Everything on this page is editable in your browser — drag nodes, rewrite text, add notes, bend arrows.
   This demo is static. Unlike the full tool, there's no backend, so <strong>Update spec</strong> and <strong>Undo</strong> are disabled.
-  To get the round-trip against a real spec file: <a href="https://github.com/michaelficocelli/spec-tacle">install spec-tacle</a> and run <code>npx spec-tacle demo</code>.
+  To get the round-trip against a real spec file: <a href="https://github.com/michaelficocelli/spec-tacle">install spec-tacle</a> and run <code>npx spec-tacle_skill demo</code>.
 </div>
 
 <header class="sticky-header">
@@ -1206,7 +1206,7 @@
     document.getElementById('btn-update-spec').disabled = true;
     document.getElementById('btn-undo-spec').disabled = true;
   } else if (!serverBase) {
-    setServerStatus('Opened via file:// — run `npx spec-tacle serve` and load through that server to enable Update spec.', 'err');
+    setServerStatus('Opened via file:// — run `npx spec-tacle_skill serve` and load through that server to enable Update spec.', 'err');
     document.getElementById('btn-update-spec').disabled = true;
     document.getElementById('btn-undo-spec').disabled = true;
   } else {
@@ -1282,7 +1282,7 @@
         setServerStatus(body.changed ? `saved · backup ${body.backup}` : 'saved (no changes)', 'ok');
       }
     } catch (err) {
-      setServerStatus(`update failed: ${err.message}. Is \`npx spec-tacle serve\` running?`, 'err');
+      setServerStatus(`update failed: ${err.message}. Is \`npx spec-tacle_skill serve\` running?`, 'err');
     }
   }
 
@@ -1303,7 +1303,7 @@
       }
       setServerStatus(`restored from ${body.restored_from} · ${body.remaining_backups} backup(s) remain · refresh to reload diagrams`, 'ok');
     } catch (err) {
-      setServerStatus(`undo failed: ${err.message}. Is \`npx spec-tacle serve\` running?`, 'err');
+      setServerStatus(`undo failed: ${err.message}. Is \`npx spec-tacle_skill serve\` running?`, 'err');
     }
   }
 

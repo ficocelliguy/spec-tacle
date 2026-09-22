@@ -1,5 +1,5 @@
 {
-  "name": "spec-tacle",
+  "name": "spec-tacle_skill",
   "version": "0.1.0",
   "description": "Turn a software spec into an editable HTML visualizer — technical summary, mermaid diagrams, per-node/arrow descriptions, and round-trip back to the spec file.",
   "engines": {
@@ -15,7 +15,7 @@
     "skill": "node ./bin/spec-tacle.js skill"
   },
   "bin": {
-    "spec-tacle": "./bin/spec-tacle.js"
+    "spec-tacle_skill": "./bin/spec-tacle.js"
   },
   "files": [
     "bin",

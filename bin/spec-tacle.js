@@ -3,11 +3,11 @@
  * spec-tacle CLI.
  *
  * Commands:
- *   spec-tacle render <data.json> [output.html]     Render a data JSON to HTML
- *   spec-tacle serve [--port N] [--root DIR]        Start the round-trip server
- *   spec-tacle skill                                 Print the skill instructions
- *   spec-tacle example [dir]                         Copy the example spec + data JSON to a dir
- *   spec-tacle demo [--port N]                       Render the bundled example and start the server
+ *   spec-tacle_skill render <data.json> [output.html]  Render a data JSON to HTML
+ *   spec-tacle_skill serve [--port N] [--root DIR]     Start the round-trip server
+ *   spec-tacle_skill skill                             Print the skill instructions
+ *   spec-tacle_skill example [dir]                     Copy the example spec + data JSON to a dir
+ *   spec-tacle_skill demo [--port N]                   Render the bundled example and start the server
  */
 'use strict';
 
@@ -32,22 +32,22 @@ function usage() {
     'spec-tacle — turn a spec into an editable HTML visualizer',
     '',
     'Usage:',
-    '  npx spec-tacle render <data.json> [output.html]',
+    '  npx spec-tacle_skill render <data.json> [output.html]',
     '      Render a data JSON into an HTML visualizer.',
     '      Output defaults to <data-basename>-visualizer.html next to the input.',
     '',
-    '  npx spec-tacle serve [--port N] [--root DIR] [--open PATH] [--no-open]',
+    '  npx spec-tacle_skill serve [--port N] [--root DIR] [--open PATH] [--no-open]',
     '      Start the round-trip server and open the root in your browser.',
     '      Root defaults to the current directory. Pass --open PATH to open a',
     '      specific file instead of the root, or --no-open to skip opening.',
     '',
-    '  npx spec-tacle skill',
+    '  npx spec-tacle_skill skill',
     '      Print the skill instructions (for use with Claude or other AI editors).',
     '',
-    '  npx spec-tacle example [dir]',
+    '  npx spec-tacle_skill example [dir]',
     '      Copy the bundled example spec + data JSON into <dir> (default: cwd).',
     '',
-    '  npx spec-tacle demo [--port N] [--no-open]',
+    '  npx spec-tacle_skill demo [--port N] [--no-open]',
     '      Copy the example into a temp dir, render it, start the server, and',
     '      open the visualizer in your browser. Pass --no-open to skip opening.',
     ''
@@ -82,7 +82,7 @@ function openInBrowser(url) {
 
 function cmdRender(args) {
   if (!args.length) {
-    console.error('Usage: spec-tacle render <data.json> [output.html]');
+    console.error('Usage: spec-tacle_skill render <data.json> [output.html]');
     process.exit(1);
   }
   const dataJson = path.resolve(args[0]);
@@ -166,8 +166,8 @@ function cmdExample(args) {
   console.log('');
   console.log('Next steps:');
   console.log(`  cd ${path.relative(process.cwd(), targetDir) || '.'}`);
-  console.log('  npx spec-tacle render example-data.json');
-  console.log('  npx spec-tacle serve');
+  console.log('  npx spec-tacle_skill render example-data.json');
+  console.log('  npx spec-tacle_skill serve');
   console.log('  open http://localhost:8765/example-visualizer.html');
 }
 

@@ -1,6 +1,6 @@
 ---
-name: spec-tacle
-description: Turn a software spec into a browsable HTML visualizer — a technical what/why summary plus editable mermaid diagrams (architecture, user flow, dependency map). Round-trip user edits back into the spec. Use when the user asks to "visualize this spec", "make a spec-tacle for X", "render diagrams for this spec", or points at a spec file and asks for a picture of it.
+name: spec-tacle_skill
+description: Turn a software spec into a browsable HTML visualizer — a technical what/why summary plus editable mermaid diagrams (architecture, user flow, dependency map, data-summary charts). Round-trip user edits back into the spec. Use when the user asks to "visualize this spec", "make a spec-tacle for X", "render diagrams for this spec", or points at a spec file and asks for a picture of it.
 ---
 
 # spec-tacle
@@ -8,15 +8,15 @@ description: Turn a software spec into a browsable HTML visualizer — a technic
 Take a written spec, produce an HTML page a person can open in a browser that shows:
 
 1. A tight **technical summary** — a short bulleted list of *what* is being built and one of *why*, sharpened with `no-ai-slop`.
-2. A set of **editable mermaid diagrams** — architecture (data/request flow), user flow (task completion paths), and a dependency map (what decisions shape what outcomes). Not every spec needs all three; pick the ones that make the spec easier to hold in your head.
+2. A set of **editable mermaid diagrams** — architecture (data/request flow), user flow (task completion paths), a dependency map (what decisions shape what outcomes), and a **data-summary chart** (usually a pie or bar) when the spec makes a quantitative promise a reader should be able to argue with. Not every spec needs all of these; pick the ones that make the spec easier to hold in your head.
 3. **Direct manipulation** — nodes drag, source is editable, annotations can be attached to any node or edge.
 4. An **export payload** the user can hand back to reconcile edits into the spec.
 
 The project lives at `_project-management/personal/mike/spec-tacle/`. It contains:
 
 - `lib/template.html` — the reusable HTML shell (mermaid + drag + annotate + inline-edit + export)
-- `lib/render.js` — substitutes a JSON data blob into the template (invoked via `npx spec-tacle render`)
-- `lib/serve.js` — local HTTP server that round-trips visualizer edits into the spec file with timestamped backups (invoked via `npx spec-tacle serve`; see "Live editing" below)
+- `lib/render.js` — substitutes a JSON data blob into the template (invoked via `npx spec-tacle_skill render`)
+- `lib/serve.js` — local HTTP server that round-trips visualizer edits into the spec file with timestamped backups (invoked via `npx spec-tacle_skill serve`; see "Live editing" below)
 - `example/example-spec.md` — a fictional Tasky spec used as the reference example, with marker anchors
 - `generated/tasky-visualizer.html` — the reference example rendered
 - `backups/` — created by the server next to the spec file (not under `generated/`) on the first Update spec
@@ -46,11 +46,11 @@ The skill runs the full workflow itself using its own shell commands:
 
 1. Writes/updates the markdown spec (Step 0).
 2. Drafts summary and diagrams and writes the data JSON (Steps 1–5).
-3. Runs `npx spec-tacle render …` to produce the HTML (Step 6).
+3. Runs `npx spec-tacle_skill render …` to produce the HTML (Step 6).
 4. Inserts marker anchors into the spec (Step 7).
-5. Runs `npx spec-tacle serve --root … --open …` in the background, which auto-opens the visualizer in the user's default browser (Step 8).
+5. Runs `npx spec-tacle_skill serve --root … --open …` in the background, which auto-opens the visualizer in the user's default browser (Step 8).
 
-The user should never need to run `npx spec-tacle render` or `npx spec-tacle serve` by hand. If the skill can't run those commands in this environment, say so plainly rather than asking the user to run them.
+The user should never need to run `npx spec-tacle_skill render` or `npx spec-tacle_skill serve` by hand. If the skill can't run those commands in this environment, say so plainly rather than asking the user to run them.
 
 ## Generate a visualizer from a spec
 
@@ -84,8 +84,11 @@ Then run the writing rules from the appendix over every bullet. Cut em-dashes an
 | `dependency map` | Decisions, constraints, or scope items that shape downstream outcomes | `flowchart LR` from decisions to their consequences |
 | `state` | An entity with clear states and transitions | `stateDiagram-v2` |
 | `sequence` | Messages between named actors over time (auth, handshake, retries) | `sequenceDiagram` |
+| `data summary` | A **quantitative claim** the spec makes but doesn't quantify: a share-of-total (traffic mix, effort split), a latency or size budget, a projected mix | `pie showData` for share-of-total; `xychart-beta` for a trend; `quadrantChart` for prioritization |
 
 Fewer, load-bearing diagrams beats a full menu. One is fine. Skip a diagram if the spec doesn't have the content to make it truthful.
+
+A `data summary` chart earns its place only when the surrounding decisions **assume a distribution** that isn't spelled out anywhere — the redirect latency budget the "why" section promises, the write-heavy activity mix a real-time sync design is priced against, the roll-out split a phased plan implies. If the spec already says the numbers in prose, a chart adds nothing. Don't invent numbers to fill a chart; if the values are a guess, label them as guesses in the detail block so the reader knows what they're arguing with. Charts are non-interactive (no draggable nodes, no per-node descriptions), so all the meaning lives in the caption, detail, and the mermaid data itself.
 
 **Step 4 — write mermaid for each chosen diagram.**
 
@@ -126,7 +129,7 @@ Both are plain prose. Apply the writing rules from the appendix to every sentenc
   "diagrams": [
     {
       "id": "<slug>",
-      "kind": "architecture | user flow | dependency map | state | sequence",
+      "kind": "architecture | user flow | dependency map | state | sequence | data summary",
       "title": "<human title>",
       "caption": "<two or three sentences shown directly above the diagram; bold key terms with **asterisks**>",
       "detail":  "<longer paragraph or bulleted list shown in the 'About the <title>' section under the diagram (expanded by default)>",
@@ -149,14 +152,14 @@ Notes on the shape:
 - `caption` is two or three sentences of italic subtext directly above the diagram. `detail` is a longer paragraph or bulleted list in an "About the <diagram title>" block that starts expanded (the reader can collapse it). Both accept `**bold**` markdown for key terms; `detail` also accepts `- ` / `  - ` nested bullet lists.
 - `descriptions` is optional — a map from `node:<id>` / `edge:L-<source>-<target>-<n>` keys to one-sentence descriptions shown on hover, editable on click.
 - `notes` is optional and usually empty on first render. It's a per-diagram free-form user notes area (supports `**bold**` and `- ` / `  - ` nested bullets). Users click the "Add notes…" area under each diagram to add general thoughts; those get written back into the spec via a `diagram:<id>:notes` marker section on Update.
-- `serverUrl` is normally `null`. The visualizer falls back to `location.origin` when served through `npx spec-tacle serve`, and disables Update/Undo when opened via `file://`. Only set it if the visualizer will be served from a different origin than the one hosting the spec-tacle server.
+- `serverUrl` is normally `null`. The visualizer falls back to `location.origin` when served through `npx spec-tacle_skill serve`, and disables Update/Undo when opened via `file://`. Only set it if the visualizer will be served from a different origin than the one hosting the spec-tacle server.
 
 **Nested markdown lists** are supported in captions, details, per-node/edge descriptions, and user notes. Use `- ` for a top-level bullet and `  - ` (two-space indent) for a nested sub-bullet, arbitrarily deep. Details in particular read much better as a bulleted list than a paragraph — draft them that way by default.
 
 **Step 6 — render.** Run the render command yourself (do not just print it and ask the user to run it):
 
 ```
-npx spec-tacle render <path/to/spec-slug-data.json>
+npx spec-tacle_skill render <path/to/spec-slug-data.json>
 ```
 
 That writes `<spec-slug>-visualizer.html` next to the data JSON.
@@ -179,7 +182,7 @@ The order within a diagram section is caption, then detail, then notes, then the
 Run this yourself as a long-running background process:
 
 ```
-npx spec-tacle serve --root <path/to/spec-dir> --open <relative/path/to/spec-slug-visualizer.html>
+npx spec-tacle_skill serve --root <path/to/spec-dir> --open <relative/path/to/spec-slug-visualizer.html>
 ```
 
 - Run it in the background (your tool's `run_in_background` option, or `&` in a plain shell). Don't wait for it to exit — it stays up until the user stops it.

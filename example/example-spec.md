@@ -279,3 +279,31 @@ flowchart LR
   D5 --> OQ1["Open question:\nlink expiration policy"]
 ```
 <!-- /spec-tacle:diagram:decisions -->
+
+### Expected per-team weekly activity mix
+
+<!-- spec-tacle:diagram:activity-mix:caption -->
+The shape of use the v1 decisions are priced against. **Task create + complete** dominate, which is what the optimistic UI and real-time push are being built for; invites and admin sit in the long tail.
+<!-- /spec-tacle:diagram:activity-mix:caption -->
+
+<!-- spec-tacle:diagram:activity-mix:detail -->
+- These are **design-time guesses**, not measured usage — post-launch, replace them with numbers from the activity log.
+- **Why it's here:** the spec's biggest calls (live sync, one list per team, magic-link guests) assume write traffic looks roughly like this. If it doesn't, those calls need a second look.
+- Read it against the architecture diagram: the two big slices flow through the Redis fan-out, which is why that path is the hot one.
+<!-- /spec-tacle:diagram:activity-mix:detail -->
+
+<!-- spec-tacle:diagram:activity-mix:notes -->
+
+<!-- /spec-tacle:diagram:activity-mix:notes -->
+
+<!-- spec-tacle:diagram:activity-mix -->
+```mermaid
+pie showData
+  title Expected per-team weekly action mix
+  "Create task" : 55
+  "Complete / reopen task" : 25
+  "Comment on task" : 12
+  "Invite or role change" : 5
+  "Rename or archive list" : 3
+```
+<!-- /spec-tacle:diagram:activity-mix -->

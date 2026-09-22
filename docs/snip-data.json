@@ -53,6 +53,14 @@
       "caption": "Every early decision has one or two downstream constraints. Read left-to-right for consequences, right-to-left for what to revisit.",
       "detail": "- Five load-bearing v1 decisions on the left\n- Three shapes of consequence on the right:\n  - **Required implementation** we're committed to\n  - **Out-of-scope** for v1\n  - **Open question** we still owe an answer on",
       "source": "flowchart LR\n  D1[\"7-character random code\"]\n  D2[\"Idempotent per owner+target\"]\n  D3[\"Async analytics rollup\"]\n  D4[\"One shared short host\"]\n  D5[\"Rate-limit per token\"]\n\n  D1 --> R1[\"Handle insert collisions with retries\"]\n  D2 --> R2[\"Unique index on (owner_id, target_url)\"]\n  D3 --> R3[\"Redirect never waits on aggregation\"]\n  D3 --> OQ1[\"Open question:\\nrollup lag SLA\"]\n  D4 --> OOS1[\"Out of scope v1:\\ncustom domains, tenant column\"]\n  D5 --> R4[\"Sliding-window counter in Redis\"]\n  D5 --> OQ2[\"Open question:\\nlimit per token or per owner\"]"
+    },
+    {
+      "id": "latency-budget",
+      "kind": "data summary",
+      "title": "50ms redirect: where the budget goes",
+      "caption": "The 50ms SLO from the **why** section, broken into named contributions. **Postgres lookup** is the largest fixed cost; the click-log append is deliberately fire-and-forget so it doesn't push the total over the cap.",
+      "detail": "- These are **design targets**, not measured p50s — the numbers to protect at launch.\n- **Postgres lookup** is the single item most at risk of drifting up; if it slips past 25ms, revisit the code index or move the click-log append fully off-thread.\n- **Custom domains** (v2) would add a DNS-lookup line item, which is why they're deferred: v1 has no headroom for one.\n- Read this against the redirect user flow: the boxes there run in this order, and this chart says how many milliseconds each is allowed.",
+      "source": "pie showData\n  title Redirect latency budget (50ms cap, in ms)\n  \"Client-to-edge network\" : 12\n  \"Postgres code lookup\" : 18\n  \"App logic + serialize\" : 8\n  \"Append click_log row\" : 7\n  \"301 response back to client\" : 5"
     }
   ],
   "demoMode": true

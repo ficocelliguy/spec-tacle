@@ -54,6 +54,14 @@
       "caption": "The five v1 decisions and the constraints they cascade into. Read left-to-right to trace **why** a constraint exists; read right-to-left to find **which decision** to revisit if a downstream constraint no longer holds.",
       "detail": "- Each decision on the left drives one or more downstream implications on the right\n- Three implication shapes:\n  - **Implementation choice** we're committed to\n  - **Out-of-scope** item\n  - **Open question** we know we owe an answer on\n- The map is deliberately shallow so a reader can hold the whole thing in one glance",
       "source": "flowchart LR\n  D1[\"One list per team\"]\n  D2[\"Optimistic UI\"]\n  D3[\"WS gateway separate from API\"]\n  D4[\"Postgres, not document store\"]\n  D5[\"Magic-link guest access\"]\n\n  D1 --> OOS1[\"Out of scope:\\nmulti-project\"]\n  D2 --> R1[\"Requires rollback on server reject\"]\n  D2 --> R2[\"Live sync feels correct\"]\n  D3 --> R3[\"Independent scaling of connections\"]\n  D3 --> R4[\"API deploys don't drop clients\"]\n  D4 --> R5[\"Relational joins across users/teams/tasks\"]\n  D5 --> R6[\"Read-only stakeholder access\"]\n  D5 --> OQ1[\"Open question:\\nlink expiration policy\"]"
+    },
+    {
+      "id": "activity-mix",
+      "kind": "data summary",
+      "title": "Expected per-team weekly activity mix",
+      "caption": "The shape of use the v1 decisions are priced against. **Task create + complete** dominate, which is what the optimistic UI and real-time push are being built for; invites and admin sit in the long tail.",
+      "detail": "- These are **design-time guesses**, not measured usage — post-launch, replace them with numbers from the activity log.\n- **Why it's here:** the spec's biggest calls (live sync, one list per team, magic-link guests) assume write traffic looks roughly like this. If it doesn't, those calls need a second look.\n- Read it against the architecture diagram: the two big slices flow through the Redis fan-out, which is why that path is the hot one.",
+      "source": "pie showData\n  title Expected per-team weekly action mix\n  \"Create task\" : 55\n  \"Complete / reopen task\" : 25\n  \"Comment on task\" : 12\n  \"Invite or role change\" : 5\n  \"Rename or archive list\" : 3"
     }
   ]
 }
