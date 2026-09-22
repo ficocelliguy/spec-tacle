@@ -43,6 +43,31 @@ test('applyUpdates rewrites sections and diagram mermaid blocks', () => {
   assert.doesNotMatch(text, /old mermaid/);
 });
 
+test('applyUpdates writes table-kind diagrams as raw markdown (no mermaid fence)', () => {
+  const src =
+    '<!-- spec-tacle:diagram:roles -->\n' +
+    '| Old | Header |\n|---|---|\n| a | b |\n' +
+    '<!-- /spec-tacle:diagram:roles -->';
+  const newTable = '| Capability | Member | Guest |\n|---|---|---|\n| Read list | y | y |\n| Invite    | y | n |';
+  const { text, created } = applyUpdates(src, {
+    sections: {},
+    diagrams: { 'roles': { source: newTable, kind: 'table' } }
+  });
+  assert.deepEqual(created, []);
+  assert.match(text, /Capability \| Member \| Guest/);
+  assert.doesNotMatch(text, /```mermaid/);
+  assert.doesNotMatch(text, /Old \| Header/);
+});
+
+test('applyUpdates keeps the mermaid fence for non-table kinds passed in object form', () => {
+  const src = '<!-- spec-tacle:diagram:arch -->\n```mermaid\nold\n```\n<!-- /spec-tacle:diagram:arch -->';
+  const { text } = applyUpdates(src, {
+    sections: {},
+    diagrams: { 'arch': { source: 'flowchart LR\n  A --> B', kind: 'architecture' } }
+  });
+  assert.match(text, /```mermaid\nflowchart LR\n {2}A --> B\n```/);
+});
+
 test('applyUpdates reports every missing marker as created', () => {
   const src = '# Spec\n\nno markers here';
   const { text, created } = applyUpdates(src, {

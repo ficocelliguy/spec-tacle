@@ -62,6 +62,14 @@
       "caption": "The shape of use the v1 decisions are priced against. **Task create + complete** dominate, which is what the optimistic UI and real-time push are being built for; invites and admin sit in the long tail.",
       "detail": "- These are **design-time guesses**, not measured usage — post-launch, replace them with numbers from the activity log.\n- **Why it's here:** the spec's biggest calls (live sync, one list per team, magic-link guests) assume write traffic looks roughly like this. If it doesn't, those calls need a second look.\n- Read it against the architecture diagram: the two big slices flow through the Redis fan-out, which is why that path is the hot one.",
       "source": "pie showData\n  title Expected per-team weekly action mix\n  \"Create task\" : 55\n  \"Complete / reopen task\" : 25\n  \"Comment on task\" : 12\n  \"Invite or role change\" : 5\n  \"Rename or archive list\" : 3"
+    },
+    {
+      "id": "roles-matrix",
+      "kind": "table",
+      "title": "Roles × capabilities",
+      "caption": "What each **role** can do on the shared list. Guests are read-only and can't reach team settings; only the team lead can invite or reassign.",
+      "detail": "- Three rows, one per role; each column is a distinct capability the API enforces.\n- **✓** = allowed, **—** = not allowed. A dash isn't the same as \"probably not\" — the API rejects it.\n- Use this table to reconcile the roles list with the surface list: every surface should map to a subset of the columns here.\n- If a new capability lands (attachments, mentions, etc.), add a column here first — the row a guest gets is usually the load-bearing answer.",
+      "source": "| Capability                | Member | Team lead | Guest |\n|---------------------------|--------|-----------|-------|\n| See the team list         | ✓      | ✓         | ✓     |\n| Open a task's detail      | ✓      | ✓         | ✓     |\n| Create a task             | ✓      | ✓         | —     |\n| Complete or reopen a task | ✓      | ✓         | —     |\n| Comment on a task         | ✓      | ✓         | —     |\n| Reassign a task's owner   | —      | ✓         | —     |\n| Archive completed items   | —      | ✓         | —     |\n| Invite a new teammate     | —      | ✓         | —     |\n| Change a member's role    | —      | ✓         | —     |"
     }
   ]
 }

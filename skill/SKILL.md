@@ -77,16 +77,19 @@ Then run the writing rules from the appendix over every bullet. Cut em-dashes an
 
 **Step 3 — pick which diagrams the spec warrants.** Ask "would this diagram make the spec easier to hold in your head?" for each candidate:
 
-| Kind | Use when the spec describes… | Mermaid form |
+| Kind | Use when the spec describes… | Form |
 |---|---|---|
-| `architecture` | Components, services, stores, and how requests/data flow between them | `flowchart LR` with directional edges labeled by protocol/payload |
-| `user flow` | A sequence of user actions with system responses and branches | `flowchart TD` with a Start node, decision diamonds, and terminal states |
-| `dependency map` | Decisions, constraints, or scope items that shape downstream outcomes | `flowchart LR` from decisions to their consequences |
-| `state` | An entity with clear states and transitions | `stateDiagram-v2` |
-| `sequence` | Messages between named actors over time (auth, handshake, retries) | `sequenceDiagram` |
-| `data summary` | A **quantitative claim** the spec makes but doesn't quantify: a share-of-total (traffic mix, effort split), a latency or size budget, a projected mix | `pie showData` for share-of-total; `xychart-beta` for a trend; `quadrantChart` for prioritization |
+| `architecture` | Components, services, stores, and how requests/data flow between them | mermaid `flowchart LR` with directional edges labeled by protocol/payload |
+| `user flow` | A sequence of user actions with system responses and branches | mermaid `flowchart TD` with a Start node, decision diamonds, and terminal states |
+| `dependency map` | Decisions, constraints, or scope items that shape downstream outcomes | mermaid `flowchart LR` from decisions to their consequences |
+| `state` | An entity with clear states and transitions | mermaid `stateDiagram-v2` |
+| `sequence` | Messages between named actors over time (auth, handshake, retries) | mermaid `sequenceDiagram` |
+| `data summary` | A **quantitative claim** the spec makes but doesn't quantify: a share-of-total (traffic mix, effort split), a latency or size budget, a projected mix | mermaid `pie showData` for share-of-total; `xychart-beta` for a trend; `quadrantChart` for prioritization |
+| `table` | Inter-related data of the same shape — options, tiers, roles, phases, plans, outcomes — where the reader wants to compare rows against a fixed set of columns rather than trace a directional flow | markdown pipe table (no mermaid) |
 
 Fewer, load-bearing diagrams beats a full menu. One is fine. Skip a diagram if the spec doesn't have the content to make it truthful.
+
+A `table` earns its place when the spec has a bunch of items that share the same shape and the reader's real question is "how do these compare across the same set of dimensions?" A flowchart or dependency map is the wrong tool for that — there are no directional connections, just parallel entries. Common triggers: a **roles × capabilities** matrix, a **phased rollout** with per-phase gates and durations, an **options comparison** (COTS vs SaaS vs custom), a **tiers** grid (free/pro/enterprise), a **surfaces × supported operations** matrix. Rule of thumb: if the answer to "does this thing support X?" is a lookup across many rows, it's a table. If the answer is "X only exists because of Y, which only exists because of Z," it's a dependency map.
 
 A `data summary` chart earns its place only when the surrounding decisions **assume a distribution** that isn't spelled out anywhere — the redirect latency budget the "why" section promises, the write-heavy activity mix a real-time sync design is priced against, the roll-out split a phased plan implies. If the spec already says the numbers in prose, a chart adds nothing. Don't invent numbers to fill a chart; if the values are a guess, label them as guesses in the detail block so the reader knows what they're arguing with. Charts are non-interactive (no draggable nodes, no per-node descriptions), so all the meaning lives in the caption, detail, and the mermaid data itself.
 
@@ -98,6 +101,22 @@ A `data summary` chart earns its place only when the surrounding decisions **ass
 - Every user-flow branch labels its condition (`ok`, `fail`, `yes`, `no`, `if <predicate>`).
 - Node ids are short, stable, kebab or camel — they show up in the export payload when the user annotates them.
 - If the spec is genuinely silent on flow direction or condition, leave it unlabeled rather than guess.
+
+**Step 4a — write a markdown pipe table for each `table` diagram.** The `source` field for a `table` kind is a plain markdown table, not mermaid. Shape:
+
+```
+| <col header> | <col header> | … |
+|---|---|---|
+| <row 1 cell> | <row 1 cell> | … |
+| <row 2 cell> | <row 2 cell> | … |
+```
+
+- **First column is the row identity** (the role, tier, phase, option name). The remaining columns are the dimensions being compared.
+- Keep cells short — a short phrase, a number, a checkmark, a dash. Wrap key terms in `**double asterisks**` for the same in-cell bolding the rest of the visualizer supports; use it sparingly, at most a couple of bolds per table.
+- Use `✓` / `—` (or `y` / `n`) for boolean cells so the eye can scan the grid, not `Yes` / `No` in every row.
+- Alignment row can be plain (`|---|---|`); the visualizer doesn't render per-column alignment. Use whatever raw formatting keeps the markdown scannable in the spec.
+- **Don't invent a comparison the spec doesn't make.** If two rows are genuinely the same on a dimension, say so; don't dramatize a difference to justify the column.
+- Cells edit inline in the visualizer (double-click); users can also add/remove columns or rows by editing the source pane directly. Round-trips back into the spec as raw markdown — a reader without the visualizer still sees a real table.
 
 **Step 4b — draft a caption and a detail block for each diagram.**
 
@@ -129,11 +148,11 @@ Both are plain prose. Apply the writing rules from the appendix to every sentenc
   "diagrams": [
     {
       "id": "<slug>",
-      "kind": "architecture | user flow | dependency map | state | sequence | data summary",
+      "kind": "architecture | user flow | dependency map | state | sequence | data summary | table",
       "title": "<human title>",
       "caption": "<two or three sentences shown directly above the diagram; bold key terms with **asterisks**>",
       "detail":  "<longer paragraph or bulleted list shown in the 'About the <title>' section under the diagram (expanded by default)>",
-      "source":  "<mermaid source, with \\n for newlines; default direction LR>",
+      "source":  "<mermaid source for every kind except 'table'; 'table' holds a markdown pipe table (header row, `|---|---|` alignment row, then data rows). Use \\n for newlines in either case.>",
       "descriptions": {
         "node:<id>": "<what this node is and does, shown on hover, editable in place>",
         "edge:<edgeId>": "<what this arrow carries, shown on hover, editable in place>"
@@ -173,9 +192,9 @@ That writes `<spec-slug>-visualizer.html` next to the data JSON.
   - `<!-- spec-tacle:diagram:<id>:caption -->` … `<!-- /spec-tacle:diagram:<id>:caption -->` around the caption sentence(s).
   - `<!-- spec-tacle:diagram:<id>:detail -->` … `<!-- /spec-tacle:diagram:<id>:detail -->` around the bulleted or paragraph detail.
   - `<!-- spec-tacle:diagram:<id>:notes -->` … `<!-- /spec-tacle:diagram:<id>:notes -->` around the per-diagram user notes area (usually empty on first render — the user fills it in-browser and Update spec writes back here).
-  - `<!-- spec-tacle:diagram:<id> -->` … `<!-- /spec-tacle:diagram:<id> -->` around the ```` ```mermaid ```` fenced block itself.
+  - `<!-- spec-tacle:diagram:<id> -->` … `<!-- /spec-tacle:diagram:<id> -->` around the source block itself. For every kind except `table` this is a ```` ```mermaid ```` fenced block. **For `table` diagrams it is the raw markdown table** (no code fence), so a reader looking at the spec without the visualizer still sees a real table.
 
-The order within a diagram section is caption, then detail, then notes, then the mermaid block, with a human-readable `### Diagram title` heading above the caption. `example-spec.md` in the spec-tacle project directory is the reference — copy its shape.
+The order within a diagram section is caption, then detail, then notes, then the source block, with a human-readable `### Diagram title` heading above the caption. `example-spec.md` in the spec-tacle project directory is the reference — copy its shape.
 
 **Step 8 — start the round-trip server (it auto-opens the visualizer).** Without the server running the Update spec / Undo buttons in the visualizer disable themselves (the page detects `file://` and won't accept edits), so if you skip this step the user gets a read-only page and thinks the tool is broken.
 
@@ -204,7 +223,7 @@ The visualizer's **Export changes** button produces `spec-tacle-edits.json`. Whe
 
 **Step 2 — categorize each change.**
 
-- **Source-only edits** (added/removed/renamed nodes and edges) — real structural changes the user made in the mermaid textarea. These usually imply the spec is wrong or incomplete.
+- **Source-only edits** (added/removed/renamed nodes and edges, or added/removed/renamed table rows and columns, or edited table cells) — real structural changes the user made in the source pane (or via inline cell editing for tables). These usually imply the spec is wrong or incomplete. For tables the diff is a markdown-table diff, not a mermaid diff.
 - **Position-only edits** (nodes dragged, or arrows bent via `edgeWaypoints`, but source unchanged) — layout preference, not spec content. Do not modify the spec for these; only mention them if you're saving a new default data JSON.
 - **Caption/detail edits** (`captionChanged`/`detailChanged`) — the user rewrote the picture-caption or the "About the …" section. Treat these like any other prose edit: fold the new wording back into the spec's `diagram:<id>:caption`/`:detail` marker section, running `no-ai-slop` over it first if the user's phrasing is rough.
 - **Summary bullet edits** (`summary`) — the user rewrote, added, or removed a What/Why bullet. These read the same as any other content correction — fold them into `summary:what`/`summary:why`.

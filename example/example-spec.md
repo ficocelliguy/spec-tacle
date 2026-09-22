@@ -307,3 +307,34 @@ pie showData
   "Rename or archive list" : 3
 ```
 <!-- /spec-tacle:diagram:activity-mix -->
+
+### Roles × capabilities
+
+<!-- spec-tacle:diagram:roles-matrix:caption -->
+What each **role** can do on the shared list. Guests are read-only and can't reach team settings; only the team lead can invite or reassign.
+<!-- /spec-tacle:diagram:roles-matrix:caption -->
+
+<!-- spec-tacle:diagram:roles-matrix:detail -->
+- Three rows, one per role; each column is a distinct capability the API enforces.
+- **✓** = allowed, **—** = not allowed. A dash isn't the same as "probably not" — the API rejects it.
+- Use this table to reconcile the roles list with the surface list: every surface should map to a subset of the columns here.
+- If a new capability lands (attachments, mentions, etc.), add a column here first — the row a guest gets is usually the load-bearing answer.
+<!-- /spec-tacle:diagram:roles-matrix:detail -->
+
+<!-- spec-tacle:diagram:roles-matrix:notes -->
+
+<!-- /spec-tacle:diagram:roles-matrix:notes -->
+
+<!-- spec-tacle:diagram:roles-matrix -->
+| Capability                | Member | Team lead | Guest |
+|---------------------------|--------|-----------|-------|
+| See the team list         | ✓      | ✓         | ✓     |
+| Open a task's detail      | ✓      | ✓         | ✓     |
+| Create a task             | ✓      | ✓         | —     |
+| Complete or reopen a task | ✓      | ✓         | —     |
+| Comment on a task         | ✓      | ✓         | —     |
+| Reassign a task's owner   | —      | ✓         | —     |
+| Archive completed items   | —      | ✓         | —     |
+| Invite a new teammate     | —      | ✓         | —     |
+| Change a member's role    | —      | ✓         | —     |
+<!-- /spec-tacle:diagram:roles-matrix -->

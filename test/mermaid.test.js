@@ -11,7 +11,13 @@ const DATA_PATH = path.join(__dirname, '..', 'example', 'example-data.json');
 const DIAGRAM_HEADERS = /^(flowchart|graph|stateDiagram|sequenceDiagram|classDiagram|erDiagram|journey)\b/;
 
 function loadDiagrams() {
-  return JSON.parse(fs.readFileSync(DATA_PATH, 'utf-8')).diagrams;
+  // Table-kind diagrams intentionally hold markdown-pipe-table source, not
+  // mermaid — every assertion below is mermaid-shape and skips them.
+  return JSON.parse(fs.readFileSync(DATA_PATH, 'utf-8')).diagrams.filter(d => d.kind !== 'table');
+}
+
+function loadTables() {
+  return JSON.parse(fs.readFileSync(DATA_PATH, 'utf-8')).diagrams.filter(d => d.kind === 'table');
 }
 
 test('every diagram source starts with a valid mermaid directive', () => {
@@ -70,5 +76,19 @@ test('TD flowcharts have a linear path ≥8 nodes (justifying top-down); LR othe
       // Allow TD when the source has plenty of arrows (deep chains).
       assert.ok(arrows >= 4, `diagram "${d.id}" uses TD but only has ${arrows} arrows — consider LR`);
     }
+  }
+});
+
+test('table-kind diagrams look like a markdown pipe table with a header + alignment row', () => {
+  const align = /^\s*\|?\s*:?-{2,}:?(?:\s*\|\s*:?-{2,}:?)*\s*\|?\s*$/;
+  for (const d of loadTables()) {
+    const lines = d.source.split(/\r?\n/).filter(l => l.trim());
+    assert.ok(lines.length >= 3, `table "${d.id}" needs a header, an alignment row, and at least one data row`);
+    // Header + alignment must be adjacent.
+    let alignedAt = -1;
+    for (let i = 1; i < lines.length; i++) if (align.test(lines[i])) { alignedAt = i; break; }
+    assert.ok(alignedAt > 0, `table "${d.id}" is missing an alignment row (|---|---|)`);
+    const cols = lines[alignedAt - 1].replace(/^\||\|$/g, '').split('|').length;
+    assert.ok(cols >= 2, `table "${d.id}" needs at least two columns to be worth a table`);
   }
 });

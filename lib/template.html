@@ -581,6 +581,66 @@
     cursor: text;
   }
 
+  /* Table-kind diagrams: no mermaid, no drag, no shape picker — a plain HTML
+     table whose cells edit inline and round-trip as a markdown table. */
+  .spec-tacle-table-wrap {
+    width: 100%;
+    overflow-x: auto;
+  }
+  table.spec-tacle-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 13px;
+    line-height: 1.45;
+    color: var(--ink);
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  table.spec-tacle-table th,
+  table.spec-tacle-table td {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--line);
+    border-right: 1px solid var(--line);
+    vertical-align: top;
+    text-align: left;
+  }
+  table.spec-tacle-table th:last-child,
+  table.spec-tacle-table td:last-child { border-right: 0; }
+  table.spec-tacle-table tr:last-child td { border-bottom: 0; }
+  table.spec-tacle-table thead th {
+    background: var(--bg);
+    color: var(--ink);
+    font-weight: 600;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    border-bottom: 2px solid var(--line);
+  }
+  table.spec-tacle-table tbody tr:nth-child(even) td { background: var(--bg); }
+  table.spec-tacle-table tbody tr:hover td { background: var(--accent-soft); }
+  table.spec-tacle-table td[data-cell], table.spec-tacle-table th[data-cell] { cursor: text; }
+  table.spec-tacle-table td[contenteditable="true"],
+  table.spec-tacle-table th[contenteditable="true"] {
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
+    background: var(--panel);
+  }
+  table.spec-tacle-table caption {
+    caption-side: bottom;
+    padding: 6px 4px 0;
+    color: var(--ink-dim);
+    font-size: 11px;
+    text-align: left;
+  }
+  .spec-tacle-table .parse-error {
+    color: var(--warn);
+    white-space: pre-wrap;
+    font: 12px/1.5 "SF Mono", Menlo, Consolas, monospace;
+  }
+
   details.source-pane {
     flex: 0 0 36px;
     border-left: 1px solid var(--line);
@@ -982,7 +1042,15 @@
   });
 
 
+  const HINT_MERMAID = 'Hover a node or arrow to see a description tooltip; click the tooltip to edit it. Click a node to select it, then Delete/Backspace to remove it (and its edges). Drag a node to reposition; arrows and labels follow. Hover a node for its four side dots and shape-picker (◇). Drag a side dot to another node to create a new arrow, or into empty space to spawn a new node in edit mode. Hover an arrow for its handles: drag the blue circle (or the label itself) to bend, drag the green/orange endpoints to reconnect. Double-click a node, edge label, caption, detail, or bullet to edit its text inline. Click the "Add notes…" area below to jot general thoughts about this diagram. Wrap key terms in double asterisks to bold them. Ctrl/⌘+Z undoes the last edit.';
+  const HINT_TABLE = 'Double-click a header or cell to edit it in place; Enter commits, Esc cancels. Wrap key terms in double asterisks to bold them. To add or remove columns or rows, open the Source pane on the right and edit the markdown table directly — the visualizer re-renders when you re-render. Caption, detail, and notes all edit inline the same way. Ctrl/⌘+Z undoes the last edit.';
+  const SOURCE_HINT_MERMAID = 'Show or hide the mermaid source for this diagram';
+  const SOURCE_HINT_TABLE = 'Show or hide the raw markdown table source';
+  const SOURCE_EDIT_HINT_MERMAID = 'Edit the mermaid source directly';
+  const SOURCE_EDIT_HINT_TABLE = 'Edit the markdown table source directly';
+
   data.diagrams.forEach((diagram, idx) => {
+    const isTable = diagram.kind === 'table';
     const card = document.createElement('div');
     card.className = 'diagram-card';
     card.dataset.idx = idx;
@@ -995,13 +1063,13 @@
       <details class="diagram-detail" open>
         <summary title="Show or hide the longer description of this diagram">About the ${escapeHtml(diagram.title)}</summary>
         <div class="detail-content" data-detail-idx="${idx}" title="Double-click to edit the detail text. Use dash-space for bullets and two-space indent for nested bullets. Wrap key terms in **double asterisks** to bold.">${mdRich(diagram.detail || '')}</div>
-        <div class="hint">Hover a node or arrow to see a description tooltip; click the tooltip to edit it. Click a node to select it, then Delete/Backspace to remove it (and its edges). Drag a node to reposition; arrows and labels follow. Hover a node for its four side dots and shape-picker (◇). Drag a side dot to another node to create a new arrow, or into empty space to spawn a new node in edit mode. Hover an arrow for its handles: drag the blue circle (or the label itself) to bend, drag the green/orange endpoints to reconnect. Double-click a node, edge label, caption, detail, or bullet to edit its text inline. Click the "Add notes…" area below to jot general thoughts about this diagram. Wrap key terms in double asterisks to bold them. Ctrl/⌘+Z undoes the last edit.</div>
+        <div class="hint">${isTable ? HINT_TABLE : HINT_MERMAID}</div>
       </details>
       <div class="diagram-body" data-body-idx="${idx}">
         <div class="diagram-canvas" data-canvas-idx="${idx}"></div>
         <details class="source-pane">
-          <summary title="Show or hide the mermaid source for this diagram"><span class="arrow">◂</span><span class="label">Source</span></summary>
-          <textarea data-source-idx="${idx}" spellcheck="false" title="Edit the mermaid source directly">${escapeHtml(diagram.source)}</textarea>
+          <summary title="${isTable ? SOURCE_HINT_TABLE : SOURCE_HINT_MERMAID}"><span class="arrow">◂</span><span class="label">Source</span></summary>
+          <textarea data-source-idx="${idx}" spellcheck="false" title="${isTable ? SOURCE_EDIT_HINT_TABLE : SOURCE_EDIT_HINT_MERMAID}">${escapeHtml(diagram.source)}</textarea>
         </details>
       </div>
       <div class="diagram-resize-handle" data-resize-idx="${idx}" title="Drag up or down to resize this diagram"></div>
@@ -1010,9 +1078,9 @@
       <div class="diagram-footer">
         <span class="status" data-status-idx="${idx}"></span>
         <div class="actions">
-          <button data-action="rerender" data-idx="${idx}" title="Re-parse the mermaid source and redraw this diagram">Re-render</button>
+          <button data-action="rerender" data-idx="${idx}" title="Re-parse the source and redraw this diagram">Re-render</button>
           <button data-action="revert" data-idx="${idx}" title="Discard this diagram's in-browser edits">Revert</button>
-          <button data-action="diff" data-idx="${idx}" title="Show a line-diff of the current mermaid source vs the original">Show diff</button>
+          <button data-action="diff" data-idx="${idx}" title="Show a line-diff of the current source vs the original">Show diff</button>
         </div>
       </div>
       <div class="diff-view" data-diff-idx="${idx}" hidden></div>
@@ -1232,7 +1300,12 @@
       payload.sections[sectionMap.summaryWhy] = toMarkdownBullets(state.summary.currentWhy);
     }
     state.diagrams.forEach(d => {
-      if (d.currentSource !== d.originalSource) payload.diagrams[d.id] = d.currentSource;
+      if (d.currentSource !== d.originalSource) {
+        // Send the kind so the server can pick the right block wrapper: 'table'
+        // writes the source as raw markdown; every other kind gets a mermaid
+        // code fence. The old "string only" shape still works for legacy callers.
+        payload.diagrams[d.id] = { source: d.currentSource, kind: d.kind || '' };
+      }
       if (d.currentCaption !== d.originalCaption) {
         payload.sections[`diagram:${d.id}:caption`] = d.currentCaption;
       }
@@ -1371,6 +1444,10 @@
   async function renderDiagram(idx) {
     const diagram = state.diagrams[idx];
     const canvas = document.querySelector(`[data-canvas-idx="${idx}"]`);
+    if (diagram.kind === 'table') {
+      renderTableDiagram(canvas, idx);
+      return;
+    }
     try {
       const id = `mermaid-${idx}-${Date.now()}`;
       const { svg } = await mermaid.render(id, diagram.currentSource);
@@ -1385,6 +1462,128 @@
     } catch (err) {
       canvas.innerHTML = `<pre style="color: var(--warn); white-space: pre-wrap;">Mermaid parse error:\n\n${escapeHtml(err.message || String(err))}</pre>`;
     }
+  }
+
+  // --- Table-kind rendering ---
+  //
+  // Parse a markdown pipe-table into { headers, rows }. Both are arrays of
+  // strings. The alignment row (|---|:--:|...|) is recognized and skipped.
+  // Leading/trailing pipes on each row are optional. Anything before the
+  // header line (blank lines, a leading "Table:" or a stray comment) is
+  // tolerated — we look for the first line whose next non-blank sibling is
+  // an alignment row.
+  function parseMarkdownTable(src) {
+    const lines = String(src || '').split(/\r?\n/);
+    const rows = [];
+    let headers = null;
+    let headerFound = false;
+    const isAlign = (s) => /^\s*\|?\s*:?-{2,}:?(?:\s*\|\s*:?-{2,}:?)*\s*\|?\s*$/.test(s);
+    const splitRow = (s) => {
+      let t = s.trim();
+      if (t.startsWith('|')) t = t.slice(1);
+      if (t.endsWith('|')) t = t.slice(0, -1);
+      // Preserve empty cells so column count stays stable.
+      return t.split('|').map(c => c.trim());
+    };
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      if (!line.trim()) continue;
+      if (!headerFound) {
+        // Look ahead: is the next non-blank line an alignment row?
+        let j = i + 1;
+        while (j < lines.length && !lines[j].trim()) j++;
+        if (j < lines.length && isAlign(lines[j])) {
+          headers = splitRow(line);
+          headerFound = true;
+          i = j; // skip alignment row
+          continue;
+        }
+        // No alignment row after this line — treat as commentary and skip.
+        continue;
+      }
+      rows.push(splitRow(line));
+    }
+    if (!headers) throw new Error('Table needs a header row followed by an alignment row (`|---|---|`).');
+    const width = headers.length;
+    // Normalize row widths so the HTML render lines up even if a row is short/long.
+    for (const r of rows) {
+      while (r.length < width) r.push('');
+      if (r.length > width) r.length = width;
+    }
+    return { headers, rows };
+  }
+
+  // Serialize back to a markdown pipe-table. Column widths pad to the max so
+  // the raw markdown source stays scannable when saved into the spec.
+  function stringifyMarkdownTable(headers, rows) {
+    const width = headers.length;
+    const cols = Array.from({ length: width }, (_, c) => {
+      let m = String(headers[c] || '').length;
+      for (const r of rows) m = Math.max(m, String(r[c] || '').length);
+      return Math.max(3, m);
+    });
+    const line = (cells) => '| ' + cells.map((v, c) => String(v || '').padEnd(cols[c], ' ')).join(' | ') + ' |';
+    const sep = '|' + cols.map(w => '-'.repeat(w + 2)).join('|') + '|';
+    return [line(headers), sep, ...rows.map(line)].join('\n');
+  }
+
+  function renderTableDiagram(canvas, idx) {
+    const diagram = state.diagrams[idx];
+    let parsed;
+    try {
+      parsed = parseMarkdownTable(diagram.currentSource);
+    } catch (err) {
+      canvas.innerHTML = `<div class="spec-tacle-table"><div class="parse-error">Table parse error:\n\n${escapeHtml(err.message || String(err))}</div></div>`;
+      return;
+    }
+    const { headers, rows } = parsed;
+    const thHtml = headers.map((h, c) =>
+      `<th data-cell="h:${c}" title="Double-click to edit this column header. Wrap key terms in **double asterisks** to bold.">${mdBold(h)}</th>`
+    ).join('');
+    const bodyHtml = rows.map((r, ri) =>
+      '<tr>' + r.map((v, ci) =>
+        `<td data-cell="${ri}:${ci}" title="Double-click to edit. Wrap key terms in **double asterisks** to bold.">${mdBold(v)}</td>`
+      ).join('') + '</tr>'
+    ).join('');
+    canvas.innerHTML =
+      `<div class="spec-tacle-table-wrap">` +
+        `<table class="spec-tacle-table">` +
+          `<thead><tr>${thHtml}</tr></thead>` +
+          `<tbody>${bodyHtml}</tbody>` +
+        `</table>` +
+      `</div>`;
+    wireTableCellEditing(canvas, idx);
+  }
+
+  function wireTableCellEditing(canvas, idx) {
+    canvas.querySelectorAll('th[data-cell], td[data-cell]').forEach(cell => {
+      cell.addEventListener('dblclick', (e) => {
+        e.stopPropagation();
+        const parsed = safeParseTable(state.diagrams[idx].currentSource);
+        if (!parsed) return;
+        const [scope, a, b] = parseCellRef(cell.dataset.cell);
+        const original = scope === 'h' ? parsed.headers[a] : parsed.rows[a][b];
+        inlineEdit(cell, original || '', (next) => {
+          const p2 = safeParseTable(state.diagrams[idx].currentSource);
+          if (!p2) return;
+          if (scope === 'h') p2.headers[a] = next; else p2.rows[a][b] = next;
+          state.diagrams[idx].currentSource = stringifyMarkdownTable(p2.headers, p2.rows);
+          syncSourceTextarea(idx);
+          markDirty(idx);
+          renderTableDiagram(canvas, idx);
+        }, { allowEmpty: true, multiline: false });
+      });
+    });
+  }
+
+  function safeParseTable(src) {
+    try { return parseMarkdownTable(src); } catch (_) { return null; }
+  }
+
+  function parseCellRef(ref) {
+    const parts = String(ref || '').split(':');
+    if (parts[0] === 'h') return ['h', +parts[1], -1];
+    return ['b', +parts[0], +parts[1]];
   }
 
   function ensureViewBoxRoom(canvas) {
