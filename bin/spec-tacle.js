@@ -6,6 +6,7 @@
  *   spec-tacle_skill render <data.json> [output.html]  Render a data JSON to HTML
  *   spec-tacle_skill serve [--port N] [--root DIR]     Start the round-trip server
  *   spec-tacle_skill skill                             Print the skill instructions
+ *   spec-tacle_skill install [--dir PATH] [--force]    Install SKILL.md into a skills dir
  *   spec-tacle_skill example [dir]                     Copy the example spec + data JSON to a dir
  *   spec-tacle_skill demo [--port N]                   Render the bundled example and start the server
  */
@@ -43,6 +44,10 @@ function usage() {
     '',
     '  npx spec-tacle_skill skill',
     '      Print the skill instructions (for use with Claude or other AI editors).',
+    '',
+    '  npx spec-tacle_skill install [--dir PATH] [--force]',
+    '      Install SKILL.md into ~/.claude/skills/spec-tacle_skill/ (or --dir).',
+    '      Refuses to overwrite unless --force.',
     '',
     '  npx spec-tacle_skill example [dir]',
     '      Copy the bundled example spec + data JSON into <dir> (default: cwd).',
@@ -147,6 +152,23 @@ function cmdSkill() {
   process.stdout.write(fs.readFileSync(SKILL_MD, 'utf-8'));
 }
 
+function cmdInstallSkill(args) {
+  const dirFlag = argFlag(args, '--dir');
+  const force = hasFlag(args, '--force');
+  const targetDir = dirFlag
+    ? path.resolve(dirFlag)
+    : path.join(os.homedir(), '.claude', 'skills', 'spec-tacle_skill');
+  const targetFile = path.join(targetDir, 'SKILL.md');
+  if (fs.existsSync(targetFile) && !force) {
+    console.error(`spec-tacle_skill: ${targetFile} already exists — re-run with --force to overwrite.`);
+    process.exit(1);
+  }
+  fs.mkdirSync(targetDir, { recursive: true });
+  fs.copyFileSync(SKILL_MD, targetFile);
+  console.log(`Installed skill to ${targetFile}`);
+  console.log('Restart your editor session, then try: "spec-tacle this: <path-to-spec.md>"');
+}
+
 function cmdExample(args) {
   const targetDir = args[0] ? path.resolve(args[0]) : process.cwd();
   fs.mkdirSync(targetDir, { recursive: true });
@@ -209,6 +231,7 @@ function main() {
     case 'render':  return cmdRender(rest);
     case 'serve':   return cmdServe(rest);
     case 'skill':   return cmdSkill();
+    case 'install': return cmdInstallSkill(rest);
     case 'example': return cmdExample(rest);
     case 'demo':    return cmdDemo(rest);
     default:

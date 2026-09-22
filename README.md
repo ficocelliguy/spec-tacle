@@ -10,6 +10,23 @@ spec-tacle turns any technical document into a page that is actually readable an
 
 **[ficocelliguy.github.io/spec-tacle](https://ficocelliguy.github.io/spec-tacle/)** — a static example visualizing a spec for "Snip" (a URL-shortener) . Everything is editable in the browser so you can feel the shape of the tool: drag nodes, bend arrows, rewrite captions. Note there is no backend on that demo for undo or saving — that's what `npx spec-tacle_skill demo` (below) adds.
 
+
+## Get the skill
+
+```sh
+npx spec-tacle_skill install
+```
+
+That writes `SKILL.md` to `~/.claude/skills/spec-tacle_skill/`. For Codex or any other editor with named skills, pass `--dir <path>` to point at whichever directory it reads skills from.
+
+Then in a session:
+
+> spec-tacle this: docs/product-brief.md
+
+Invoke it alone ("spec-tacle this") and it'll ask what to include. Point it at a markdown file, a stack of files, a transcript, one or more images of a whiteboard, or a mix — it merges them into one spec first, then produces the visualizer.
+
+Edit anything you want in the browser, hit Update spec. Your spec file now reflects your edits.
+
 ## Full local demo
 
 ```sh
@@ -18,26 +35,6 @@ npx spec-tacle_skill demo
 
 That stages the bundled Tasky example (a fictional shared to-do app spec) in a temp directory, renders it, and starts a local server. Open the URL it prints. Drag nodes around, rewrite a caption, add a note under a diagram, watch the source file change.
 
-## Use it as a skill for Claude or Codex
-
-Install the skill for Claude Code:
-
-```sh
-mkdir -p ~/.claude/skills/spec-tacle_skill
-npx spec-tacle_skill skill > ~/.claude/skills/spec-tacle_skill/SKILL.md
-```
-
-For Codex (or any other editor with named skills), drop the same file wherever it picks skills up.
-
-Then in a session:
-
-> spec-tacle this: docs/product-brief.md
-
-The skill does the whole workflow itself — drafts the summary bullets, picks the diagrams, writes the mermaid, produces a data JSON next to your spec, inserts marker anchors into the spec, renders the visualizer, starts the local server, and opens the visualizer in your default browser. You don't need to type `npx spec-tacle_skill render` or `npx spec-tacle_skill serve` — the skill runs those for you.
-
-Invoke it naked ("spec-tacle this") and it'll ask what to include. Point it at a markdown file, a stack of files, a transcript, one or more images of a whiteboard, or a mix — it merges them into one spec first, then produces the visualizer.
-
-Edit anything you want in the browser, hit Update spec. Your spec file now reflects your edits.
 
 ## Round-trip, in one paragraph
 
