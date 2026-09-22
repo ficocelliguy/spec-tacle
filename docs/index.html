@@ -1202,8 +1202,11 @@
     serverStatusEl.className = 'server-note' + (cls ? ' ' + cls : '');
   }
 
-  if (!serverBase) {
-    setServerStatus('Opened via file:// — start `python3 serve.py` and load through the server to enable Update spec.', 'err');
+  if (data.demoMode) {
+    document.getElementById('btn-update-spec').disabled = true;
+    document.getElementById('btn-undo-spec').disabled = true;
+  } else if (!serverBase) {
+    setServerStatus('Opened via file:// — run `npx spec-tacle serve` and load through that server to enable Update spec.', 'err');
     document.getElementById('btn-update-spec').disabled = true;
     document.getElementById('btn-undo-spec').disabled = true;
   } else {
@@ -1267,7 +1270,7 @@
       markGlobalDirty();
       setServerStatus(body.changed ? `saved · backup ${body.backup}` : 'saved (no changes)', 'ok');
     } catch (err) {
-      setServerStatus(`update failed: ${err.message}. Is serve.py running?`, 'err');
+      setServerStatus(`update failed: ${err.message}. Is \`npx spec-tacle serve\` running?`, 'err');
     }
   }
 
@@ -1288,7 +1291,7 @@
       }
       setServerStatus(`restored from ${body.restored_from} · ${body.remaining_backups} backup(s) remain · refresh to reload diagrams`, 'ok');
     } catch (err) {
-      setServerStatus(`undo failed: ${err.message}. Is serve.py running?`, 'err');
+      setServerStatus(`undo failed: ${err.message}. Is \`npx spec-tacle serve\` running?`, 'err');
     }
   }
 

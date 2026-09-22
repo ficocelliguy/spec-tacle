@@ -14,12 +14,12 @@ Take a written spec, produce an HTML page a person can open in a browser that sh
 
 The project lives at `_project-management/personal/mike/spec-tacle/`. It contains:
 
-- `template.html` — the reusable HTML shell (mermaid + drag + annotate + inline-edit + export)
-- `render.py` — substitutes a JSON data blob into the template
-- `serve.py` — local HTTP server that round-trips visualizer edits into the spec file with timestamped backups (see "Live editing" below)
-- `example-spec.md` — a fictional Tasky spec used as the reference example, with marker anchors
+- `lib/template.html` — the reusable HTML shell (mermaid + drag + annotate + inline-edit + export)
+- `lib/render.js` — substitutes a JSON data blob into the template (invoked via `npx spec-tacle render`)
+- `lib/serve.js` — local HTTP server that round-trips visualizer edits into the spec file with timestamped backups (invoked via `npx spec-tacle serve`; see "Live editing" below)
+- `example/example-spec.md` — a fictional Tasky spec used as the reference example, with marker anchors
 - `generated/tasky-visualizer.html` — the reference example rendered
-- `backups/` — created by `serve.py` next to the spec file (not under `generated/`) on the first Update spec
+- `backups/` — created by the server next to the spec file (not under `generated/`) on the first Update spec
 
 ## When to invoke this skill
 
@@ -149,7 +149,7 @@ Notes on the shape:
 - `caption` is two or three sentences of italic subtext directly above the diagram. `detail` is a longer paragraph or bulleted list in an "About the <diagram title>" block that starts expanded (the reader can collapse it). Both accept `**bold**` markdown for key terms; `detail` also accepts `- ` / `  - ` nested bullet lists.
 - `descriptions` is optional — a map from `node:<id>` / `edge:L-<source>-<target>-<n>` keys to one-sentence descriptions shown on hover, editable on click.
 - `notes` is optional and usually empty on first render. It's a per-diagram free-form user notes area (supports `**bold**` and `- ` / `  - ` nested bullets). Users click the "Add notes…" area under each diagram to add general thoughts; those get written back into the spec via a `diagram:<id>:notes` marker section on Update.
-- `serverUrl` is normally `null`. The visualizer falls back to `location.origin` when served through `serve.py`, and disables Update/Undo when opened via `file://`. Only set it if the visualizer will be served from a different origin than the one hosting `serve.py`.
+- `serverUrl` is normally `null`. The visualizer falls back to `location.origin` when served through `npx spec-tacle serve`, and disables Update/Undo when opened via `file://`. Only set it if the visualizer will be served from a different origin than the one hosting the spec-tacle server.
 
 **Nested markdown lists** are supported in captions, details, per-node/edge descriptions, and user notes. Use `- ` for a top-level bullet and `  - ` (two-space indent) for a nested sub-bullet, arbitrarily deep. Details in particular read much better as a bulleted list than a paragraph — draft them that way by default.
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /*
- * spec-tacle CLI. Pure Node — no Python dependency.
+ * spec-tacle CLI.
  *
  * Commands:
  *   spec-tacle render <data.json> [output.html]     Render a data JSON to HTML
