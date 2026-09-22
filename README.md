@@ -1,7 +1,7 @@
 
 <img src="https://raw.githubusercontent.com/ficocelliguy/spec-tacle/refs/heads/master/assets/spactacle_logo_transparent.png" alt="spec-tacle logo" width="500px">
 
-spec-tacle turns any technical document into a page that is actually readable and understandable - and visually editable. The page is laid out for reading, and every part of it is editable in place. Hit **Update spec** and the changes are reflected in the spec file.
+spec-tacle turns any technical document into a page that is actually readable and understandable - and visually editable. The page is laid out for reading, and every part of it can be updated in-place. Hit **Update spec** and the changes are reflected in the spec file.
 
 ## See it live
 
