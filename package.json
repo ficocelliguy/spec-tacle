@@ -1,6 +1,6 @@
 {
   "name": "spec-tacle_skill",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Turn a software spec into an editable HTML visualizer — technical summary, mermaid diagrams, per-node/arrow descriptions, and round-trip back to the spec file.",
   "engines": {
     "node": ">=18"
