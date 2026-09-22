@@ -1,0 +1,59 @@
+{
+  "title": "Tasky — a shared to-do list webapp",
+  "subtitle": "Example spec-tacle output · example-spec.md",
+  "specPath": "example-spec.md",
+  "serverUrl": null,
+  "sectionMap": {
+    "summaryWhat": "summary:what",
+    "summaryWhy": "summary:why"
+  },
+  "summary": {
+    "what": [
+      "Single-page web client in the browser talking to a stateless REST API",
+      "Postgres stores users, teams, tasks, comments; Redis pub/sub carries real-time events",
+      "A separate **WebSocket gateway** holds live connections and fans events out to every open browser for the team",
+      "A mail worker sends invites and notifications through a third-party provider",
+      "Three roles (member, team lead, magic-link guest) and three surfaces (list, task detail, team settings)"
+    ],
+    "why": [
+      "Small teams currently juggle lists across Slack, sticky notes, and half-abandoned tools, so ownership and status drift",
+      "Tasky picks a deliberately narrow shape (**one list per team**) so the state of the world is unambiguous",
+      "Invests in optimistic UI and live sync so the shared list feels trustworthy enough to actually rely on",
+      "Magic-link guests remove account friction for read-only stakeholders"
+    ]
+  },
+  "diagrams": [
+    {
+      "id": "architecture",
+      "kind": "architecture",
+      "title": "System architecture and data flow",
+      "caption": "The full data plane. **HTTPS** for CRUD, a **WebSocket** for pushed events, and **Redis pub/sub** as the fan-out that keeps every open browser in sync within a second.",
+      "detail": "- **Read/write path**: browser → API → Postgres\n- **Real-time path**: API publishes to Redis, WS gateway subscribes and fans events out to every open client for that team\n- **Async work**: API enqueues onto the mail worker, which hands off to a third-party email provider\n- **How to read**: primary data plane runs across the top, real-time loop-back runs through Redis and the WS gateway on the right, async email path branches down at the bottom",
+      "source": "flowchart LR\n  Browser[\"Web client\\n(SPA)\"]\n  API[\"API server\\n(stateless Node)\"]\n  WS[\"WebSocket gateway\"]\n  PG[(Postgres)]\n  Redis[(Redis pub/sub)]\n  Mail[\"Mail worker\"]\n  Provider([Email provider])\n\n  Browser -->|\"HTTPS: CRUD\"| API\n  Browser <-->|\"WebSocket: events\"| WS\n  API -->|\"read/write\"| PG\n  API -->|\"publish events\"| Redis\n  Redis -->|\"subscribe\"| WS\n  API -->|\"enqueue invites\"| Mail\n  Mail -->|\"send email\"| Provider"
+    },
+    {
+      "id": "create-task-flow",
+      "kind": "user flow",
+      "title": "User flow — create a task",
+      "caption": "The nine-step round-trip from a member typing a title to every open client seeing the row. **Validation failure** rolls back the optimistic insert with a toast.",
+      "detail": "- **Golden path** (validation passes):\n  - Client POSTs `/tasks` and inserts an optimistic row locally\n  - API writes to Postgres, appends to the activity log, publishes `task.created` on Redis\n  - WS gateway fans the event out to every open client for that team\n  - Each client reconciles its optimistic row against the server's authoritative row\n- **Fail path**: validation rejection removes the optimistic row and shows an error toast\n- Nine steps in the linear path, so the diagram runs top-down",
+      "source": "flowchart TD\n  Start([Member on list view])\n  Click[\"Click 'New task'\"]\n  Type[\"Type title, hit Enter\"]\n  Post[\"Client POSTs /tasks\"]\n  Validate{\"API validates\"}\n  Save[\"Write to Postgres\"]\n  Publish[\"Publish task.created on Redis\"]\n  Fanout[\"WS gateway fans out to open clients\"]\n  Insert[\"Every client inserts row\"]\n  Error[\"Rollback + toast\"]\n\n  Start --> Click --> Type --> Post --> Validate\n  Validate -- ok --> Save --> Publish --> Fanout --> Insert\n  Validate -- fail --> Error"
+    },
+    {
+      "id": "invite-flow",
+      "kind": "user flow",
+      "title": "User flow — invite a teammate",
+      "caption": "How a team lead brings a new member onto the team, from typing an email address to the invitee landing on the shared list with the right **role**.",
+      "detail": "- Team lead opens Team Settings, enters an email, picks a role\n- API creates a pending invite row and enqueues the outbound email\n- Mail worker sends the invite via a third-party provider\n- Invitee follows the link:\n  - Already has an account: signs in and lands on the team with the pre-selected role\n  - No account yet: completes signup, then lands on the team\n- Eleven steps including the account-branch diamond, so the diagram runs top-down",
+      "source": "flowchart TD\n  Lead([Team lead])\n  Settings[\"Open Team Settings\"]\n  Enter[\"Enter email + pick role\"]\n  Invite[\"Click Invite\"]\n  API1[\"API creates pending invite\"]\n  Queue[\"Enqueue in mail worker\"]\n  Send[\"Send email via provider\"]\n  Click[\"Invitee clicks link\"]\n  Signup{\"Has account?\"}\n  Login[\"Log in\"]\n  Register[\"Sign up\"]\n  Join[\"Added to team with role\"]\n\n  Lead --> Settings --> Enter --> Invite --> API1 --> Queue --> Send --> Click --> Signup\n  Signup -- yes --> Login --> Join\n  Signup -- no --> Register --> Join"
+    },
+    {
+      "id": "decisions",
+      "kind": "dependency map",
+      "title": "Key decisions and what they shape",
+      "caption": "The five v1 decisions and the constraints they cascade into. Read left-to-right to trace **why** a constraint exists; read right-to-left to find **which decision** to revisit if a downstream constraint no longer holds.",
+      "detail": "- Each decision on the left drives one or more downstream implications on the right\n- Three implication shapes:\n  - **Implementation choice** we're committed to\n  - **Out-of-scope** item\n  - **Open question** we know we owe an answer on\n- The map is deliberately shallow so a reader can hold the whole thing in one glance",
+      "source": "flowchart LR\n  D1[\"One list per team\"]\n  D2[\"Optimistic UI\"]\n  D3[\"WS gateway separate from API\"]\n  D4[\"Postgres, not document store\"]\n  D5[\"Magic-link guest access\"]\n\n  D1 --> OOS1[\"Out of scope:\\nmulti-project\"]\n  D2 --> R1[\"Requires rollback on server reject\"]\n  D2 --> R2[\"Live sync feels correct\"]\n  D3 --> R3[\"Independent scaling of connections\"]\n  D3 --> R4[\"API deploys don't drop clients\"]\n  D4 --> R5[\"Relational joins across users/teams/tasks\"]\n  D5 --> R6[\"Read-only stakeholder access\"]\n  D5 --> OQ1[\"Open question:\\nlink expiration policy\"]"
+    }
+  ]
+}

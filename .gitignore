@@ -1,0 +1,7 @@
+node_modules/
+*.log
+.DS_Store
+example/example-visualizer.html
+example/backups/
+generated/
+.idea

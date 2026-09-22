@@ -1,0 +1,3288 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Spec-tacle</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #fafaf7;
+    --panel: #ffffff;
+    --ink: #1a1a1a;
+    --ink-dim: #6b6b6b;
+    --line: #e4e4dd;
+    --accent: #2c5f8a;
+    --accent-soft: #eaf2fa;
+    --warn: #b45309;
+    --ok: #2f7a3d;
+    --diff-add: #e8f5e9;
+    --diff-del: #fdecea;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #16181c;
+      --panel: #1f2229;
+      --ink: #e8e8e6;
+      --ink-dim: #9a9a92;
+      --line: #2e3138;
+      --accent: #7fb2df;
+      --accent-soft: #263444;
+      --diff-add: #1e3a24;
+      --diff-del: #402224;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  header.sticky-header {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 8px 24px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--line);
+    box-shadow: 0 1px 8px rgba(0, 0, 0, 0.06);
+    flex-wrap: wrap;
+  }
+  header.sticky-header .header-title { display: flex; align-items: baseline; gap: 10px; min-width: 0; flex: 1 1 auto; }
+  header.sticky-header h1 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  header.sticky-header .subtitle {
+    color: var(--ink-dim);
+    font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  header.sticky-header .header-actions {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    flex-wrap: wrap;
+    flex-shrink: 0;
+  }
+  header.sticky-header .server-note { font-size: 12px; color: var(--ink-dim); margin-left: 4px; }
+  header.sticky-header .server-note.ok { color: var(--ok); }
+  header.sticky-header .server-note.err { color: var(--warn); }
+  header.sticky-header button { padding: 4px 10px; font-size: 13px; }
+  button {
+    font: inherit;
+    padding: 6px 12px;
+    border: 1px solid var(--line);
+    background: var(--panel);
+    color: var(--ink);
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  button:hover { background: var(--accent-soft); border-color: var(--accent); }
+  button.primary { background: var(--accent); color: white; border-color: var(--accent); }
+  button.primary:hover { opacity: 0.9; }
+
+  main { padding: 20px 24px; max-width: 1200px; margin: 0 auto; }
+
+  section.summary {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin-bottom: 20px;
+  }
+  section.summary h2 { margin: 0 0 8px; font-size: 15px; font-weight: 600; color: var(--ink-dim); text-transform: uppercase; letter-spacing: 0.5px; }
+  section.summary .summary-heading {
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+  }
+  section.summary .summary-heading h1 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 600;
+    line-height: 1.2;
+  }
+  section.summary .summary-heading .section-label {
+    margin: 0;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--ink-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  section.summary .summary-heading .subtitle {
+    font-size: 12px;
+    color: var(--ink-dim);
+  }
+  section.summary .block { margin-bottom: 14px; }
+  section.summary .block:last-child { margin-bottom: 0; }
+  section.summary .block-label { font-size: 12px; font-weight: 600; color: var(--accent); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+  section.summary ul.summary-list { margin: 0; padding-left: 20px; }
+  section.summary ul.summary-list li {
+    margin: 4px 0;
+    padding: 2px 6px;
+    border-radius: 3px;
+    cursor: text;
+  }
+  section.summary ul.summary-list li:hover { background: var(--bg); }
+  section.summary ul.summary-list li[contenteditable="true"] {
+    outline: 2px solid var(--accent);
+    background: var(--panel);
+    cursor: text;
+    list-style-position: inside;
+  }
+  section.summary .add-bullet {
+    font-size: 12px;
+    padding: 2px 8px;
+    margin-top: 4px;
+    color: var(--ink-dim);
+    background: transparent;
+    border: 1px dashed var(--line);
+  }
+  section.summary .add-bullet:hover { color: var(--accent); border-color: var(--accent); background: transparent; }
+  section.summary .edit-hint { font-size: 11px; color: var(--ink-dim); margin-top: 8px; font-style: italic; }
+
+  .diagram-card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    margin-bottom: 20px;
+    overflow: hidden;
+  }
+  .diagram-header {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .diagram-header h3 { margin: 0; font-size: 16px; font-weight: 600; }
+  .diagram-header .kind {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--accent);
+    background: var(--accent-soft);
+    padding: 2px 8px;
+    border-radius: 10px;
+  }
+  .diagram-caption {
+    padding: 8px 16px;
+    color: var(--ink-dim);
+    font-size: 12.5px;
+    font-style: italic;
+    border-bottom: 1px solid var(--line);
+    cursor: text;
+    line-height: 1.5;
+  }
+  .diagram-caption:hover { background: var(--bg); }
+  .diagram-caption[contenteditable="true"] {
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
+    background: var(--panel);
+  }
+  .diagram-caption:empty::before {
+    content: "Double-click to add a caption";
+    color: var(--ink-dim);
+    font-style: italic;
+  }
+  details.diagram-detail {
+    border-bottom: 1px solid var(--line);
+    background: var(--bg);
+    font-size: 13px;
+    color: var(--ink-dim);
+  }
+  details.diagram-detail > summary {
+    padding: 10px 16px;
+    cursor: pointer;
+    color: var(--accent);
+    font-weight: 500;
+    user-select: none;
+    outline: none;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  details.diagram-detail > summary::-webkit-details-marker { display: none; }
+  details.diagram-detail > summary::before {
+    content: "▸";
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    font-size: 18px;
+    line-height: 1;
+    color: var(--accent);
+    background: var(--accent-soft);
+    border-radius: 5px;
+    transition: transform 0.15s, background 0.12s;
+    flex-shrink: 0;
+  }
+  details.diagram-detail[open] > summary::before { transform: rotate(90deg); }
+  details.diagram-detail > summary:hover { color: var(--ink); }
+  details.diagram-detail > summary:hover::before { background: var(--accent); color: var(--panel); }
+  details.diagram-detail .detail-content {
+    padding: 4px 20px 12px 28px;
+    color: var(--ink);
+    white-space: pre-wrap;
+    line-height: 1.5;
+    cursor: text;
+    border-radius: 3px;
+  }
+  details.diagram-detail .detail-content:hover { background: var(--panel); }
+  details.diagram-detail .detail-content[contenteditable="true"] {
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
+    background: var(--panel);
+    cursor: text;
+  }
+  details.diagram-detail .detail-content:empty::before {
+    content: "Double-click to add more detail about this diagram";
+    color: var(--ink-dim);
+    font-style: italic;
+  }
+  .diagram-body {
+    display: flex;
+    align-items: stretch;
+  }
+  @media (max-width: 900px) {
+    .diagram-body { flex-direction: column; }
+  }
+  .diagram-canvas {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 20px;
+    overflow: auto;
+    min-height: 200px;
+    background: var(--bg);
+    position: relative;
+  }
+  .diagram-body { min-height: 360px; }
+  .diagram-resize-handle {
+    height: 9px;
+    cursor: ns-resize;
+    background: var(--bg);
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+    position: relative;
+    user-select: none;
+    touch-action: none;
+  }
+  .diagram-resize-handle::after {
+    content: "";
+    position: absolute;
+    top: 3px; left: 50%; transform: translateX(-50%);
+    width: 36px; height: 2px;
+    background: var(--ink-dim);
+    border-radius: 1px;
+    opacity: 0.35;
+    transition: opacity 0.12s, background 0.12s, width 0.12s;
+  }
+  .diagram-resize-handle:hover::after,
+  .diagram-resize-handle.dragging::after {
+    opacity: 1;
+    background: var(--accent);
+    width: 60px;
+  }
+  .diagram-canvas svg {
+    width: 100% !important;
+    max-width: none !important;
+    max-height: 100%;
+    height: auto;
+    cursor: default;
+    overflow: visible;
+    display: block;
+  }
+  .diagram-canvas .node { cursor: grab; }
+  .diagram-canvas .node.dragging { cursor: grabbing; opacity: 0.85; }
+  /* Roomier arrow labels — hide mermaid's own tight rect and give the span its
+     own padded pill background. foreignObject must overflow so the padded span
+     isn't clipped by the tight width/height mermaid set. */
+  .diagram-canvas g.edgeLabels foreignObject { overflow: visible; }
+  .diagram-canvas g.edgeLabels rect { display: none; }
+  .diagram-canvas g.edgeLabels span.edgeLabel,
+  .diagram-canvas g.edgeLabels .edgeLabel > div {
+    padding: 4px 10px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 5px;
+    color: var(--ink);
+    display: inline-block;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    line-height: 1.35;
+    white-space: nowrap;
+  }
+  /* When the label ships as a bare div (no inner span), don't double-pad. */
+  .diagram-canvas g.edgeLabels .edgeLabel > div:has(> span.edgeLabel) {
+    padding: 0; background: transparent; border: 0; box-shadow: none;
+  }
+  .diagram-canvas .node.selected > rect,
+  .diagram-canvas .node.selected > circle,
+  .diagram-canvas .node.selected > polygon,
+  .diagram-canvas .node.selected > path { stroke: var(--warn) !important; stroke-width: 3 !important; }
+  .diagram-canvas .edgePath.selected path { stroke: var(--warn) !important; stroke-width: 3 !important; }
+  /* Handle wrap: hidden by default, visible on hover. The wrap holds both a
+     fat transparent hit-circle and a small visible dot, so pointer targets are
+     easy to grab without cluttering the arrow visually. */
+  .diagram-canvas .edge-handle-wrap,
+  .diagram-canvas .edge-endpoint-wrap {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.12s;
+    cursor: grab;
+  }
+  .diagram-canvas .edge-handle-wrap.visible,
+  .diagram-canvas .edge-endpoint-wrap.visible,
+  .diagram-canvas .edge-handle-wrap.dragging,
+  .diagram-canvas .edge-endpoint-wrap.dragging {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .diagram-canvas .edge-handle-wrap.dragging,
+  .diagram-canvas .edge-endpoint-wrap.dragging { cursor: grabbing; }
+  .diagram-canvas .grab-area {
+    fill: rgba(0, 0, 0, 0.001); /* invisible but hit-testable */
+    stroke: none;
+    pointer-events: all;
+  }
+  .diagram-canvas .edge-handle {
+    fill: var(--accent);
+    fill-opacity: 0.85;
+    stroke: var(--accent);
+    stroke-width: 1.5;
+    pointer-events: none;
+  }
+  .diagram-canvas .edge-handle-wrap.dragging .edge-handle,
+  .diagram-canvas .edge-handle-wrap:hover .edge-handle { fill-opacity: 1; }
+  .diagram-canvas .edge-endpoint {
+    fill-opacity: 0.9;
+    stroke-width: 1.5;
+    pointer-events: none;
+  }
+  .diagram-canvas .edge-endpoint-wrap.dragging .edge-endpoint,
+  .diagram-canvas .edge-endpoint-wrap:hover .edge-endpoint { fill-opacity: 1; }
+  .diagram-canvas .edge-endpoint-source { fill: var(--ok); stroke: var(--ok); }
+  .diagram-canvas .edge-endpoint-target { fill: var(--warn); stroke: var(--warn); }
+
+  /* Side connector dots: JS toggles .visible when the node or a dot is hovered. */
+  .diagram-canvas .connect-dot-wrap {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.12s;
+    cursor: crosshair;
+  }
+  .diagram-canvas .connect-dot-wrap.visible,
+  .diagram-canvas .connect-dot-wrap.dragging {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .diagram-canvas .connect-dot-wrap .connect-dot {
+    fill: var(--accent);
+    stroke: var(--panel);
+    stroke-width: 1.5;
+    pointer-events: none;
+    transition: fill 0.12s;
+  }
+  .diagram-canvas .connect-dot-wrap.dragging .connect-dot { fill: var(--warn); }
+
+  /* Node-corner shape/type button — same reveal-on-hover pattern as the dots. */
+  .diagram-canvas .node-tool-wrap {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.12s;
+    cursor: pointer;
+  }
+  .diagram-canvas .node-tool-wrap.visible {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .diagram-canvas .node-tool-hit {
+    fill: rgba(0, 0, 0, 0.001);
+    stroke: none;
+    pointer-events: all;
+  }
+  .diagram-canvas .node-tool-bg {
+    fill: var(--panel);
+    stroke: var(--accent);
+    stroke-width: 1.5;
+    pointer-events: none;
+    transition: fill 0.12s;
+  }
+  .diagram-canvas .node-tool-wrap:hover .node-tool-bg { fill: var(--accent-soft); }
+  .diagram-canvas .node-tool-icon {
+    fill: var(--accent);
+    font-size: 12px;
+    font-family: -apple-system, sans-serif;
+    pointer-events: none;
+    user-select: none;
+    transition: fill 0.12s;
+  }
+  .diagram-canvas .node-tool-wrap:hover .node-tool-icon { fill: var(--warn); }
+
+  /* Hover-tooltip for node/arrow descriptions (click to edit). Positioned
+     via JS in fixed coords near the hovered element. */
+  .element-tooltip {
+    position: fixed;
+    z-index: 25;
+    max-width: 320px;
+    padding: 8px 12px;
+    background: var(--panel);
+    color: var(--ink);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    font-size: 12.5px;
+    line-height: 1.45;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.16);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.12s;
+    cursor: text;
+    white-space: pre-wrap;
+  }
+  .element-tooltip.visible { opacity: 1; pointer-events: auto; }
+  .element-tooltip.editing { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .element-tooltip.empty { color: var(--ink-dim); font-style: italic; }
+  .element-tooltip .tooltip-hint {
+    display: block;
+    margin-top: 4px;
+    font-size: 10.5px;
+    color: var(--ink-dim);
+    font-style: italic;
+  }
+
+  /* HTML input floated inside the canvas for annotation / rename fallback. */
+  .diagram-canvas .inline-overlay-input {
+    position: absolute;
+    z-index: 15;
+    font: inherit;
+    padding: 4px 8px;
+    border: 2px solid var(--accent);
+    border-radius: 4px;
+    background: var(--panel);
+    color: var(--ink);
+    min-width: 160px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.18);
+  }
+  .diagram-canvas textarea.inline-overlay-input {
+    min-height: 56px;
+    resize: vertical;
+    font-family: inherit;
+  }
+  .diagram-canvas .node.drop-target > rect,
+  .diagram-canvas .node.drop-target > circle,
+  .diagram-canvas .node.drop-target > polygon,
+  .diagram-canvas .node.drop-target > path {
+    stroke: var(--warn) !important;
+    stroke-width: 3.5 !important;
+  }
+  /* Invisible fat hover overlay for arrows so pointerenter is easy to trigger */
+  .diagram-canvas .edge-hover-overlay {
+    fill: none;
+    stroke: transparent;
+    stroke-width: 22;
+    pointer-events: stroke;
+    cursor: pointer;
+  }
+
+  /* Shape-picker context menu */
+  #shape-menu {
+    position: fixed;
+    z-index: 30;
+    background: var(--panel);
+    color: var(--ink);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 6px;
+    min-width: 200px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+    display: none;
+  }
+  #shape-menu.open { display: block; }
+  #shape-menu .menu-header {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--ink-dim);
+    padding: 6px 10px 4px;
+  }
+  #shape-menu button.shape-btn {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 6px 10px;
+    border: none;
+    background: transparent;
+    color: var(--ink);
+    text-align: left;
+    cursor: pointer;
+    border-radius: 4px;
+    font: inherit;
+    width: 100%;
+  }
+  #shape-menu button.shape-btn:hover { background: var(--accent-soft); }
+  #shape-menu .shape-preview {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 18px;
+    color: var(--accent);
+    flex-shrink: 0;
+  }
+  #shape-menu .shape-preview svg { width: 100%; height: 100%; }
+  #shape-menu .shape-label { font-size: 13px; }
+  .diagram-canvas [contenteditable="true"] {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    background: var(--panel);
+    color: var(--ink);
+    border-radius: 3px;
+    padding: 0 4px;
+    min-width: 20px;
+    cursor: text;
+  }
+
+  details.source-pane {
+    flex: 0 0 36px;
+    border-left: 1px solid var(--line);
+    background: var(--panel);
+    overflow: hidden;
+    transition: flex-basis 0.18s ease;
+    display: flex;
+    flex-direction: column;
+  }
+  details.source-pane[open] {
+    flex: 0 1 40%;
+    min-width: 280px;
+  }
+  @media (max-width: 900px) {
+    details.source-pane { flex: 0 0 auto; border-left: none; border-top: 1px solid var(--line); }
+    details.source-pane[open] { min-width: 0; }
+  }
+  details.source-pane > summary {
+    padding: 10px 8px;
+    cursor: pointer;
+    color: var(--accent);
+    text-align: center;
+    user-select: none;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+  }
+  details.source-pane > summary::-webkit-details-marker { display: none; }
+  details.source-pane > summary .arrow {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    font-size: 18px;
+    line-height: 1;
+    background: var(--accent-soft);
+    color: var(--accent);
+    border-radius: 5px;
+    transition: transform 0.15s, background 0.12s;
+    flex-shrink: 0;
+  }
+  details.source-pane > summary:hover .arrow { background: var(--accent); color: var(--panel); }
+  details.source-pane[open] > summary .arrow { transform: rotate(180deg); }
+  details.source-pane > summary .label { display: none; }
+  details.source-pane[open] > summary .label { display: inline; }
+  details.source-pane:hover:not([open]) > summary { background: var(--bg); }
+  details.source-pane > summary:hover { color: var(--ink); }
+  details.source-pane textarea {
+    flex: 1;
+    width: 100%;
+    border: 0;
+    padding: 12px 14px;
+    font: 12px/1.5 "SF Mono", Menlo, Consolas, monospace;
+    background: var(--panel);
+    color: var(--ink);
+    resize: none;
+    min-height: 260px;
+  }
+  details.source-pane textarea:focus { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+  .diagram-footer {
+    padding: 8px 16px;
+    border-top: 1px solid var(--line);
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+  }
+  .diagram-footer .status { font-size: 12px; color: var(--ink-dim); }
+  .diagram-footer .status:not(.dirty) { display: none; }
+  .diagram-footer .status.dirty { color: var(--warn); }
+  .diagram-footer .status.dirty::before { content: "● "; color: var(--warn); }
+  .diagram-footer .actions { display: flex; gap: 6px; }
+  .diagram-footer button { font-size: 12px; padding: 4px 10px; }
+
+  .diagram-notes {
+    padding: 10px 16px;
+    border-top: 1px solid var(--line);
+    background: var(--bg);
+    font-size: 13px;
+    color: var(--ink);
+    cursor: text;
+    min-height: 40px;
+    line-height: 1.5;
+  }
+  .diagram-notes.empty { color: var(--ink-dim); font-style: italic; }
+  .diagram-notes:hover:not([contenteditable="true"]) { background: var(--panel); }
+  .diagram-notes[contenteditable="true"] {
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
+    font-style: normal;
+    color: var(--ink);
+    background: var(--panel);
+  }
+  .diagram-notes ul { margin: 4px 0 4px 0; padding-left: 20px; }
+  .diagram-notes p { margin: 4px 0; }
+
+  .annotations {
+    padding: 12px 16px;
+    border-top: 1px solid var(--line);
+    background: var(--bg);
+    max-height: 240px;
+    overflow-y: auto;
+    display: none; /* replaced by .diagram-notes; kept for state compat only */
+  }
+  .annotations h4 { margin: 0 0 8px; font-size: 12px; font-weight: 600; color: var(--ink-dim); text-transform: uppercase; letter-spacing: 0.5px; }
+  .annotation {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 8px;
+    padding: 6px 8px;
+    align-items: center;
+    border-radius: 4px;
+    font-size: 13px;
+  }
+  .annotation:hover { background: var(--panel); }
+  .annotation .target { font-family: monospace; font-size: 12px; color: var(--accent); }
+  .annotation .note { color: var(--ink); }
+  .annotation button.remove {
+    padding: 2px 6px; font-size: 11px; border: none; background: transparent; color: var(--ink-dim);
+  }
+  .annotation button.remove:hover { color: var(--warn); background: transparent; }
+  .annotation-input {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 8px;
+    padding: 8px;
+    margin-top: 4px;
+    background: var(--panel);
+    border-radius: 4px;
+    align-items: center;
+  }
+  .annotation-input .target { font-family: monospace; font-size: 12px; color: var(--accent); padding: 4px 8px; background: var(--accent-soft); border-radius: 3px; }
+  .annotation-input input {
+    font: inherit; padding: 4px 8px; border: 1px solid var(--line); border-radius: 3px; background: var(--bg); color: var(--ink);
+  }
+
+  .hint {
+    font-size: 11.5px;
+    font-style: italic;
+    color: var(--ink-dim);
+    padding: 8px 20px 12px 28px;
+    background: var(--bg);
+    border-top: 1px dashed var(--line);
+    line-height: 1.5;
+  }
+
+  .diff-view { padding: 12px 16px; border-top: 1px solid var(--line); background: var(--bg); font: 12px/1.5 "SF Mono", Menlo, Consolas, monospace; }
+  .diff-view .diff-line.add { background: var(--diff-add); }
+  .diff-view .diff-line.del { background: var(--diff-del); text-decoration: line-through; opacity: 0.8; }
+  .diff-view .diff-line { padding: 1px 4px; white-space: pre-wrap; }
+
+  #export-modal {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.55);
+    display: none; align-items: center; justify-content: center; z-index: 10;
+    padding: 24px;
+  }
+  #export-modal.open { display: flex; }
+  #export-modal .box {
+    background: var(--panel); color: var(--ink); border-radius: 8px;
+    padding: 20px; max-width: 720px; width: 100%; max-height: 80vh; display: flex; flex-direction: column;
+  }
+  #export-modal h3 { margin: 0 0 8px; }
+  #export-modal p { margin: 0 0 12px; color: var(--ink-dim); }
+  #export-modal textarea {
+    flex: 1; min-height: 240px; font: 12px/1.5 "SF Mono", Menlo, Consolas, monospace;
+    background: var(--bg); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 12px;
+  }
+  #export-modal .row { display: flex; gap: 8px; margin-top: 12px; justify-content: flex-end; }
+</style>
+</head>
+<body>
+
+<header class="sticky-header">
+  <div class="header-actions">
+    <button id="btn-update-spec" class="primary" title="Save all edits back into the spec file (creates a timestamped backup first)">Update spec</button>
+    <button id="btn-undo-spec" title="Restore the spec file from the most recent backup">Undo</button>
+    <button id="btn-export" title="Copy or download a JSON payload of every in-browser edit">Export JSON</button>
+    <button id="btn-reset" title="Discard all in-browser edits (does not touch the spec file)">Reset</button>
+    <span id="server-status" class="server-note"></span>
+  </div>
+</header>
+
+<main id="app"></main>
+
+<div id="shape-menu" role="menu"></div>
+
+<div id="export-modal">
+  <div class="box">
+    <h3>Change payload</h3>
+    <p>Copy this JSON and hand it to <code>spec-tacle</code> to reconcile the edits back into the spec.</p>
+    <textarea id="export-json" readonly></textarea>
+    <div class="row">
+      <button id="btn-copy" title="Copy the JSON payload to the clipboard">Copy</button>
+      <button id="btn-download" title="Download the JSON payload as a file">Download JSON</button>
+      <button id="btn-close-modal" title="Close this dialog">Close</button>
+    </div>
+  </div>
+</div>
+
+<script id="specdata" type="application/json">__SPEC_DATA__</script>
+
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>
+<script>
+(function () {
+  const data = JSON.parse(document.getElementById('specdata').textContent);
+  // The visible title elements are created later, inside the summary section.
+  document.title = 'Spec-tacle · ' + (data.title || '');
+
+  // Summary is bullets. Accept a string for back-compat by splitting on newlines.
+  const asBullets = (v) => Array.isArray(v) ? v.slice() : (v ? String(v).split(/\r?\n/).map(s => s.replace(/^[-*]\s+/, '').trim()).filter(Boolean) : []);
+  const initialWhat = asBullets(data.summary?.what);
+  const initialWhy  = asBullets(data.summary?.why);
+
+  const summarySection = document.createElement('section');
+  summarySection.className = 'summary';
+  summarySection.innerHTML = `
+    <div class="summary-heading">
+      <h1 id="doc-title"></h1>
+      <span class="section-label">Technical summary</span>
+      <span class="subtitle" id="doc-subtitle"></span>
+    </div>
+    <div class="block">
+      <div class="block-label">What</div>
+      <ul id="summary-what-list" class="summary-list" data-summary="what"></ul>
+      <button type="button" class="add-bullet" data-target="what" title="Add a new bullet to the What list">+ Add bullet</button>
+    </div>
+    <div class="block">
+      <div class="block-label">Why</div>
+      <ul id="summary-why-list" class="summary-list" data-summary="why"></ul>
+      <button type="button" class="add-bullet" data-target="why" title="Add a new bullet to the Why list">+ Add bullet</button>
+    </div>
+    <div class="edit-hint">Double-click a bullet to edit. Wrap key terms in **double asterisks** to bold them. Enter commits, Esc cancels, empty commit removes the bullet.</div>
+  `;
+  document.getElementById('app').appendChild(summarySection);
+  document.getElementById('doc-title').textContent = data.title || 'Spec-tacle';
+  document.getElementById('doc-subtitle').textContent = data.subtitle || '';
+  const whatUl = document.getElementById('summary-what-list');
+  const whyUl  = document.getElementById('summary-why-list');
+
+  mermaid.initialize({
+    startOnLoad: false,
+    theme: window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'default',
+    securityLevel: 'loose',
+    flowchart: { htmlLabels: true, curve: 'basis' }
+  });
+
+  const state = {
+    summary: {
+      originalWhat: initialWhat.slice(),
+      currentWhat: initialWhat.slice(),
+      originalWhy: initialWhy.slice(),
+      currentWhy: initialWhy.slice()
+    },
+    diagrams: data.diagrams.map(d => ({
+      ...d,
+      originalSource: d.source,
+      currentSource: d.source,
+      originalCaption: d.caption || '',
+      currentCaption: d.caption || '',
+      originalDetail: d.detail || '',
+      currentDetail: d.detail || '',
+      originalDescriptions: JSON.parse(JSON.stringify(d.descriptions || {})),
+      descriptions: JSON.parse(JSON.stringify(d.descriptions || {})),
+      originalNotes: d.notes || '',
+      currentNotes: d.notes || '',
+      nodePositions: {},
+      edgeWaypoints: {},
+      annotations: [],
+      pendingRelocations: {},
+      pendingEditNodeId: null,
+      selectedNodeId: null
+    }))
+  };
+
+  const sectionMap = Object.assign({ summaryWhat: 'summary:what', summaryWhy: 'summary:why' }, data.sectionMap || {});
+  const serverBase = (data.serverUrl || (location.protocol === 'file:' ? null : location.origin));
+
+  // --- Undo stack (Ctrl/Cmd+Z) ---
+  const undoStack = [];
+  const UNDO_LIMIT = 100;
+
+  function snapshotState() {
+    return JSON.stringify({
+      summary: {
+        currentWhat: state.summary.currentWhat,
+        currentWhy: state.summary.currentWhy
+      },
+      diagrams: state.diagrams.map(d => ({
+        currentSource: d.currentSource,
+        currentCaption: d.currentCaption,
+        currentDetail: d.currentDetail,
+        currentNotes: d.currentNotes,
+        descriptions: d.descriptions,
+        nodePositions: d.nodePositions,
+        edgeWaypoints: d.edgeWaypoints,
+        annotations: d.annotations
+      }))
+    });
+  }
+
+  function pushUndo() {
+    const snap = snapshotState();
+    if (undoStack.length && undoStack[undoStack.length - 1] === snap) return;
+    undoStack.push(snap);
+    if (undoStack.length > UNDO_LIMIT) undoStack.shift();
+  }
+
+  function restoreSnapshot(snap) {
+    const s = JSON.parse(snap);
+    state.summary.currentWhat = s.summary.currentWhat.slice();
+    state.summary.currentWhy = s.summary.currentWhy.slice();
+    renderBullets('what');
+    renderBullets('why');
+    s.diagrams.forEach((d, i) => {
+      const cur = state.diagrams[i];
+      const changed =
+        cur.currentSource !== d.currentSource ||
+        cur.currentCaption !== d.currentCaption ||
+        cur.currentDetail !== d.currentDetail ||
+        cur.currentNotes !== d.currentNotes ||
+        !deepEqual(cur.descriptions, d.descriptions) ||
+        !deepEqual(cur.nodePositions, d.nodePositions) ||
+        !deepEqual(cur.edgeWaypoints, d.edgeWaypoints) ||
+        !deepEqual(cur.annotations, d.annotations);
+      cur.currentSource = d.currentSource;
+      cur.currentCaption = d.currentCaption;
+      cur.currentDetail = d.currentDetail;
+      cur.currentNotes = d.currentNotes;
+      cur.descriptions = d.descriptions;
+      cur.nodePositions = d.nodePositions;
+      cur.edgeWaypoints = d.edgeWaypoints;
+      cur.annotations = d.annotations;
+      if (changed) {
+        const ta = document.querySelector(`textarea[data-source-idx="${i}"]`);
+        if (ta) ta.value = d.currentSource;
+        const capEl = document.querySelector(`[data-caption-idx="${i}"]`);
+        if (capEl) capEl.innerHTML = mdBold(d.currentCaption);
+        const detEl = document.querySelector(`[data-detail-idx="${i}"]`);
+        if (detEl) detEl.innerHTML = mdRich(d.currentDetail);
+        renderNotes(i);
+        renderDiagram(i);
+      }
+      markDirty(i);
+    });
+    markGlobalDirty();
+  }
+
+  function undo() {
+    if (!undoStack.length) return;
+    const snap = undoStack.pop();
+    restoreSnapshot(snap);
+  }
+
+  document.addEventListener('keydown', (e) => {
+    const t = e.target;
+    const inField = t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable);
+
+    // Ctrl/Cmd+Z → undo
+    if ((e.metaKey || e.ctrlKey) && (e.key === 'z' || e.key === 'Z') && !e.shiftKey) {
+      if (inField) return;
+      e.preventDefault();
+      undo();
+      return;
+    }
+    // Delete / Backspace → remove the selected node
+    if ((e.key === 'Delete' || e.key === 'Backspace')) {
+      if (inField) return;
+      if (deleteSelected()) e.preventDefault();
+      return;
+    }
+    // Escape → clear selection
+    if (e.key === 'Escape') {
+      if (inField) return;
+      deselectAll();
+      return;
+    }
+  });
+
+
+  data.diagrams.forEach((diagram, idx) => {
+    const card = document.createElement('div');
+    card.className = 'diagram-card';
+    card.dataset.idx = idx;
+    card.innerHTML = `
+      <div class="diagram-header">
+        <h3>${escapeHtml(diagram.title)}</h3>
+        <span class="kind">${escapeHtml(diagram.kind || 'diagram')}</span>
+      </div>
+      <div class="diagram-caption" data-caption-idx="${idx}" title="Double-click to edit (wrap key terms in **double asterisks** to bold)">${mdBold(diagram.caption || '')}</div>
+      <details class="diagram-detail" open>
+        <summary title="Show or hide the longer description of this diagram">About the ${escapeHtml(diagram.title)}</summary>
+        <div class="detail-content" data-detail-idx="${idx}" title="Double-click to edit the detail text. Use dash-space for bullets and two-space indent for nested bullets. Wrap key terms in **double asterisks** to bold.">${mdRich(diagram.detail || '')}</div>
+        <div class="hint">Hover a node or arrow to see a description tooltip; click the tooltip to edit it. Click a node to select it, then Delete/Backspace to remove it (and its edges). Drag a node to reposition; arrows and labels follow. Hover a node for its four side dots and shape-picker (◇). Drag a side dot to another node to create a new arrow, or into empty space to spawn a new node in edit mode. Hover an arrow for its handles: drag the blue circle (or the label itself) to bend, drag the green/orange endpoints to reconnect. Double-click a node, edge label, caption, detail, or bullet to edit its text inline. Click the "Add notes…" area below to jot general thoughts about this diagram. Wrap key terms in double asterisks to bold them. Ctrl/⌘+Z undoes the last edit.</div>
+      </details>
+      <div class="diagram-body" data-body-idx="${idx}">
+        <div class="diagram-canvas" data-canvas-idx="${idx}"></div>
+        <details class="source-pane">
+          <summary title="Show or hide the mermaid source for this diagram"><span class="arrow">◂</span><span class="label">Source</span></summary>
+          <textarea data-source-idx="${idx}" spellcheck="false" title="Edit the mermaid source directly">${escapeHtml(diagram.source)}</textarea>
+        </details>
+      </div>
+      <div class="diagram-resize-handle" data-resize-idx="${idx}" title="Drag up or down to resize this diagram"></div>
+      <div class="diagram-notes" data-notes-idx="${idx}" title="Click to add general notes about this diagram. Supports **bold** and dash-space bullets. Notes save into the spec on Update.">Add notes…</div>
+      <div class="annotations" data-annotations-idx="${idx}" hidden></div>
+      <div class="diagram-footer">
+        <span class="status" data-status-idx="${idx}"></span>
+        <div class="actions">
+          <button data-action="rerender" data-idx="${idx}" title="Re-parse the mermaid source and redraw this diagram">Re-render</button>
+          <button data-action="revert" data-idx="${idx}" title="Discard this diagram's in-browser edits">Revert</button>
+          <button data-action="diff" data-idx="${idx}" title="Show a line-diff of the current mermaid source vs the original">Show diff</button>
+        </div>
+      </div>
+      <div class="diff-view" data-diff-idx="${idx}" hidden></div>
+    `;
+    document.getElementById('app').appendChild(card);
+  });
+
+  state.diagrams.forEach((_, idx) => renderDiagram(idx));
+
+  // Click on empty diagram-canvas background → clear selection.
+  document.querySelectorAll('.diagram-canvas').forEach(cv => {
+    cv.addEventListener('click', (e) => {
+      const t = e.target;
+      const insideInteractive = t && t.closest && (
+        t.closest('.node') || t.closest('.edgePath') || t.closest('.edgeLabel') ||
+        t.closest('.connect-dot-wrap') || t.closest('.node-tool-wrap') ||
+        t.closest('.edge-handle-wrap') || t.closest('.edge-endpoint-wrap') ||
+        t.closest('.edge-hover-overlay')
+      );
+      if (!insideInteractive) deselectAll();
+    });
+  });
+
+  // Diagram resize handles — drag up/down to change the diagram body height.
+  document.querySelectorAll('.diagram-resize-handle').forEach(handle => {
+    handle.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0) return;
+      e.preventDefault();
+      const idx = +handle.dataset.resizeIdx;
+      const body = document.querySelector(`[data-body-idx="${idx}"]`);
+      if (!body) return;
+      const startY = e.clientY;
+      const startHeight = body.getBoundingClientRect().height;
+      handle.classList.add('dragging');
+      handle.setPointerCapture(e.pointerId);
+
+      const onMove = (ev) => {
+        const dy = ev.clientY - startY;
+        const next = Math.max(160, startHeight + dy);
+        body.style.height = next + 'px';
+      };
+      const onUp = () => {
+        handle.classList.remove('dragging');
+        handle.removeEventListener('pointermove', onMove);
+        handle.removeEventListener('pointerup', onUp);
+        handle.removeEventListener('lostpointercapture', onUp);
+      };
+      handle.addEventListener('pointermove', onMove);
+      handle.addEventListener('pointerup', onUp);
+      handle.addEventListener('lostpointercapture', onUp);
+    });
+  });
+
+  document.getElementById('app').addEventListener('input', (e) => {
+    if (e.target.matches('textarea[data-source-idx]')) {
+      const idx = +e.target.dataset.sourceIdx;
+      state.diagrams[idx].currentSource = e.target.value;
+      markDirty(idx);
+    }
+  });
+  // Push a single undo snapshot per focus session on a source textarea, so
+  // Ctrl+Z restores the pre-typing text instead of one keystroke at a time.
+  document.getElementById('app').addEventListener('focusin', (e) => {
+    if (e.target.matches('textarea[data-source-idx]')) pushUndo();
+  });
+
+  document.getElementById('app').addEventListener('click', (e) => {
+    const action = e.target.dataset.action;
+    const idx = +e.target.dataset.idx;
+    if (action === 'rerender') renderDiagram(idx);
+    if (action === 'revert') revertDiagram(idx);
+    if (action === 'diff') toggleDiff(idx);
+    if (e.target.classList.contains('remove') && e.target.dataset.annotationIdx !== undefined) {
+      const [dIdx, aIdx] = e.target.dataset.annotationIdx.split(':').map(Number);
+      pushUndo();
+      state.diagrams[dIdx].annotations.splice(aIdx, 1);
+      renderAnnotations(dIdx);
+      markDirty(dIdx);
+    }
+  });
+
+  // --- Editable summary bullets ---
+  function bulletsFor(key) {
+    return key === 'what' ? state.summary.currentWhat : state.summary.currentWhy;
+  }
+  function ulFor(key) { return key === 'what' ? whatUl : whyUl; }
+
+  function renderBullets(key) {
+    const list = bulletsFor(key);
+    const ul = ulFor(key);
+    ul.innerHTML = list.map((b, i) =>
+      `<li data-i="${i}" title="Double-click to edit. Shift+Enter for a new line. Add sub-bullets with two-space indented lines. Wrap key terms in **double asterisks** to bold.">${bulletInnerHTML(b)}</li>`
+    ).join('');
+    markGlobalDirty();
+  }
+
+  function editBulletAt(key, i) {
+    const li = ulFor(key).querySelector(`li[data-i="${i}"]`);
+    if (!li) return;
+    const original = bulletsFor(key)[i] || '';
+    inlineEdit(li, original, (next) => {
+      const arr = bulletsFor(key);
+      if (!next) arr.splice(i, 1); else arr[i] = next;
+      renderBullets(key);
+    }, { allowEmpty: true, multiline: true });
+  }
+
+  ['what', 'why'].forEach(key => {
+    const ul = ulFor(key);
+    ul.addEventListener('dblclick', (e) => {
+      const li = e.target.closest('li[data-i]');
+      if (!li) return;
+      e.stopPropagation();
+      editBulletAt(key, +li.dataset.i);
+    });
+    renderBullets(key);
+  });
+
+  document.querySelectorAll('.add-bullet').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const key = btn.dataset.target;
+      pushUndo();
+      const arr = bulletsFor(key);
+      arr.push('');
+      renderBullets(key);
+      editBulletAt(key, arr.length - 1);
+    });
+  });
+
+  // --- Editable diagram caption + detail ---
+  document.querySelectorAll('.diagram-caption').forEach(el => {
+    el.addEventListener('dblclick', (e) => {
+      e.stopPropagation();
+      const idx = +el.dataset.captionIdx;
+      inlineEdit(el, state.diagrams[idx].currentCaption, (next) => {
+        state.diagrams[idx].currentCaption = next;
+        el.innerHTML = mdBold(next);
+        markDirty(idx);
+      }, { allowEmpty: true });
+    });
+  });
+  document.querySelectorAll('.detail-content').forEach(el => {
+    el.addEventListener('dblclick', (e) => {
+      e.stopPropagation();
+      const idx = +el.dataset.detailIdx;
+      const wrapper = el.closest('details');
+      if (wrapper && !wrapper.open) wrapper.open = true;
+      inlineEdit(el, state.diagrams[idx].currentDetail, (next) => {
+        state.diagrams[idx].currentDetail = next;
+        el.innerHTML = mdRich(next);
+        markDirty(idx);
+      }, { multiline: true, allowEmpty: true });
+    });
+  });
+
+  // --- Free-form notes per diagram (click anywhere in the box to edit) ---
+  function renderNotes(idx) {
+    const el = document.querySelector(`[data-notes-idx="${idx}"]`);
+    if (!el) return;
+    const text = state.diagrams[idx].currentNotes || '';
+    if (text.trim()) {
+      el.classList.remove('empty');
+      el.innerHTML = mdRich(text);
+    } else {
+      el.classList.add('empty');
+      el.textContent = 'Add notes…';
+    }
+  }
+  document.querySelectorAll('.diagram-notes').forEach(el => {
+    const idx = +el.dataset.notesIdx;
+    renderNotes(idx);
+    el.addEventListener('click', () => {
+      if (el.getAttribute('contenteditable') === 'true') return;
+      el.classList.remove('empty');
+      // inlineEdit sets textContent to raw text (with any ** and - lines visible)
+      inlineEdit(el, state.diagrams[idx].currentNotes || '', (next) => {
+        state.diagrams[idx].currentNotes = next;
+        renderNotes(idx);
+        markDirty(idx);
+      }, { multiline: true, allowEmpty: true });
+    });
+  });
+
+  // --- Server round-trip ---
+  const serverStatusEl = document.getElementById('server-status');
+  function setServerStatus(msg, cls) {
+    serverStatusEl.textContent = msg;
+    serverStatusEl.className = 'server-note' + (cls ? ' ' + cls : '');
+  }
+
+  if (!serverBase) {
+    setServerStatus('Opened via file:// — start `python3 serve.py` and load through the server to enable Update spec.', 'err');
+    document.getElementById('btn-update-spec').disabled = true;
+    document.getElementById('btn-undo-spec').disabled = true;
+  } else {
+    setServerStatus(`server ${serverBase}`, 'ok');
+  }
+
+  document.getElementById('btn-update-spec').addEventListener('click', updateSpec);
+  document.getElementById('btn-undo-spec').addEventListener('click', undoSpec);
+
+  async function updateSpec() {
+    if (!serverBase) return;
+    const payload = {
+      specPath: data.specPath,
+      sections: {},
+      diagrams: {}
+    };
+    const toMarkdownBullets = (arr) => arr.filter(b => b.trim().length).map(b => `- ${b}`).join('\n');
+    if (bulletsChanged(state.summary.currentWhat, state.summary.originalWhat)) {
+      payload.sections[sectionMap.summaryWhat] = toMarkdownBullets(state.summary.currentWhat);
+    }
+    if (bulletsChanged(state.summary.currentWhy, state.summary.originalWhy)) {
+      payload.sections[sectionMap.summaryWhy] = toMarkdownBullets(state.summary.currentWhy);
+    }
+    state.diagrams.forEach(d => {
+      if (d.currentSource !== d.originalSource) payload.diagrams[d.id] = d.currentSource;
+      if (d.currentCaption !== d.originalCaption) {
+        payload.sections[`diagram:${d.id}:caption`] = d.currentCaption;
+      }
+      if (d.currentDetail !== d.originalDetail) {
+        payload.sections[`diagram:${d.id}:detail`] = d.currentDetail;
+      }
+      if (d.currentNotes !== d.originalNotes) {
+        payload.sections[`diagram:${d.id}:notes`] = d.currentNotes;
+      }
+    });
+    const nChanges = Object.keys(payload.sections).length + Object.keys(payload.diagrams).length;
+    if (!nChanges) { setServerStatus('nothing to update', 'ok'); return; }
+    setServerStatus('saving…');
+    try {
+      const res = await fetch(`${serverBase}/update-spec`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok || !body.ok) {
+        setServerStatus(`update failed: ${body.error || res.statusText || res.status}`, 'err');
+        return;
+      }
+      // Adopt the new baseline so further edits diff against the freshly-saved spec.
+      state.summary.originalWhat = state.summary.currentWhat.slice();
+      state.summary.originalWhy = state.summary.currentWhy.slice();
+      state.diagrams.forEach(d => {
+        d.originalSource = d.currentSource;
+        d.originalCaption = d.currentCaption;
+        d.originalDetail = d.currentDetail;
+        d.originalNotes = d.currentNotes;
+        d.originalDescriptions = JSON.parse(JSON.stringify(d.descriptions));
+      });
+      state.diagrams.forEach((_, i) => markDirty(i));
+      markGlobalDirty();
+      setServerStatus(body.changed ? `saved · backup ${body.backup}` : 'saved (no changes)', 'ok');
+    } catch (err) {
+      setServerStatus(`update failed: ${err.message}. Is serve.py running?`, 'err');
+    }
+  }
+
+  async function undoSpec() {
+    if (!serverBase) return;
+    if (!confirm('Undo the most recent Update — restore the last backup? The visualizer will still show your current in-browser edits until you refresh.')) return;
+    setServerStatus('undoing…');
+    try {
+      const res = await fetch(`${serverBase}/undo`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ specPath: data.specPath })
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok || !body.ok) {
+        setServerStatus(`undo failed: ${body.error || res.statusText || res.status}`, 'err');
+        return;
+      }
+      setServerStatus(`restored from ${body.restored_from} · ${body.remaining_backups} backup(s) remain · refresh to reload diagrams`, 'ok');
+    } catch (err) {
+      setServerStatus(`undo failed: ${err.message}. Is serve.py running?`, 'err');
+    }
+  }
+
+  function bulletsChanged(a, b) {
+    return a.length !== b.length || a.some((v, i) => v !== b[i]);
+  }
+  function markGlobalDirty() {
+    const s = state.summary;
+    const summaryDirty = bulletsChanged(s.currentWhat, s.originalWhat) || bulletsChanged(s.currentWhy, s.originalWhy);
+    const diagramsDirty = state.diagrams.some(d =>
+      d.currentSource !== d.originalSource ||
+      d.currentCaption !== d.originalCaption ||
+      d.currentDetail !== d.originalDetail ||
+      d.currentNotes !== d.originalNotes ||
+      !deepEqual(d.descriptions, d.originalDescriptions)
+    );
+    const btn = document.getElementById('btn-update-spec');
+    btn.classList.toggle('primary', summaryDirty || diagramsDirty);
+  }
+
+  document.getElementById('btn-export').addEventListener('click', showExport);
+  document.getElementById('btn-close-modal').addEventListener('click', () => {
+    document.getElementById('export-modal').classList.remove('open');
+  });
+  document.getElementById('btn-copy').addEventListener('click', () => {
+    const ta = document.getElementById('export-json');
+    ta.select();
+    document.execCommand('copy');
+  });
+  document.getElementById('btn-download').addEventListener('click', () => {
+    const blob = new Blob([document.getElementById('export-json').value], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'spec-tacle-edits.json';
+    a.click();
+  });
+  document.getElementById('btn-reset').addEventListener('click', () => {
+    if (!confirm('Reset all diagrams, annotations, captions, details, and summary edits (in-browser only — does not touch the spec file)?')) return;
+    pushUndo();
+    state.summary.currentWhat = state.summary.originalWhat.slice();
+    state.summary.currentWhy = state.summary.originalWhy.slice();
+    renderBullets('what');
+    renderBullets('why');
+    state.diagrams.forEach((d, i) => {
+      d.currentSource = d.originalSource;
+      d.currentCaption = d.originalCaption;
+      d.currentDetail = d.originalDetail;
+      d.currentNotes = d.originalNotes;
+      d.descriptions = JSON.parse(JSON.stringify(d.originalDescriptions));
+      d.nodePositions = {};
+      d.edgeWaypoints = {};
+      d.annotations = [];
+      document.querySelector(`textarea[data-source-idx="${i}"]`).value = d.originalSource;
+      const capEl = document.querySelector(`[data-caption-idx="${i}"]`);
+      if (capEl) capEl.innerHTML = mdBold(d.currentCaption);
+      const detEl = document.querySelector(`[data-detail-idx="${i}"]`);
+      if (detEl) detEl.innerHTML = mdRich(d.currentDetail);
+      renderNotes(i);
+      renderDiagram(i);
+    });
+    markGlobalDirty();
+  });
+
+  async function renderDiagram(idx) {
+    const diagram = state.diagrams[idx];
+    const canvas = document.querySelector(`[data-canvas-idx="${idx}"]`);
+    try {
+      const id = `mermaid-${idx}-${Date.now()}`;
+      const { svg } = await mermaid.render(id, diagram.currentSource);
+      canvas.innerHTML = svg;
+      // Pad the fresh viewBox so nodes have breathing room on all sides — especially
+      // for tall/narrow (TD) diagrams where a small sideways drag would otherwise
+      // trigger a viewBox expansion and shrink everything.
+      ensureViewBoxRoom(canvas);
+      wireInteractions(canvas, idx);
+      applyStoredPositions(canvas, idx);
+      renderAnnotations(idx);
+    } catch (err) {
+      canvas.innerHTML = `<pre style="color: var(--warn); white-space: pre-wrap;">Mermaid parse error:\n\n${escapeHtml(err.message || String(err))}</pre>`;
+    }
+  }
+
+  function ensureViewBoxRoom(canvas) {
+    const svg = canvas.querySelector('svg');
+    if (!svg) return;
+    const cur = (svg.getAttribute('viewBox') || '').split(/[\s,]+/).map(parseFloat);
+    if (cur.length !== 4 || !cur.every(Number.isFinite)) return;
+    let [x, y, w, h] = cur;
+    if (w <= 0 || h <= 0) return;
+
+    const padY = Math.max(40, h * 0.06);
+    let padX = Math.max(40, w * 0.08);
+
+    // Portrait diagrams would otherwise scale up massively when the SVG fills
+    // canvas width (aspect ratio mismatch). Pad horizontally so the padded
+    // aspect is at least ~1.0 — nodes render at a compact, readable size and
+    // the user can still resize with the handle if they want more room.
+    const paddedH = h + padY * 2;
+    const paddedW0 = w + padX * 2;
+    const minAspect = 1.0;
+    if (paddedW0 / paddedH < minAspect) {
+      const targetVBW = paddedH * minAspect;
+      const extra = (targetVBW - paddedW0) / 2;
+      padX += Math.max(0, extra);
+    }
+
+    x -= padX; w += padX * 2;
+    y -= padY; h += padY * 2;
+
+    svg.setAttribute('viewBox', `${x} ${y} ${w} ${h}`);
+    svg.setAttribute('width', w);
+    svg.setAttribute('height', h);
+    _viewBoxMin.set(canvas, { x, y, w, h });
+    _viewBoxAnim.delete(canvas);
+  }
+
+  function extractNodeId(node) {
+    // Mermaid v10 emits ids like `flowchart-Browser-0`; we want the middle segment.
+    const raw = node.id || '';
+    return raw.replace(/^flowchart-/, '').replace(/-\d+$/, '') || raw;
+  }
+
+  function pathEndpoints(pathEl, dAttr) {
+    // Prefer geometry-derived endpoints so we're robust to whatever curve command mermaid used.
+    try {
+      const len = pathEl.getTotalLength();
+      if (len > 0) {
+        const s = pathEl.getPointAtLength(0);
+        const e = pathEl.getPointAtLength(len);
+        return { start: { x: s.x, y: s.y }, end: { x: e.x, y: e.y } };
+      }
+    } catch (_) { /* fall through */ }
+    // Fallback: parse the first "M" and the final coordinate pair from d.
+    const m = /M\s*([-\d.]+)[ ,]([-\d.]+)/.exec(dAttr);
+    const nums = [...dAttr.matchAll(/[-\d.]+/g)].map(x => parseFloat(x[0]));
+    if (!m || nums.length < 4) return null;
+    return {
+      start: { x: parseFloat(m[1]), y: parseFloat(m[2]) },
+      end: { x: nums[nums.length - 2], y: nums[nums.length - 1] }
+    };
+  }
+
+  function bezierD(s, c, e) {
+    // Quadratic bezier passes near, not through, the control point. Convert so the
+    // curve actually passes through the drag waypoint by using c' = 2c - (s+e)/2.
+    const cx = 2 * c.x - (s.x + e.x) / 2;
+    const cy = 2 * c.y - (s.y + e.y) / 2;
+    return `M ${s.x},${s.y} Q ${cx},${cy} ${e.x},${e.y}`;
+  }
+
+  function midpoint(a, b) {
+    return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+  }
+
+  function offsetToward(from, to, distance) {
+    const dx = to.x - from.x;
+    const dy = to.y - from.y;
+    const len = Math.hypot(dx, dy);
+    if (len < 0.001) return { x: from.x, y: from.y };
+    return { x: from.x + (dx / len) * distance, y: from.y + (dy / len) * distance };
+  }
+
+  function findEditableTarget(container) {
+    // Mermaid with htmlLabels renders labels as <foreignObject><div><span>text</span>.
+    // Fall back through likely candidates; return null if we'd have to overlay an
+    // input over a raw SVG <text> element (caller prompts instead).
+    return container.querySelector('foreignObject span.nodeLabel')
+        || container.querySelector('foreignObject span.edgeLabel')
+        || container.querySelector('foreignObject span')
+        || container.querySelector('foreignObject p')
+        || container.querySelector('foreignObject div')
+        || null;
+  }
+
+  // --- Source-level edge parsing & rewriting (for endpoint reconnection) ---
+
+  function parseEdges(source) {
+    // Two grammars share a lookahead-based target so chained edges (A --> B --> C) split cleanly.
+    //   Form A: id shape? arrow (|label|)?         target      (arrow may be -->, ==>, -.->, --x, --o, <-->, <--)
+    //   Form B: id shape? -- label -->              target      (bare-word label between dashes)
+    const idRe = '[A-Za-z][A-Za-z0-9_]*';
+    const shapeRe = '(?:\\[[^\\]]*\\]|\\{[^}]*\\}|\\(\\([^)]*\\)\\)|\\(\\[[^\\]]*\\]\\)|\\([^)]*\\)|\\[\\([^)]*\\)\\]|\\[\\[[^\\]]*\\]\\]|\\[\\/[^\\/]*\\/\\]|\\[\\\\[^\\\\]*\\\\\\])?';
+    // Form A arrows: must contain '>' or '<' so we don't collide with Form B's opening dashes.
+    const arrowSimple = '(-{2,3}>|<-{2,3}>|<-{2,3}|-\\.->|=+>|--x|--o|<==>)';
+    const pattern = new RegExp(
+      `(${idRe})${shapeRe}\\s*(?:` +
+        `${arrowSimple}\\s*(?:\\|"?([^|"]+)"?\\|)?` +
+        `|` +
+        `(-{2,3})\\s+"?([^"|\\n]+?)"?\\s+(-{2,3}>)` +
+      `)\\s*(?=(${idRe}))`,
+      'g'
+    );
+    const edges = [];
+    let m;
+    while ((m = pattern.exec(source)) !== null) {
+      const src = m[1];
+      const arrow = m[2] || `${m[4]} ${m[5]} ${m[6]}`;
+      const label = m[3] || m[5] || null;
+      const target = m[7];
+      const end = m.index + m[0].length + target.length;
+      edges.push({
+        index: edges.length,
+        source: src,
+        arrow,
+        label,
+        target,
+        start: m.index,
+        end,
+        fullText: source.substring(m.index, end)
+      });
+    }
+    return edges;
+  }
+
+  function reconnectEdge(source, edge, side, newId) {
+    // Rebuild the edge's text with source or target swapped, then string-replace once in source.
+    const oldFull = edge.fullText;
+    let newFull;
+    if (side === 'target') {
+      const i = oldFull.lastIndexOf(edge.target);
+      if (i < 0) return null;
+      newFull = oldFull.substring(0, i) + newId + oldFull.substring(i + edge.target.length);
+    } else {
+      const i = oldFull.indexOf(edge.source);
+      if (i < 0) return null;
+      newFull = oldFull.substring(0, i) + newId + oldFull.substring(i + edge.source.length);
+    }
+    const next = source.replace(oldFull, newFull);
+    return next === source ? null : next;
+  }
+
+  function insertNodeDecl(source, id, label) {
+    const escaped = label.replace(/"/g, '\\"');
+    return insertLineAfterHeader(source, `  ${id}["${escaped}"]`);
+  }
+
+  function appendEdgeLine(source, fromId, toId) {
+    const trailing = source.endsWith('\n') ? '' : '\n';
+    return `${source}${trailing}  ${fromId} --> ${toId}`;
+  }
+
+  // Drop a node from mermaid source: its standalone shape declaration and any
+  // line that references it as an edge participant. Chained edges through the
+  // deleted node collapse (the whole line is removed) — users can rewire.
+  function deleteNodeFromSource(source, id) {
+    const wordRe = new RegExp(`(?:^|[\\s|>])${id}(?:$|[\\s\\[\\{\\(|<>\\-])`);
+    const kept = source.split('\n').filter(line => !wordRe.test(line));
+    return kept.join('\n').replace(/\n{3,}/g, '\n\n');
+  }
+
+  // Selection helpers — apply the .selected class to the SVG node whose extracted
+  // id matches, and clear any prior selection in every diagram.
+  function selectNode(diagramIdx, nodeId) {
+    state.diagrams.forEach((d, i) => {
+      d.selectedNodeId = (i === diagramIdx) ? nodeId : null;
+      const c = document.querySelector(`[data-canvas-idx="${i}"]`);
+      if (c) c.querySelectorAll('.node.selected').forEach(n => n.classList.remove('selected'));
+    });
+    const canvas = document.querySelector(`[data-canvas-idx="${diagramIdx}"]`);
+    if (!canvas) return;
+    const target = [...canvas.querySelectorAll('.node')].find(n => extractNodeId(n) === nodeId);
+    if (target) target.classList.add('selected');
+  }
+
+  function deselectAll() {
+    state.diagrams.forEach((d, i) => {
+      d.selectedNodeId = null;
+      const c = document.querySelector(`[data-canvas-idx="${i}"]`);
+      if (c) c.querySelectorAll('.node.selected').forEach(n => n.classList.remove('selected'));
+    });
+  }
+
+  function deleteSelected() {
+    for (let i = 0; i < state.diagrams.length; i++) {
+      const id = state.diagrams[i].selectedNodeId;
+      if (!id) continue;
+      pushUndo();
+      state.diagrams[i].currentSource = deleteNodeFromSource(state.diagrams[i].currentSource, id);
+      state.diagrams[i].selectedNodeId = null;
+      // Clean up any stored position / relocation for the deleted node.
+      delete state.diagrams[i].nodePositions[id];
+      delete state.diagrams[i].pendingRelocations[id];
+      syncSourceTextarea(i);
+      markDirty(i);
+      renderDiagram(i);
+      return true;
+    }
+    return false;
+  }
+
+  // Node bbox in svg-user-space coords, derived from the browser's rendered layout.
+  function getNodeSvgBBox(nodeEl) {
+    try {
+      const svgEl = nodeEl.ownerSVGElement || nodeEl.closest('svg');
+      if (!svgEl) return null;
+      const r = nodeEl.getBoundingClientRect();
+      if (!Number.isFinite(r.left) || !Number.isFinite(r.top) ||
+          !Number.isFinite(r.right) || !Number.isFinite(r.bottom)) return null;
+      const tl = clientToSvg(svgEl, r.left, r.top);
+      const br = clientToSvg(svgEl, r.right, r.bottom);
+      if (!Number.isFinite(tl.x) || !Number.isFinite(tl.y) ||
+          !Number.isFinite(br.x) || !Number.isFinite(br.y)) return null;
+      const x = Math.min(tl.x, br.x);
+      const y = Math.min(tl.y, br.y);
+      const w = Math.abs(br.x - tl.x);
+      const h = Math.abs(br.y - tl.y);
+      return { x, y, width: w, height: h, cx: x + w / 2, cy: y + h / 2 };
+    } catch (e) { return null; }
+  }
+
+  function insertLineAfterHeader(source, line) {
+    const lines = source.split('\n');
+    const first = (lines[0] || '').trim();
+    const isHeader = /^(flowchart|graph|stateDiagram(-v2)?|sequenceDiagram|classDiagram|erDiagram|journey)\b/.test(first);
+    lines.splice(isHeader ? 1 : 0, 0, line);
+    return lines.join('\n');
+  }
+
+  // Find the first mermaid shape declaration for `id` in `source` and return the shape
+  // substring (e.g. `["Web client"]`). Returns null when the id only appears as a bare
+  // reference inside edges.
+  function findNodeShape(source, id) {
+    const shape = '(\\[\\([^)]*\\)\\]|\\[\\[[^\\]]*\\]\\]|\\[/[^/]*/\\]|\\[\\\\[^\\\\]*\\\\\\]|\\[[^\\]]*\\]|\\{[^}]*\\}|\\(\\([^)]*\\)\\)|\\(\\[[^\\]]*\\]\\)|\\([^)]*\\))';
+    const re = new RegExp(`\\b${id}\\s*${shape}`);
+    const m = re.exec(source);
+    return m ? m[1] : null;
+  }
+
+  // Does the id already have its own declaration line (id + shape, nothing else)?
+  function hasStandaloneDecl(source, id) {
+    const shape = '(?:\\[\\([^)]*\\)\\]|\\[\\[[^\\]]*\\]\\]|\\[/[^/]*/\\]|\\[\\\\[^\\\\]*\\\\\\]|\\[[^\\]]*\\]|\\{[^}]*\\}|\\(\\([^)]*\\)\\)|\\(\\[[^\\]]*\\]\\)|\\([^)]*\\))';
+    return new RegExp(`(?:^|\\n)\\s*${id}\\s*${shape}\\s*(?=\\n|$)`).test(source);
+  }
+
+  // Guarantee `id` survives in the diagram by adding a standalone declaration
+  // when none exists. Preserves the existing shape+label if we can find one;
+  // falls back to a plain rectangle with `fallbackLabel`.
+  function ensureNodeDecl(source, id, fallbackLabel) {
+    if (hasStandaloneDecl(source, id)) return source;
+    const shape = findNodeShape(source, id) || `["${(fallbackLabel || id).replace(/"/g, '\\"')}"]`;
+    return insertLineAfterHeader(source, `  ${id}${shape}`);
+  }
+
+  const SHAPE_WRAPPERS = {
+    rectangle:     (l) => `["${l}"]`,
+    rounded:       (l) => `("${l}")`,
+    stadium:       (l) => `(["${l}"])`,
+    circle:        (l) => `(("${l}"))`,
+    doubleCircle:  (l) => `((("${l}")))`,
+    database:      (l) => `[("${l}")]`,
+    decision:      (l) => `{"${l}"}`,
+    hexagon:       (l) => `{{"${l}"}}`,
+    subroutine:    (l) => `[["${l}"]]`,
+    parallelogram: (l) => `[/"${l}"/]`,
+    trapezoid:     (l) => `[/"${l}"\\]`,
+  };
+
+  // Reverse of SHAPE_WRAPPERS: parse a raw shape substring back to its label.
+  function extractLabelFromShape(shape) {
+    const patterns = [
+      /^\[\(\s*"?(.*?)"?\s*\)\]$/,
+      /^\[\[\s*"?(.*?)"?\s*\]\]$/,
+      /^\[\/\s*"?(.*?)"?\s*\/\]$/,
+      /^\[\/\s*"?(.*?)"?\s*\\\]$/,
+      /^\[\\\s*"?(.*?)"?\s*\/\]$/,
+      /^\[\\\s*"?(.*?)"?\s*\\\]$/,
+      /^\(\(\(\s*"?(.*?)"?\s*\)\)\)$/,
+      /^\(\(\s*"?(.*?)"?\s*\)\)$/,
+      /^\(\[\s*"?(.*?)"?\s*\]\)$/,
+      /^\{\{\s*"?(.*?)"?\s*\}\}$/,
+      /^\{\s*"?(.*?)"?\s*\}$/,
+      /^\[\s*"?(.*?)"?\s*\]$/,
+      /^\(\s*"?(.*?)"?\s*\)$/,
+    ];
+    for (const re of patterns) {
+      const m = re.exec(shape);
+      if (m) return m[1];
+    }
+    return shape;
+  }
+
+  function changeNodeShape(source, id, shapeKey, fallbackLabel) {
+    const wrap = SHAPE_WRAPPERS[shapeKey];
+    if (!wrap) return null;
+
+    const shapeSearch = '(\\[\\([^)]*\\)\\]|\\[\\[[^\\]]*\\]\\]|\\[/[^/]*/\\]|\\[/[^\\\\]*\\\\\\]|\\[\\\\[^/]*/\\]|\\[\\\\[^\\\\]*\\\\\\]|\\[[^\\]]*\\]|\\{\\{[^}]*\\}\\}|\\{[^}]*\\}|\\(\\(\\([^)]*\\)\\)\\)|\\(\\(\\[[^\\]]*\\]\\)\\)|\\(\\([^)]*\\)\\)|\\(\\[[^\\]]*\\]\\)|\\([^)]*\\))';
+    const re = new RegExp(`\\b${id}\\s*${shapeSearch}`);
+    const m = re.exec(source);
+    if (m) {
+      const label = extractLabelFromShape(m[1]) || fallbackLabel || id;
+      const newShape = wrap(label.replace(/"/g, '\\"'));
+      return source.replace(m[0], `${id}${newShape}`);
+    }
+    // No existing shape decl anywhere — add a standalone one.
+    const label = (fallbackLabel || id).replace(/"/g, '\\"');
+    return insertLineAfterHeader(source, `  ${id}${wrap(label)}`);
+  }
+
+  // --- Shape picker menu ---
+  const SHAPES = [
+    { key: 'rectangle',     label: 'Rectangle',     svg: '<svg viewBox="0 0 30 20"><rect x="1" y="1" width="28" height="18" rx="1" fill="none" stroke="currentColor" stroke-width="2"/></svg>' },
+    { key: 'rounded',       label: 'Rounded box',   svg: '<svg viewBox="0 0 30 20"><rect x="1" y="1" width="28" height="18" rx="6" fill="none" stroke="currentColor" stroke-width="2"/></svg>' },
+    { key: 'stadium',       label: 'Stadium',       svg: '<svg viewBox="0 0 30 20"><rect x="1" y="1" width="28" height="18" rx="9" fill="none" stroke="currentColor" stroke-width="2"/></svg>' },
+    { key: 'subroutine',    label: 'Subroutine',    svg: '<svg viewBox="0 0 30 20"><rect x="1" y="1" width="28" height="18" fill="none" stroke="currentColor" stroke-width="2"/><line x1="4" y1="1" x2="4" y2="19" stroke="currentColor" stroke-width="2"/><line x1="26" y1="1" x2="26" y2="19" stroke="currentColor" stroke-width="2"/></svg>' },
+    { key: 'database',      label: 'Database',      svg: '<svg viewBox="0 0 30 20"><path d="M 4,3 Q 4,1 15,1 Q 26,1 26,3 L 26,17 Q 26,19 15,19 Q 4,19 4,17 Z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M 4,3 Q 4,5 15,5 Q 26,5 26,3" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>' },
+    { key: 'circle',        label: 'Circle',        svg: '<svg viewBox="0 0 30 20"><circle cx="15" cy="10" r="9" fill="none" stroke="currentColor" stroke-width="2"/></svg>' },
+    { key: 'doubleCircle',  label: 'Double circle', svg: '<svg viewBox="0 0 30 20"><circle cx="15" cy="10" r="9" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="15" cy="10" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>' },
+    { key: 'decision',      label: 'Decision',      svg: '<svg viewBox="0 0 30 20"><polygon points="15,1 29,10 15,19 1,10" fill="none" stroke="currentColor" stroke-width="2"/></svg>' },
+    { key: 'hexagon',       label: 'Hexagon',       svg: '<svg viewBox="0 0 30 20"><polygon points="8,1 22,1 29,10 22,19 8,19 1,10" fill="none" stroke="currentColor" stroke-width="2"/></svg>' },
+    { key: 'parallelogram', label: 'Parallelogram', svg: '<svg viewBox="0 0 30 20"><polygon points="5,1 29,1 25,19 1,19" fill="none" stroke="currentColor" stroke-width="2"/></svg>' },
+    { key: 'trapezoid',     label: 'Trapezoid',     svg: '<svg viewBox="0 0 30 20"><polygon points="6,1 24,1 29,19 1,19" fill="none" stroke="currentColor" stroke-width="2"/></svg>' },
+  ];
+
+  let shapeMenuCloser = null;
+  function openShapeMenu(clientX, clientY, diagramIdx, nodeId, currentLabel) {
+    const menu = document.getElementById('shape-menu');
+    menu.innerHTML =
+      `<div class="menu-header">Shape for “${nodeId}”</div>` +
+      SHAPES.map(s => `
+        <button type="button" class="shape-btn" data-shape="${s.key}" title="Change this node to a ${s.label.toLowerCase()}">
+          <span class="shape-preview">${s.svg}</span>
+          <span class="shape-label">${s.label}</span>
+        </button>
+      `).join('');
+    menu.classList.add('open');
+    // Clamp within viewport.
+    const rect = menu.getBoundingClientRect();
+    const vw = window.innerWidth, vh = window.innerHeight;
+    const left = Math.min(clientX, vw - rect.width - 8);
+    const top = Math.min(clientY, vh - rect.height - 8);
+    menu.style.left = Math.max(4, left) + 'px';
+    menu.style.top = Math.max(4, top) + 'px';
+
+    menu.onclick = (e) => {
+      const btn = e.target.closest('.shape-btn');
+      if (!btn) return;
+      const shape = btn.dataset.shape;
+      closeShapeMenu();
+      applyShapeChange(diagramIdx, nodeId, shape, currentLabel);
+    };
+
+    // Close on outside click / Escape
+    const onDocDown = (e) => {
+      if (!menu.contains(e.target)) closeShapeMenu();
+    };
+    const onKey = (e) => { if (e.key === 'Escape') closeShapeMenu(); };
+    // Defer so this click doesn't immediately close.
+    setTimeout(() => {
+      document.addEventListener('pointerdown', onDocDown);
+      document.addEventListener('keydown', onKey);
+    }, 0);
+    shapeMenuCloser = () => {
+      menu.classList.remove('open');
+      menu.onclick = null;
+      document.removeEventListener('pointerdown', onDocDown);
+      document.removeEventListener('keydown', onKey);
+      shapeMenuCloser = null;
+    };
+  }
+  function closeShapeMenu() {
+    if (shapeMenuCloser) shapeMenuCloser();
+  }
+
+  function applyShapeChange(idx, nodeId, shapeKey, fallbackLabel) {
+    const nextSrc = changeNodeShape(state.diagrams[idx].currentSource, nodeId, shapeKey, fallbackLabel);
+    if (!nextSrc || nextSrc === state.diagrams[idx].currentSource) return;
+    pushUndo();
+    state.diagrams[idx].currentSource = nextSrc;
+    syncSourceTextarea(idx);
+    markDirty(idx);
+    renderDiagram(idx);
+  }
+
+  function generateNodeId(source) {
+    let n = 1;
+    while (new RegExp(`(^|[^A-Za-z0-9_])new${n}([^A-Za-z0-9_]|$)`).test(source)) n++;
+    return `new${n}`;
+  }
+
+  function nodeAtPoint(clientX, clientY, svg) {
+    // Walk the stack so overlapping handles don't block the hit-test.
+    const stack = document.elementsFromPoint(clientX, clientY);
+    for (const el of stack) {
+      if (!el.classList) continue;
+      if (el.classList.contains('edge-endpoint') || el.classList.contains('edge-handle')) continue;
+      const node = el.closest && el.closest('.node');
+      if (node && svg.contains(node)) return node;
+    }
+    return null;
+  }
+
+  let dropTargetRef = null;
+  function markDropTarget(svg, clientX, clientY) {
+    const node = nodeAtPoint(clientX, clientY, svg);
+    if (node !== dropTargetRef) {
+      if (dropTargetRef) dropTargetRef.classList.remove('drop-target');
+      dropTargetRef = node;
+      if (node) node.classList.add('drop-target');
+    }
+  }
+  function clearDropTarget() {
+    if (dropTargetRef) dropTargetRef.classList.remove('drop-target');
+    dropTargetRef = null;
+  }
+
+  function syncSourceTextarea(idx) {
+    const ta = document.querySelector(`textarea[data-source-idx="${idx}"]`);
+    if (ta) ta.value = state.diagrams[idx].currentSource;
+  }
+
+  function inlineEdit(target, originalText, onCommit, opts) {
+    opts = opts || {};
+    const multiline = !!opts.multiline;
+    let committed = false;
+    let cancelled = false;
+    target.setAttribute('contenteditable', 'true');
+    target.setAttribute('spellcheck', 'false');
+    target.textContent = originalText;
+    target.focus();
+    // Select all
+    const sel = window.getSelection();
+    const range = document.createRange();
+    range.selectNodeContents(target);
+    sel.removeAllRanges();
+    sel.addRange(range);
+
+    const readText = () => {
+      // innerText preserves line breaks from <br> etc.; textContent flattens them.
+      const raw = multiline ? (target.innerText || '') : (target.textContent || '');
+      return multiline ? raw.replace(/\s+$/, '') : raw.trim();
+    };
+    const cleanup = () => {
+      target.removeAttribute('contenteditable');
+      target.removeAttribute('spellcheck');
+    };
+    const finish = () => {
+      if (committed) return;
+      committed = true;
+      const next = readText();
+      cleanup();
+      if (cancelled) {
+        target.textContent = originalText;
+        return;
+      }
+      if (opts.allowEmpty) {
+        pushUndo();
+        onCommit(next);
+        return;
+      }
+      if (next && next !== originalText) {
+        pushUndo();
+        onCommit(next);
+      } else {
+        target.textContent = originalText;
+      }
+    };
+    target.addEventListener('blur', finish, { once: true });
+    target.addEventListener('keydown', (e) => {
+      // Enter commits; Shift+Enter inserts a line break (multiline only — otherwise
+      // it's a no-op since single-line targets shouldn't hold newlines).
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        target.blur();
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        cancelled = true;
+        target.blur();
+      }
+    });
+    // Don't let clicks inside the editor start a node drag
+    target.addEventListener('pointerdown', (e) => e.stopPropagation());
+    target.addEventListener('mousedown', (e) => e.stopPropagation());
+  }
+
+  function clientToSvg(svg, clientX, clientY) {
+    const pt = svg.createSVGPoint();
+    pt.x = clientX; pt.y = clientY;
+    const ctm = svg.getScreenCTM();
+    if (!ctm) return { x: clientX, y: clientY };
+    const p = pt.matrixTransform(ctm.inverse());
+    return { x: p.x, y: p.y };
+  }
+
+  function readNodeLabel(node) {
+    // Prefer foreignObject html label; fall back to text spans.
+    const fo = node.querySelector('foreignObject');
+    if (fo && fo.textContent) return fo.textContent.trim();
+    const text = node.querySelector('text');
+    return text ? text.textContent.trim() : '';
+  }
+
+  function readEdgeLabel(labelEl) {
+    // The label group may have an SVG <title> child (for hover tooltips) which
+    // must NOT be treated as label text. Prefer the foreignObject's content.
+    const fo = labelEl.querySelector('foreignObject');
+    if (fo && fo.textContent) return fo.textContent.trim();
+    // Fallback: text elements minus any <title>
+    const clone = labelEl.cloneNode(true);
+    clone.querySelectorAll('title').forEach(t => t.remove());
+    return (clone.textContent || '').trim();
+  }
+
+  function replaceInSource(idx, oldLabel, newLabel) {
+    // Escape the old label for a literal regex; then require it to sit inside
+    // a mermaid label bracket (["..."], [...], {"..."}, {...}, ((...)), (...), etc.)
+    // or after an edge-pipe (|"..."| or |...|). Belt-and-suspenders: string replace
+    // both quoted and unquoted forms.
+    const src = state.diagrams[idx].currentSource;
+    const escaped = oldLabel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const quoted = new RegExp(`"${escaped}"`, 'g');
+    const unquoted = new RegExp(`(^|[\\[\\{\\(\\|])${escaped}([\\]\\}\\)\\|])`, 'g');
+    let next = src.replace(quoted, `"${newLabel}"`);
+    if (next === src) {
+      next = src.replace(unquoted, (_, a, b) => `${a}${newLabel}${b}`);
+    }
+    if (next === src) return false;
+    state.diagrams[idx].currentSource = next;
+    const ta = document.querySelector(`textarea[data-source-idx="${idx}"]`);
+    if (ta) ta.value = next;
+    return true;
+  }
+
+  function wireInteractions(canvas, idx) {
+    const svg = canvas.querySelector('svg');
+    if (!svg) return;
+
+    // Edge registry: filled in during the edge loop below. Node drag handlers
+    // hold a reference (populated later) so an outbound arrow can redraw itself
+    // as the node it points at moves.
+    const edgeRegistry = [];
+    // Side-dot registry keyed by node id. Declared here so attachConnectDots
+    // (called during the node loop) can populate it without a TDZ error.
+    const nodeConnectDots = new Map();
+    function redrawEdgeEntry(entry) {
+      if (!entry.sourceEdge) return; // can't compute — no id mapping
+      const positions = state.diagrams[idx].nodePositions;
+      const srcOff = positions[entry.sourceEdge.source] || { x: 0, y: 0 };
+      const tgtOff = positions[entry.sourceEdge.target] || { x: 0, y: 0 };
+      const startAdj = { x: entry.endpoints.start.x + srcOff.x, y: entry.endpoints.start.y + srcOff.y };
+      const endAdj   = { x: entry.endpoints.end.x   + tgtOff.x, y: entry.endpoints.end.y   + tgtOff.y };
+      const waypoint = state.diagrams[idx].edgeWaypoints[entry.edgeId];
+      const nothingMoved = srcOff.x === 0 && srcOff.y === 0 && tgtOff.x === 0 && tgtOff.y === 0 && !waypoint;
+
+      let d;
+      if (waypoint) {
+        d = bezierD(startAdj, waypoint, endAdj);
+      } else if (nothingMoved) {
+        d = entry.baseD; // preserve mermaid's original curve when nothing moved
+      } else {
+        d = `M ${startAdj.x},${startAdj.y} L ${endAdj.x},${endAdj.y}`;
+      }
+      entry.el.setAttribute('d', d);
+      entry.hoverOverlay.setAttribute('d', d);
+      // Move the bend handle to the new mid or waypoint.
+      if (waypoint) {
+        entry.moveBendHandle(waypoint.x, waypoint.y);
+      } else {
+        const mp = midpoint(startAdj, endAdj);
+        entry.moveBendHandle(mp.x, mp.y);
+      }
+      // Move the endpoint handles inward from the (possibly shifted) endpoints.
+      if (entry.epWraps) {
+        const anchor = { source: startAdj, target: endAdj };
+        const opposite = { source: endAdj, target: startAdj };
+        ['source', 'target'].forEach(side => {
+          const disp = offsetToward(anchor[side], opposite[side], 16);
+          entry.epWraps[side].moveEp(disp.x, disp.y);
+        });
+      }
+      // Reposition the edge label to the new midpoint (or waypoint). When
+      // nothing has moved, restore mermaid's original transform so we don't
+      // introduce sub-pixel drift.
+      if (entry.labelEl) {
+        if (nothingMoved) {
+          entry.labelEl.setAttribute('transform', entry.labelOriginalTransform);
+        } else {
+          const center = waypoint || midpoint(startAdj, endAdj);
+          entry.labelEl.setAttribute('transform', `translate(${center.x}, ${center.y})`);
+        }
+      }
+    }
+    function redrawEdgesForNode(nodeId) {
+      edgeRegistry.forEach(entry => {
+        if (!entry.sourceEdge) return;
+        if (entry.sourceEdge.source === nodeId || entry.sourceEdge.target === nodeId) {
+          redrawEdgeEntry(entry);
+        }
+      });
+    }
+
+    // ---- Node drag + click + rename ----
+    let pendingClick = null; // shared: only one debounce at a time
+    svg.querySelectorAll('.node').forEach(node => {
+      const nodeId = extractNodeId(node);
+      // Cache mermaid's own transform so our offset composes on top of it.
+      if (!node.hasAttribute('data-base-transform')) {
+        node.setAttribute('data-base-transform', node.getAttribute('transform') || '');
+      }
+
+      let dragging = false;
+      let moved = false;
+      let startSvg = null;
+      let base = { x: 0, y: 0 };
+
+      let dragUndoPushed = false;
+      node.addEventListener('pointerdown', (e) => {
+        if (e.button !== 0) return;
+        if (e.target && e.target.closest && e.target.closest('[contenteditable="true"]')) return;
+        dragging = true;
+        moved = false;
+        dragUndoPushed = false;
+        node.setPointerCapture(e.pointerId);
+        startSvg = clientToSvg(svg, e.clientX, e.clientY);
+        base = state.diagrams[idx].nodePositions[nodeId] || { x: 0, y: 0 };
+        e.preventDefault();
+      });
+      node.addEventListener('pointermove', (e) => {
+        if (!dragging) return;
+        const now = clientToSvg(svg, e.clientX, e.clientY);
+        const dx = now.x - startSvg.x;
+        const dy = now.y - startSvg.y;
+        if (!moved && Math.hypot(dx, dy) > 2) {
+          moved = true;
+          node.classList.add('dragging');
+          if (!dragUndoPushed) { pushUndo(); dragUndoPushed = true; }
+        }
+        if (moved) {
+          state.diagrams[idx].nodePositions[nodeId] = { x: base.x + dx, y: base.y + dy };
+          applyStoredPositions(canvas, idx);
+          redrawEdgesForNode(nodeId);
+          updateDotsForNode(nodeId);
+          markDirty(idx);
+        }
+      });
+      node.addEventListener('pointerup', (e) => {
+        if (!dragging) return;
+        dragging = false;
+        node.classList.remove('dragging');
+        if (moved) return;
+        selectNode(idx, nodeId);
+      });
+      node.addEventListener('dblclick', (e) => {
+        e.stopPropagation();
+        if (pendingClick) { clearTimeout(pendingClick); pendingClick = null; }
+        const current = readNodeLabel(node);
+        const editTarget = findEditableTarget(node);
+        if (editTarget) {
+          inlineEdit(editTarget, current, (next) => {
+            const ok = replaceInSource(idx, current, next);
+            if (ok) renderDiagram(idx);
+            else alert(`Could not locate "${current}" in the source. Edit it manually on the right.`);
+          });
+        } else {
+          // Fallback: overlay an HTML input right on top of the node
+          const canvasEl = canvas;
+          const r = node.getBoundingClientRect();
+          overlayInput(canvasEl, r.left + r.width / 2, r.top + r.height / 2, {
+            initialValue: current,
+            placeholder: `Rename ${nodeId}`,
+            width: Math.max(140, r.width),
+            onCommit: (next) => {
+              if (next === current) return;
+              const ok = replaceInSource(idx, current, next);
+              if (ok) renderDiagram(idx);
+              else alert(`Could not locate "${current}" in the source. Edit it manually on the right.`);
+            }
+          });
+        }
+      });
+      // Right-click → shape picker
+      node.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        openShapeMenu(e.clientX, e.clientY, idx, nodeId, readNodeLabel(node));
+      });
+
+      // Side connector dots — appear on node hover; drag one to make a new arrow.
+      attachConnectDots(node, nodeId);
+
+      // Hover description tooltip (click to edit).
+      const descKey = 'node:' + nodeId;
+      const defaultText = `Node "${nodeId}"${readNodeLabel(node) ? ` — ${readNodeLabel(node)}` : ''}`;
+      node.addEventListener('pointerenter', () => {
+        showTooltip(
+          node,
+          state.diagrams[idx].descriptions[descKey] || '',
+          defaultText,
+          (next) => {
+            pushUndo();
+            if (next) state.diagrams[idx].descriptions[descKey] = next;
+            else delete state.diagrams[idx].descriptions[descKey];
+            markDirty(idx);
+          }
+        );
+      });
+      node.addEventListener('pointerleave', queueHideTooltip);
+    });
+
+    function addTitle(el, text) {
+      // Ensure the <title> is the FIRST child so browsers pick it up as tooltip.
+      const existing = el.querySelector(':scope > title');
+      if (existing) existing.textContent = text;
+      else {
+        const t = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+        t.textContent = text;
+        el.insertBefore(t, el.firstChild);
+      }
+    }
+
+    // ---- Edges: click to annotate, drag midpoint to bend, drag endpoint to reconnect ----
+    const edgePaths = svg.querySelectorAll('.edgePaths path, path.flowchart-link, path.edgePath');
+    const uniquePaths = [...new Set(edgePaths)];
+    const edgesInSource = parseEdges(state.diagrams[idx].currentSource);
+    // Mermaid emits label groups in the same order as edge paths (one per edge).
+    const edgeLabelGroups = [...svg.querySelectorAll('g.edgeLabels > g')];
+
+    uniquePaths.forEach((edge, i) => {
+      const edgeId = edge.id || `edge-${i}`;
+      const sourceEdge = edgesInSource[i] || null; // may be null if parse can't match this one
+      const handleGroup = []; // all handles for this edge; toggled together on hover
+
+      // Cache the original path once so we can rebuild with fresh waypoints or revert.
+      if (!edge.hasAttribute('data-base-d')) {
+        edge.setAttribute('data-base-d', edge.getAttribute('d') || '');
+      }
+      const baseD = edge.getAttribute('data-base-d');
+      const endpoints = pathEndpoints(edge, baseD);
+      if (!endpoints) return; // degenerate
+
+      // Apply stored waypoint (if any) so the path is bent BEFORE we place the handle.
+      const stored = state.diagrams[idx].edgeWaypoints[edgeId];
+      if (stored) {
+        edge.setAttribute('d', bezierD(endpoints.start, stored, endpoints.end));
+      } else {
+        edge.setAttribute('d', baseD);
+      }
+
+      // Wide invisible overlay so hovering the arrow is forgiving.
+      const hoverOverlay = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      hoverOverlay.setAttribute('d', edge.getAttribute('d'));
+      hoverOverlay.setAttribute('class', 'edge-hover-overlay');
+      edge.parentNode.appendChild(hoverOverlay);
+
+      // Keep overlay in sync when the edge geometry changes.
+      const syncOverlay = () => hoverOverlay.setAttribute('d', edge.getAttribute('d'));
+
+      // Description tooltip on hover of the arrow overlay.
+      const arrowDefault = sourceEdge
+        ? `Arrow: ${sourceEdge.source} → ${sourceEdge.target}${sourceEdge.label ? ` — "${sourceEdge.label}"` : ''}`
+        : `Arrow (${edgeId})`;
+      const arrowDescKey = 'edge:' + edgeId;
+      hoverOverlay.addEventListener('pointerenter', () => {
+        showTooltip(
+          hoverOverlay,
+          state.diagrams[idx].descriptions[arrowDescKey] || '',
+          arrowDefault,
+          (next) => {
+            pushUndo();
+            if (next) state.diagrams[idx].descriptions[arrowDescKey] = next;
+            else delete state.diagrams[idx].descriptions[arrowDescKey];
+            markDirty(idx);
+          }
+        );
+      });
+      hoverOverlay.addEventListener('pointerleave', queueHideTooltip);
+
+
+      // Bend handle: <g> wrap containing a fat transparent hit-circle and a
+      // small visible dot. Events go to the hit-circle; both move together.
+      const handlePos = stored || midpoint(endpoints.start, endpoints.end);
+      const handleWrap = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      handleWrap.setAttribute('class', 'edge-handle-wrap');
+      handleWrap.setAttribute('data-edge-id', edgeId);
+      const bendTitle = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+      bendTitle.textContent = 'Drag to bend this arrow · double-click to straighten';
+      handleWrap.appendChild(bendTitle);
+      const handleHit = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      handleHit.setAttribute('r', '18');
+      handleHit.setAttribute('cx', handlePos.x);
+      handleHit.setAttribute('cy', handlePos.y);
+      handleHit.setAttribute('class', 'grab-area');
+      const handleDot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      handleDot.setAttribute('r', '6');
+      handleDot.setAttribute('cx', handlePos.x);
+      handleDot.setAttribute('cy', handlePos.y);
+      handleDot.setAttribute('class', 'edge-handle');
+      handleWrap.appendChild(handleHit);
+      handleWrap.appendChild(handleDot);
+      svg.appendChild(handleWrap);
+      handleGroup.push(handleWrap);
+
+      const moveBendHandle = (nx, ny) => {
+        handleHit.setAttribute('cx', nx); handleHit.setAttribute('cy', ny);
+        handleDot.setAttribute('cx', nx); handleDot.setAttribute('cy', ny);
+      };
+      // Capture the edge's label group (if any) and its mermaid-computed transform
+      // so we can put it back untouched when nothing has moved.
+      const labelEl = edgeLabelGroups[i] || null;
+      const labelOriginalTransform = labelEl ? (labelEl.getAttribute('transform') || '') : '';
+      let labelOriginalCenter = null;
+      if (labelEl) {
+        const m = /translate\(\s*([-\d.]+)[ ,]\s*([-\d.]+)\s*\)/.exec(labelOriginalTransform);
+        if (m) labelOriginalCenter = { x: parseFloat(m[1]), y: parseFloat(m[2]) };
+      }
+      // Register this edge so the node-drag handler can redraw it live.
+      const registryEntry = {
+        el: edge, hoverOverlay, endpoints, sourceEdge, edgeId, baseD,
+        moveBendHandle, epWraps: null,
+        labelEl, labelOriginalTransform, labelOriginalCenter
+      };
+      edgeRegistry.push(registryEntry);
+
+      let dragging = false;
+      let bendUndoPushed = false;
+      handleHit.addEventListener('pointerdown', (e) => {
+        if (e.button !== 0) return;
+        dragging = true;
+        bendUndoPushed = false;
+        handleWrap.classList.add('dragging');
+        handleHit.setPointerCapture(e.pointerId);
+        e.preventDefault();
+        e.stopPropagation();
+      });
+      handleHit.addEventListener('pointermove', (e) => {
+        if (!dragging) return;
+        if (!bendUndoPushed) { pushUndo(); bendUndoPushed = true; }
+        const pt = clientToSvg(svg, e.clientX, e.clientY);
+        state.diagrams[idx].edgeWaypoints[edgeId] = { x: pt.x, y: pt.y };
+        redrawEdgeEntry(registryEntry);
+        markDirty(idx);
+      });
+      handleHit.addEventListener('pointerup', () => {
+        dragging = false;
+        handleWrap.classList.remove('dragging');
+      });
+      handleHit.addEventListener('dblclick', (e) => {
+        e.stopPropagation();
+        pushUndo();
+        delete state.diagrams[idx].edgeWaypoints[edgeId];
+        redrawEdgeEntry(registryEntry);
+        markDirty(idx);
+      });
+
+      // ---- Endpoint handles: drag to reconnect ----
+      if (sourceEdge) {
+        registryEntry.epWraps = {};
+        ['source', 'target'].forEach(side => {
+          const anchor = side === 'source' ? endpoints.start : endpoints.end;
+          const opposite = side === 'source' ? endpoints.end : endpoints.start;
+          // Nudge the handle inward so it doesn't sit on top of the arrowhead marker.
+          const displayPos = offsetToward(anchor, opposite, 16);
+
+          const epWrap = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+          epWrap.setAttribute('class', `edge-endpoint-wrap edge-endpoint-wrap-${side}`);
+          const epTitle = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+          epTitle.textContent = `Drag to reconnect the ${side} of this arrow (drop on a node to switch the link, drop in empty space to spawn a new node)`;
+          epWrap.appendChild(epTitle);
+          const epHit = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+          epHit.setAttribute('r', '15');
+          epHit.setAttribute('cx', displayPos.x);
+          epHit.setAttribute('cy', displayPos.y);
+          epHit.setAttribute('class', 'grab-area');
+          const ep = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+          ep.setAttribute('r', '5');
+          ep.setAttribute('cx', displayPos.x);
+          ep.setAttribute('cy', displayPos.y);
+          ep.setAttribute('class', `edge-endpoint edge-endpoint-${side}`);
+          epWrap.appendChild(epHit);
+          epWrap.appendChild(ep);
+          svg.appendChild(epWrap);
+          handleGroup.push(epWrap);
+
+          const moveEp = (nx, ny) => {
+            epHit.setAttribute('cx', nx); epHit.setAttribute('cy', ny);
+            ep.setAttribute('cx', nx); ep.setAttribute('cy', ny);
+          };
+          registryEntry.epWraps[side] = { wrap: epWrap, hit: epHit, ep, moveEp };
+
+          let dragging = false;
+          let preview = null;
+          epHit.addEventListener('pointerdown', (e) => {
+            if (e.button !== 0) return;
+            dragging = true;
+            epWrap.classList.add('dragging');
+            epHit.setPointerCapture(e.pointerId);
+            preview = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            preview.setAttribute('stroke', side === 'source' ? 'var(--ok)' : 'var(--warn)');
+            preview.setAttribute('stroke-width', '2');
+            preview.setAttribute('stroke-dasharray', '5,3');
+            preview.setAttribute('fill', 'none');
+            preview.setAttribute('pointer-events', 'none');
+            svg.appendChild(preview);
+            edge.style.opacity = '0.25';
+            e.preventDefault();
+            e.stopPropagation();
+          });
+          epHit.addEventListener('pointermove', (e) => {
+            if (!dragging) return;
+            const pt = clientToSvg(svg, e.clientX, e.clientY);
+            moveEp(pt.x, pt.y);
+            preview.setAttribute('d', `M ${opposite.x},${opposite.y} L ${pt.x},${pt.y}`);
+            markDropTarget(svg, e.clientX, e.clientY);
+          });
+          epHit.addEventListener('pointerup', (e) => {
+            if (!dragging) return;
+            dragging = false;
+            epWrap.classList.remove('dragging');
+            const dropNode = nodeAtPoint(e.clientX, e.clientY, svg);
+            if (preview) { preview.remove(); preview = null; }
+            edge.style.opacity = '';
+            clearDropTarget();
+
+            const currentId = side === 'source' ? sourceEdge.source : sourceEdge.target;
+
+            // Capture the abandoned node's label BEFORE mutating the source — we may
+            // need it to synthesize a standalone declaration so mermaid keeps the node.
+            let abandonedLabel = currentId;
+            try {
+              const stillThere = [...svg.querySelectorAll('.node')].find(n => extractNodeId(n) === currentId);
+              if (stillThere) abandonedLabel = readNodeLabel(stillThere) || currentId;
+            } catch (_) {}
+
+            const preserveOrphan = (src) => ensureNodeDecl(src, currentId, abandonedLabel);
+
+            if (dropNode) {
+              const newId = extractNodeId(dropNode);
+              if (!newId || newId === currentId) { renderDiagram(idx); return; }
+              let nextSrc = reconnectEdge(state.diagrams[idx].currentSource, sourceEdge, side, newId);
+              if (!nextSrc) {
+                alert(`Could not update the source for this edge. Edit it manually on the right (${sourceEdge.fullText}).`);
+                renderDiagram(idx);
+                return;
+              }
+              nextSrc = preserveOrphan(nextSrc);
+              pushUndo();
+              state.diagrams[idx].currentSource = nextSrc;
+              delete state.diagrams[idx].edgeWaypoints[edgeId];
+              syncSourceTextarea(idx);
+              markDirty(idx);
+              renderDiagram(idx);
+            } else {
+              const dropPt = clientToSvg(svg, e.clientX, e.clientY);
+              const newId = generateNodeId(state.diagrams[idx].currentSource);
+              const defaultLabel = 'New Node';
+              let nextSrc = insertNodeDecl(state.diagrams[idx].currentSource, newId, defaultLabel);
+              const withReconnect = reconnectEdge(nextSrc, sourceEdge, side, newId);
+              pushUndo();
+              if (!withReconnect) {
+                alert(`Added node "${newId}" but could not wire it into this edge — edit source on the right.`);
+                state.diagrams[idx].currentSource = preserveOrphan(nextSrc);
+              } else {
+                state.diagrams[idx].currentSource = preserveOrphan(withReconnect);
+              }
+              state.diagrams[idx].pendingRelocations[newId] = dropPt;
+              state.diagrams[idx].pendingEditNodeId = newId;
+              delete state.diagrams[idx].edgeWaypoints[edgeId];
+              syncSourceTextarea(idx);
+              markDirty(idx);
+              renderDiagram(idx);
+            }
+          });
+          epHit.addEventListener('lostpointercapture', () => {
+            if (dragging) {
+              dragging = false;
+              epWrap.classList.remove('dragging');
+              if (preview) { preview.remove(); preview = null; }
+              edge.style.opacity = '';
+              clearDropTarget();
+            }
+          });
+        });
+      }
+
+      // ---- Per-edge hover: reveal handleGroup only when cursor is on this edge or its handles ----
+      const setVisible = (on) => {
+        handleGroup.forEach(h => h.classList.toggle('visible', on));
+      };
+      const anyDragging = () => handleGroup.some(h => h.classList.contains('dragging'));
+      // A wrap has children (hit-circle + visible dot); relatedTarget on leave may
+      // be one of those children, so accept anything the wrap contains.
+      const isInGroup = (el) => el && (
+        el === hoverOverlay || el === edge ||
+        handleGroup.some(w => w === el || w.contains(el))
+      );
+
+      const onEnter = () => setVisible(true);
+      const onLeave = (e) => {
+        if (anyDragging()) return; // keep visible while user is dragging
+        if (isInGroup(e.relatedTarget)) return; // moving between edge & its own handles
+        setVisible(false);
+      };
+      [hoverOverlay, edge, ...handleGroup].forEach(el => {
+        el.addEventListener('pointerenter', onEnter);
+        el.addEventListener('pointerleave', onLeave);
+      });
+    });
+
+    // Apply pending relocations first — new nodes just added via arrow-drag get
+    // moved to the user's drop point before we sync edges.
+    applyPendingRelocations();
+    // Sync every edge to the current node-position/waypoint state (matters after
+    // a re-render where some nodes have stored offsets).
+    edgeRegistry.forEach(redrawEdgeEntry);
+    // Now that everything is in its final place, apply node-position offsets to
+    // any dots that belong to relocated nodes.
+    Object.keys(state.diagrams[idx].nodePositions).forEach(updateDotsForNode);
+    // If a fresh node was just created, focus its label for renaming.
+    applyPendingEdit();
+
+    function applyPendingRelocations() {
+      const relocs = state.diagrams[idx].pendingRelocations;
+      if (!relocs || !Object.keys(relocs).length) return;
+      Object.entries(relocs).forEach(([nodeId, target]) => {
+        const nodeEl = [...svg.querySelectorAll('.node')].find(n => extractNodeId(n) === nodeId);
+        if (!nodeEl) return;
+        const bb = getNodeSvgBBox(nodeEl);
+        if (!bb) return;
+        state.diagrams[idx].nodePositions[nodeId] = {
+          x: target.x - bb.cx,
+          y: target.y - bb.cy
+        };
+      });
+      state.diagrams[idx].pendingRelocations = {};
+      applyStoredPositions(canvas, idx);
+    }
+
+    function applyPendingEdit() {
+      const targetId = state.diagrams[idx].pendingEditNodeId;
+      if (!targetId) return;
+      state.diagrams[idx].pendingEditNodeId = null;
+      const nodeEl = [...svg.querySelectorAll('.node')].find(n => extractNodeId(n) === targetId);
+      if (!nodeEl) return;
+      const editTarget = findEditableTarget(nodeEl);
+      const current = readNodeLabel(nodeEl);
+      if (!editTarget) return; // fall back silently — label still exists
+      // Defer so mermaid's foreignObject is fully laid out before we focus.
+      setTimeout(() => {
+        inlineEdit(editTarget, current, (next) => {
+          if (!next || next === current) return;
+          const ok = replaceInSource(idx, current, next);
+          if (ok) renderDiagram(idx);
+        }, { allowEmpty: true });
+      }, 0);
+    }
+
+    function attachConnectDots(nodeEl, nodeId) {
+      // Find the outermost visible shape drawn by mermaid for this node.
+      const shape = findNodeShape(nodeEl);
+      if (!shape) return;
+      const bb = getShapeSvgBBox(shape);
+      if (!bb || bb.width === 0 || bb.height === 0) return;
+
+      // Dot positions in svg-root user coordinates.
+      const positions = [
+        { x: bb.cx,           y: bb.y,             side: 'top' },
+        { x: bb.x + bb.width, y: bb.cy,            side: 'right' },
+        { x: bb.cx,           y: bb.y + bb.height, side: 'bottom' },
+        { x: bb.x,            y: bb.cy,            side: 'left' },
+      ];
+
+      const entries = positions.map(pos => {
+        const wrap = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        wrap.setAttribute('class', 'connect-dot-wrap');
+        wrap.setAttribute('data-node-id', nodeId);
+        const dotTitle = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+        dotTitle.textContent = `Drag to create a new arrow from "${nodeId}" (drop on a node to link, drop in empty space to spawn a new node)`;
+        wrap.appendChild(dotTitle);
+        const hit = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        hit.setAttribute('r', '11');
+        hit.setAttribute('cx', pos.x);
+        hit.setAttribute('cy', pos.y);
+        hit.setAttribute('class', 'grab-area');
+        const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        dot.setAttribute('r', '4');
+        dot.setAttribute('cx', pos.x);
+        dot.setAttribute('cy', pos.y);
+        dot.setAttribute('class', 'connect-dot');
+        wrap.appendChild(hit);
+        wrap.appendChild(dot);
+        svg.appendChild(wrap);
+        wireConnectDot(hit, wrap, nodeId);
+        return { wrap, hit, dot, basePos: pos };
+      });
+
+      // Shape/type-change button at the top-right of the node's shape.
+      const shapeBtn = createShapeButton(bb, nodeId, nodeEl);
+      if (shapeBtn) svg.appendChild(shapeBtn.wrap);
+
+      nodeConnectDots.set(nodeId, { nodeEl, entries, shapeButton: shapeBtn });
+
+      // Hover coordination: reveal all overlays when the node or any overlay is entered.
+      const wraps = entries.map(e => e.wrap).concat(shapeBtn ? [shapeBtn.wrap] : []);
+      const setVisible = (on) => wraps.forEach(w => w.classList.toggle('visible', on));
+      const anyDragging = () => wraps.some(w => w.classList.contains('dragging'));
+      const isInCluster = (el) =>
+        el && (el === nodeEl || nodeEl.contains(el) ||
+               wraps.some(w => w === el || w.contains(el)));
+
+      const onEnter = () => setVisible(true);
+      const onLeave = (e) => {
+        if (anyDragging()) return;
+        if (isInCluster(e.relatedTarget)) return;
+        setVisible(false);
+      };
+      nodeEl.addEventListener('pointerenter', onEnter);
+      nodeEl.addEventListener('pointerleave', onLeave);
+      wraps.forEach(w => {
+        w.addEventListener('pointerenter', onEnter);
+        w.addEventListener('pointerleave', onLeave);
+      });
+    }
+
+    function createShapeButton(bb, nodeId, nodeEl) {
+      // Anchor at the top-right corner of the shape, nudged just outside.
+      const bx = bb.x + bb.width;
+      const by = bb.y;
+
+      const wrap = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      wrap.setAttribute('class', 'node-tool-wrap');
+      wrap.setAttribute('data-node-id', nodeId);
+      wrap.setAttribute('transform', `translate(${bx}, ${by})`);
+      const btnTitle = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+      btnTitle.textContent = `Change the shape of "${nodeId}"`;
+      wrap.appendChild(btnTitle);
+
+      const hit = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      hit.setAttribute('x', -14);
+      hit.setAttribute('y', -14);
+      hit.setAttribute('width', 28);
+      hit.setAttribute('height', 28);
+      hit.setAttribute('class', 'node-tool-hit');
+
+      const bg = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      bg.setAttribute('cx', 0);
+      bg.setAttribute('cy', 0);
+      bg.setAttribute('r', 10);
+      bg.setAttribute('class', 'node-tool-bg');
+
+      const icon = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      icon.setAttribute('x', 0);
+      icon.setAttribute('y', 1);
+      icon.setAttribute('text-anchor', 'middle');
+      icon.setAttribute('dominant-baseline', 'central');
+      icon.setAttribute('class', 'node-tool-icon');
+      icon.textContent = '◇';
+
+      wrap.appendChild(hit);
+      wrap.appendChild(bg);
+      wrap.appendChild(icon);
+
+      hit.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openShapeMenu(e.clientX, e.clientY, idx, nodeId, readNodeLabel(nodeEl));
+      });
+      // Prevent this click from also triggering the click-to-annotate on the node.
+      hit.addEventListener('pointerdown', (e) => e.stopPropagation());
+
+      return { wrap, basePos: { x: bx, y: by } };
+    }
+
+    // Move a node's overlays (side dots + shape button) by the node's stored offset.
+    function updateDotsForNode(nodeId) {
+      const rec = nodeConnectDots.get(nodeId);
+      if (!rec) return;
+      const off = state.diagrams[idx].nodePositions[nodeId] || { x: 0, y: 0 };
+      rec.entries.forEach(({ hit, dot, basePos }) => {
+        const nx = basePos.x + off.x;
+        const ny = basePos.y + off.y;
+        hit.setAttribute('cx', nx); hit.setAttribute('cy', ny);
+        dot.setAttribute('cx', nx); dot.setAttribute('cy', ny);
+      });
+      if (rec.shapeButton) {
+        const nx = rec.shapeButton.basePos.x + off.x;
+        const ny = rec.shapeButton.basePos.y + off.y;
+        rec.shapeButton.wrap.setAttribute('transform', `translate(${nx}, ${ny})`);
+      }
+    }
+
+    function wireConnectDot(hit, wrap, sourceNodeId) {
+      let dragging = false;
+      let preview = null;
+      let anchorSvg = null;
+
+      hit.addEventListener('pointerdown', (e) => {
+        if (e.button !== 0) return;
+        e.stopPropagation();
+        e.preventDefault();
+        dragging = true;
+        wrap.classList.add('dragging');
+        hit.setPointerCapture(e.pointerId);
+        const r = hit.getBoundingClientRect();
+        anchorSvg = clientToSvg(svg, r.left + r.width / 2, r.top + r.height / 2);
+        preview = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        preview.setAttribute('stroke', 'var(--accent)');
+        preview.setAttribute('stroke-width', '2');
+        preview.setAttribute('stroke-dasharray', '5,3');
+        preview.setAttribute('fill', 'none');
+        preview.setAttribute('pointer-events', 'none');
+        preview.setAttribute('d', `M ${anchorSvg.x},${anchorSvg.y} L ${anchorSvg.x},${anchorSvg.y}`);
+        svg.appendChild(preview);
+      });
+      hit.addEventListener('pointermove', (e) => {
+        if (!dragging) return;
+        const pt = clientToSvg(svg, e.clientX, e.clientY);
+        preview.setAttribute('d', `M ${anchorSvg.x},${anchorSvg.y} L ${pt.x},${pt.y}`);
+        markDropTarget(svg, e.clientX, e.clientY);
+      });
+      hit.addEventListener('pointerup', (e) => {
+        if (!dragging) return;
+        dragging = false;
+        wrap.classList.remove('dragging');
+        if (preview) { preview.remove(); preview = null; }
+        const dropNode = nodeAtPoint(e.clientX, e.clientY, svg);
+        clearDropTarget();
+        const dropPt = clientToSvg(svg, e.clientX, e.clientY);
+
+        if (dropNode) {
+          const targetId = extractNodeId(dropNode);
+          if (!targetId || targetId === sourceNodeId) return;
+          pushUndo();
+          state.diagrams[idx].currentSource = appendEdgeLine(state.diagrams[idx].currentSource, sourceNodeId, targetId);
+          syncSourceTextarea(idx);
+          markDirty(idx);
+          renderDiagram(idx);
+        } else {
+          const newId = generateNodeId(state.diagrams[idx].currentSource);
+          const defaultLabel = 'New Node';
+          let newSrc = insertNodeDecl(state.diagrams[idx].currentSource, newId, defaultLabel);
+          newSrc = appendEdgeLine(newSrc, sourceNodeId, newId);
+          pushUndo();
+          state.diagrams[idx].currentSource = newSrc;
+          state.diagrams[idx].pendingRelocations[newId] = dropPt;
+          state.diagrams[idx].pendingEditNodeId = newId;
+          syncSourceTextarea(idx);
+          markDirty(idx);
+          renderDiagram(idx);
+        }
+      });
+      hit.addEventListener('lostpointercapture', () => {
+        if (!dragging) return;
+        dragging = false;
+        wrap.classList.remove('dragging');
+        if (preview) { preview.remove(); preview = null; }
+        clearDropTarget();
+      });
+    }
+
+    function findNodeShape(nodeEl) {
+      for (const c of nodeEl.children) {
+        const t = c.tagName.toLowerCase();
+        if (t === 'rect' || t === 'polygon' || t === 'path' || t === 'circle' || t === 'ellipse') return c;
+      }
+      return null;
+    }
+
+    function getShapeSvgBBox(shapeEl) {
+      try {
+        const svgEl = shapeEl.ownerSVGElement || shapeEl.closest('svg');
+        if (!svgEl) return null;
+        const r = shapeEl.getBoundingClientRect();
+        if (r.width === 0 && r.height === 0) return null;
+        const tl = clientToSvg(svgEl, r.left, r.top);
+        const br = clientToSvg(svgEl, r.right, r.bottom);
+        const x = Math.min(tl.x, br.x);
+        const y = Math.min(tl.y, br.y);
+        const w = Math.abs(br.x - tl.x);
+        const h = Math.abs(br.y - tl.y);
+        return { x, y, width: w, height: h, cx: x + w / 2, cy: y + h / 2 };
+      } catch (e) { return null; }
+    }
+
+    // Edge labels: double-click to rename inline, single-drag to bend the arrow.
+    edgeRegistry.forEach(entry => {
+      const labelEl = entry.labelEl;
+      if (!labelEl) return;
+      labelEl.style.cursor = 'grab';
+      addTitle(labelEl, 'Double-click to edit · drag to bend the arrow');
+
+      // Share the arrow's description tooltip with the label so hovering the
+      // label doesn't hide it (they belong to the same arrow).
+      const arrowDefault = entry.sourceEdge
+        ? `Arrow: ${entry.sourceEdge.source} → ${entry.sourceEdge.target}${entry.sourceEdge.label ? ` — "${entry.sourceEdge.label}"` : ''}`
+        : `Arrow (${entry.edgeId})`;
+      const arrowDescKey = 'edge:' + entry.edgeId;
+      labelEl.addEventListener('pointerenter', () => {
+        showTooltip(
+          labelEl,
+          state.diagrams[idx].descriptions[arrowDescKey] || '',
+          arrowDefault,
+          (next) => {
+            pushUndo();
+            if (next) state.diagrams[idx].descriptions[arrowDescKey] = next;
+            else delete state.diagrams[idx].descriptions[arrowDescKey];
+            markDirty(idx);
+          }
+        );
+      });
+      labelEl.addEventListener('pointerleave', queueHideTooltip);
+
+      labelEl.addEventListener('dblclick', (e) => {
+        e.stopPropagation();
+        const current = readEdgeLabel(labelEl);
+        if (!current) {
+          alert('This edge has no label yet. Add one by editing the source (e.g. `A -->|new label| B`).');
+          return;
+        }
+        const editTarget = findEditableTarget(labelEl);
+        if (editTarget) {
+          inlineEdit(editTarget, current, (next) => {
+            const ok = replaceInSource(idx, current, next);
+            if (ok) renderDiagram(idx);
+            else alert(`Could not locate "${current}" in the source. Edit it manually on the right.`);
+          });
+        } else {
+          const r = labelEl.getBoundingClientRect();
+          overlayInput(canvas, r.left + r.width / 2, r.top + r.height / 2, {
+            initialValue: current,
+            placeholder: 'Edge label',
+            width: 200,
+            onCommit: (next) => {
+              if (next === current) return;
+              const ok = replaceInSource(idx, current, next);
+              if (ok) renderDiagram(idx);
+              else alert(`Could not locate "${current}" in the source. Edit it manually on the right.`);
+            }
+          });
+        }
+      });
+
+      if (entry.sourceEdge) wireLabelDrag(entry);
+    });
+
+    // Drag the label to bend the arrow — waypoint tracks the label's new spot.
+    // Uses a movement threshold so a click still fires cleanly for double-click edit.
+    function wireLabelDrag(entry) {
+      const label = entry.labelEl;
+      label.addEventListener('pointerdown', (e) => {
+        if (e.button !== 0) return;
+        if (e.target && e.target.closest && e.target.closest('[contenteditable="true"]')) return;
+
+        const start = { x: e.clientX, y: e.clientY };
+        let moved = false;
+        let baseWaypoint = null;
+        let capturedId = null;
+
+        const onMove = (ev) => {
+          const dx = ev.clientX - start.x;
+          const dy = ev.clientY - start.y;
+          if (!moved && Math.hypot(dx, dy) > 4) {
+            moved = true;
+            try { label.setPointerCapture(ev.pointerId); capturedId = ev.pointerId; } catch (_) {}
+            label.style.cursor = 'grabbing';
+            pushUndo();
+            const stored = state.diagrams[idx].edgeWaypoints[entry.edgeId];
+            if (stored) {
+              baseWaypoint = { x: stored.x, y: stored.y };
+            } else {
+              const positions = state.diagrams[idx].nodePositions;
+              const srcOff = positions[entry.sourceEdge.source] || { x: 0, y: 0 };
+              const tgtOff = positions[entry.sourceEdge.target] || { x: 0, y: 0 };
+              const startAdj = { x: entry.endpoints.start.x + srcOff.x, y: entry.endpoints.start.y + srcOff.y };
+              const endAdj   = { x: entry.endpoints.end.x   + tgtOff.x, y: entry.endpoints.end.y   + tgtOff.y };
+              baseWaypoint = midpoint(startAdj, endAdj);
+            }
+          }
+          if (moved) {
+            const startSvg = clientToSvg(svg, start.x, start.y);
+            const curSvg   = clientToSvg(svg, ev.clientX, ev.clientY);
+            state.diagrams[idx].edgeWaypoints[entry.edgeId] = {
+              x: baseWaypoint.x + (curSvg.x - startSvg.x),
+              y: baseWaypoint.y + (curSvg.y - startSvg.y)
+            };
+            redrawEdgeEntry(entry);
+            markDirty(idx);
+          }
+        };
+        const onUp = () => {
+          label.removeEventListener('pointermove', onMove);
+          label.removeEventListener('pointerup', onUp);
+          label.removeEventListener('lostpointercapture', onUp);
+          if (moved) {
+            label.style.cursor = 'grab';
+            if (capturedId !== null) {
+              try { label.releasePointerCapture(capturedId); } catch (_) {}
+            }
+          }
+        };
+        label.addEventListener('pointermove', onMove);
+        label.addEventListener('pointerup', onUp);
+        label.addEventListener('lostpointercapture', onUp);
+      });
+    }
+  }
+
+  function applyStoredPositions(canvas, idx) {
+    const svg = canvas.querySelector('svg');
+    if (!svg) return;
+    const positions = state.diagrams[idx].nodePositions;
+    svg.querySelectorAll('.node').forEach(node => {
+      const nodeId = extractNodeId(node);
+      const offset = positions[nodeId];
+      const base = node.getAttribute('data-base-transform') || '';
+      if (offset && Number.isFinite(offset.x) && Number.isFinite(offset.y) &&
+          (offset.x !== 0 || offset.y !== 0)) {
+        node.setAttribute('transform', `${base} translate(${offset.x}, ${offset.y})`.trim());
+      } else {
+        node.setAttribute('transform', base);
+      }
+      node.style.transform = '';
+    });
+    fitContentToView(canvas);
+  }
+
+  // Ease the SVG's viewBox toward the union bbox of all nodes (+ margin), but
+  // asymmetrically: contract briskly, expand slowly. The initial padded viewBox
+  // from ensureViewBoxRoom is a floor — we never contract past it.
+  const _viewBoxMin = new WeakMap();
+  const _viewBoxAnim = new WeakMap();
+  const RATE_CONTRACT = 0.10;  // slow — controlled zoom-in
+  const RATE_EXPAND   = 0.04;  // very slow — barely-perceptible zoom-out
+
+  function fitContentToView(canvas) {
+    const svg = canvas.querySelector('svg');
+    if (!svg) return;
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    svg.querySelectorAll('.node').forEach(node => {
+      const bb = getNodeSvgBBox(node);
+      if (!bb) return;
+      if (bb.x < minX) minX = bb.x;
+      if (bb.y < minY) minY = bb.y;
+      if (bb.x + bb.width > maxX) maxX = bb.x + bb.width;
+      if (bb.y + bb.height > maxY) maxY = bb.y + bb.height;
+    });
+    if (minX === Infinity) return;
+    if (![minX, minY, maxX, maxY].every(Number.isFinite)) return;
+
+    const margin = 48;
+    let target = {
+      x: minX - margin,
+      y: minY - margin,
+      w: (maxX - minX) + margin * 2,
+      h: (maxY - minY) + margin * 2
+    };
+    if (target.w <= 0 || target.h <= 0) return;
+
+    // Clamp to the initial padded viewBox — that's the "at least this much" floor.
+    const floor = _viewBoxMin.get(canvas);
+    if (floor) {
+      const tMaxX = target.x + target.w;
+      const tMaxY = target.y + target.h;
+      const fMaxX = floor.x + floor.w;
+      const fMaxY = floor.y + floor.h;
+      const nx = Math.min(target.x, floor.x);
+      const ny = Math.min(target.y, floor.y);
+      const nMaxX = Math.max(tMaxX, fMaxX);
+      const nMaxY = Math.max(tMaxY, fMaxY);
+      target = { x: nx, y: ny, w: nMaxX - nx, h: nMaxY - ny };
+    }
+
+    let anim = _viewBoxAnim.get(canvas);
+    if (!anim) { anim = {}; _viewBoxAnim.set(canvas, anim); }
+    anim.target = target;
+    anim.svg = svg;
+    if (!anim.raf) anim.raf = requestAnimationFrame(() => tickViewBox(canvas));
+  }
+
+  function tickViewBox(canvas) {
+    const anim = _viewBoxAnim.get(canvas);
+    if (!anim) return;
+    anim.raf = null;
+    const svg = anim.svg;
+    if (!svg || !svg.isConnected) return;
+    const t = anim.target;
+    if (!t || !Number.isFinite(t.x) || !Number.isFinite(t.y) ||
+        !Number.isFinite(t.w) || !Number.isFinite(t.h)) return;
+    const cur = (svg.getAttribute('viewBox') || '').split(/[\s,]+/).map(parseFloat);
+    if (cur.length !== 4 || !cur.every(Number.isFinite)) return;
+
+    const cMaxX = cur[0] + cur[2];
+    const cMaxY = cur[1] + cur[3];
+    const tMaxX = t.x + t.w;
+    const tMaxY = t.y + t.h;
+
+    // Choose per-edge rate: contracting = the viewBox edge moves toward content
+    // (fast); expanding = moves away from content (slow).
+    const rX = (t.x < cur[0]) ? RATE_EXPAND : RATE_CONTRACT;
+    const rY = (t.y < cur[1]) ? RATE_EXPAND : RATE_CONTRACT;
+    const rMX = (tMaxX > cMaxX) ? RATE_EXPAND : RATE_CONTRACT;
+    const rMY = (tMaxY > cMaxY) ? RATE_EXPAND : RATE_CONTRACT;
+
+    const nx = cur[0] + (t.x - cur[0]) * rX;
+    const ny = cur[1] + (t.y - cur[1]) * rY;
+    const nMaxX = cMaxX + (tMaxX - cMaxX) * rMX;
+    const nMaxY = cMaxY + (tMaxY - cMaxY) * rMY;
+    const nw = nMaxX - nx;
+    const nh = nMaxY - ny;
+
+    if (![nx, ny, nw, nh].every(Number.isFinite) || nw <= 0 || nh <= 0) return;
+    svg.setAttribute('viewBox', `${nx} ${ny} ${nw} ${nh}`);
+    svg.setAttribute('width', nw);
+    svg.setAttribute('height', nh);
+
+    const converged =
+      Math.abs(nx - t.x) < 0.5 &&
+      Math.abs(ny - t.y) < 0.5 &&
+      Math.abs(nMaxX - tMaxX) < 0.5 &&
+      Math.abs(nMaxY - tMaxY) < 0.5;
+    if (!converged) anim.raf = requestAnimationFrame(() => tickViewBox(canvas));
+  }
+
+  // A small HTML input dropped into the canvas at a specific client position.
+  // Used for annotations and as a last-resort fallback for renaming nodes whose
+  // labels aren't held in a contenteditable-friendly element.
+  function overlayInput(canvasEl, clientX, clientY, opts) {
+    opts = opts || {};
+    const rect = canvasEl.getBoundingClientRect();
+    const el = document.createElement(opts.multiline ? 'textarea' : 'input');
+    if (!opts.multiline) el.type = 'text';
+    el.value = opts.initialValue || '';
+    el.placeholder = opts.placeholder || '';
+    el.className = 'inline-overlay-input';
+    el.spellcheck = false;
+    // clamp within the canvas so it never opens off-screen
+    const maxX = rect.width - 200;
+    const maxY = rect.height - 40;
+    const localX = Math.max(4, Math.min(maxX, clientX - rect.left + canvasEl.scrollLeft));
+    const localY = Math.max(4, Math.min(maxY, clientY - rect.top  + canvasEl.scrollTop));
+    el.style.left = localX + 'px';
+    el.style.top = localY + 'px';
+    if (opts.width) el.style.width = opts.width + 'px';
+    canvasEl.appendChild(el);
+    el.focus();
+    if (opts.selectAll !== false) el.select();
+
+    let committed = false;
+    let cancelled = false;
+    const cleanup = () => el.remove();
+    const finish = () => {
+      if (committed) return;
+      committed = true;
+      const next = (el.value || '').trim();
+      cleanup();
+      if (cancelled) { opts.onCancel && opts.onCancel(); return; }
+      if (!next && !opts.allowEmpty) { opts.onCancel && opts.onCancel(); return; }
+      opts.onCommit(next);
+    };
+    el.addEventListener('blur', finish, { once: true });
+    el.addEventListener('keydown', (e) => {
+      e.stopPropagation();
+      if (e.key === 'Enter' && (!opts.multiline || !e.shiftKey)) {
+        e.preventDefault();
+        el.blur();
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        cancelled = true;
+        el.blur();
+      }
+    });
+    return el;
+  }
+
+  // Shared hover tooltip for node/arrow descriptions. Content shows a stored
+  // description (or the auto-summary as a placeholder) and becomes contenteditable
+  // when clicked. Blur/Enter commits, Escape cancels.
+  const _tooltipState = { el: null, current: null, hideTimer: null };
+  function getTooltip() {
+    if (_tooltipState.el) return _tooltipState.el;
+    const t = document.createElement('div');
+    t.className = 'element-tooltip';
+    document.body.appendChild(t);
+    _tooltipState.el = t;
+    t.addEventListener('pointerenter', () => {
+      if (_tooltipState.hideTimer) { clearTimeout(_tooltipState.hideTimer); _tooltipState.hideTimer = null; }
+    });
+    t.addEventListener('pointerleave', () => {
+      if (!t.classList.contains('editing')) queueHideTooltip();
+    });
+    t.addEventListener('click', () => {
+      if (!t.classList.contains('editing')) beginTooltipEdit();
+    });
+    return t;
+  }
+  function showTooltip(refEl, description, defaultText, onCommit) {
+    const t = getTooltip();
+    if (_tooltipState.hideTimer) { clearTimeout(_tooltipState.hideTimer); _tooltipState.hideTimer = null; }
+    _tooltipState.current = { refEl, description, defaultText, onCommit };
+    const text = description || defaultText;
+    t.classList.toggle('empty', !description);
+    t.innerHTML = `${mdBold(text)}<span class="tooltip-hint">Click to edit</span>`;
+    // Position above (or below if no room) the ref element.
+    const r = refEl.getBoundingClientRect();
+    // Show first (to measure), then move.
+    t.classList.add('visible');
+    // Defer positioning so the tooltip has its real width/height.
+    requestAnimationFrame(() => {
+      const tw = t.offsetWidth;
+      const th = t.offsetHeight;
+      let left = r.left + r.width / 2 - tw / 2;
+      let top = r.top - th - 8;
+      // Clamp to viewport
+      left = Math.max(8, Math.min(window.innerWidth - tw - 8, left));
+      if (top < 8) top = r.bottom + 8;
+      t.style.left = left + 'px';
+      t.style.top = top + 'px';
+    });
+  }
+  function queueHideTooltip() {
+    if (_tooltipState.hideTimer) clearTimeout(_tooltipState.hideTimer);
+    _tooltipState.hideTimer = setTimeout(() => {
+      _tooltipState.hideTimer = null;
+      const t = _tooltipState.el;
+      if (t && !t.classList.contains('editing')) t.classList.remove('visible');
+    }, 180);
+  }
+  function beginTooltipEdit() {
+    const t = _tooltipState.el;
+    const cur = _tooltipState.current;
+    if (!t || !cur || !cur.onCommit) return;
+    t.classList.add('editing');
+    t.classList.remove('empty');
+    t.setAttribute('contenteditable', 'true');
+    // Preload with whatever the user was reading — the description if set,
+    // otherwise the auto-generated default — so they can edit in place instead
+    // of typing from scratch.
+    t.textContent = cur.description || cur.defaultText || '';
+    t.focus();
+    const sel = window.getSelection();
+    const range = document.createRange();
+    range.selectNodeContents(t);
+    sel.removeAllRanges();
+    sel.addRange(range);
+
+    let done = false;
+    const commit = () => {
+      if (done) return;
+      done = true;
+      const next = (t.textContent || '').trim();
+      t.classList.remove('editing');
+      t.removeAttribute('contenteditable');
+      cur.onCommit(next);
+      t.classList.remove('visible');
+    };
+    const cancel = () => {
+      if (done) return;
+      done = true;
+      t.classList.remove('editing');
+      t.removeAttribute('contenteditable');
+      t.classList.remove('visible');
+    };
+    t.addEventListener('blur', commit, { once: true });
+    t.addEventListener('keydown', function onKey(e) {
+      e.stopPropagation();
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); t.removeEventListener('keydown', onKey); commit(); }
+      else if (e.key === 'Escape') { e.preventDefault(); t.removeEventListener('keydown', onKey); cancel(); }
+    });
+  }
+
+  function promptAnnotation(idx, kind, targetId, refEl) {
+    const canvasEl = document.querySelector(`[data-canvas-idx="${idx}"]`);
+    if (!canvasEl) return;
+    let cx, cy;
+    if (refEl && refEl.getBoundingClientRect) {
+      const r = refEl.getBoundingClientRect();
+      cx = r.left + r.width / 2;
+      cy = r.bottom + 8;
+    } else {
+      const r = canvasEl.getBoundingClientRect();
+      cx = r.left + r.width / 2;
+      cy = r.top + 40;
+    }
+    overlayInput(canvasEl, cx, cy, {
+      placeholder: `Annotate this ${kind}…`,
+      onCommit: (text) => {
+        pushUndo();
+        state.diagrams[idx].annotations.push({ kind, target: targetId, note: text });
+        renderAnnotations(idx);
+        markDirty(idx);
+      }
+    });
+  }
+
+  function renderAnnotations(idx) {
+    // Annotations UI was replaced by the per-diagram notes field. Skip if the
+    // container's inner list element isn't present (which is the current case).
+    const container = document.querySelector(`[data-annotations-idx="${idx}"] .annotation-list`);
+    if (!container) return;
+    const list = state.diagrams[idx].annotations;
+    if (!list.length) {
+      container.innerHTML = `<div style="color: var(--ink-dim); font-size: 12px;">No annotations yet.</div>`;
+      return;
+    }
+    container.innerHTML = list.map((a, i) => `
+      <div class="annotation">
+        <span class="target">${escapeHtml(a.kind)}:${escapeHtml(a.target)}</span>
+        <span class="note">${escapeHtml(a.note)}</span>
+        <button class="remove" data-annotation-idx="${idx}:${i}" title="Remove this annotation">✕</button>
+      </div>
+    `).join('');
+  }
+
+  // Canonical, order-insensitive comparison for descriptions/waypoints/positions.
+  function deepEqual(a, b) {
+    if (a === b) return true;
+    if (typeof a !== 'object' || typeof b !== 'object' || a === null || b === null) return false;
+    if (Array.isArray(a) !== Array.isArray(b)) return false;
+    if (Array.isArray(a)) {
+      if (a.length !== b.length) return false;
+      for (let i = 0; i < a.length; i++) if (!deepEqual(a[i], b[i])) return false;
+      return true;
+    }
+    const ka = Object.keys(a), kb = Object.keys(b);
+    if (ka.length !== kb.length) return false;
+    for (const k of ka) {
+      if (!Object.prototype.hasOwnProperty.call(b, k)) return false;
+      if (!deepEqual(a[k], b[k])) return false;
+    }
+    return true;
+  }
+
+  // Ignore zero-offset entries: a node dragged then dragged back leaves a key,
+  // but semantically nothing has changed vs the original layout.
+  function hasNodeOffsets(positions) {
+    for (const p of Object.values(positions || {})) {
+      if (p && (Math.abs(p.x || 0) > 0.5 || Math.abs(p.y || 0) > 0.5)) return true;
+    }
+    return false;
+  }
+
+  function isDiagramDirty(d) {
+    return (
+      d.currentSource !== d.originalSource ||
+      d.currentCaption !== d.originalCaption ||
+      d.currentDetail !== d.originalDetail ||
+      d.currentNotes !== d.originalNotes ||
+      !deepEqual(d.descriptions, d.originalDescriptions) ||
+      hasNodeOffsets(d.nodePositions) ||
+      Object.keys(d.edgeWaypoints || {}).length > 0 ||
+      (d.annotations && d.annotations.length > 0)
+    );
+  }
+
+  function markDirty(idx) {
+    const d = state.diagrams[idx];
+    const dirty = isDiagramDirty(d);
+    const status = document.querySelector(`[data-status-idx="${idx}"]`);
+    status.textContent = dirty ? 'edited' : '';
+    status.classList.toggle('dirty', dirty);
+    if (typeof markGlobalDirty === 'function') markGlobalDirty();
+  }
+
+  function revertDiagram(idx) {
+    const d = state.diagrams[idx];
+    d.currentSource = d.originalSource;
+    d.nodePositions = {};
+    d.edgeWaypoints = {};
+    d.annotations = [];
+    document.querySelector(`textarea[data-source-idx="${idx}"]`).value = d.originalSource;
+    renderDiagram(idx);
+    markDirty(idx);
+  }
+
+  function toggleDiff(idx) {
+    const view = document.querySelector(`[data-diff-idx="${idx}"]`);
+    if (!view.hasAttribute('hidden')) { view.setAttribute('hidden', ''); return; }
+    view.removeAttribute('hidden');
+    view.innerHTML = renderDiff(state.diagrams[idx].originalSource, state.diagrams[idx].currentSource);
+  }
+
+  function renderDiff(a, b) {
+    const aLines = a.split('\n');
+    const bLines = b.split('\n');
+    const setA = new Set(aLines);
+    const setB = new Set(bLines);
+    const out = [];
+    const maxLen = Math.max(aLines.length, bLines.length);
+    for (let i = 0; i < maxLen; i++) {
+      const av = aLines[i];
+      const bv = bLines[i];
+      if (av === bv) {
+        out.push(`<div class="diff-line"> ${escapeHtml(av || '')}</div>`);
+      } else {
+        if (av !== undefined) out.push(`<div class="diff-line del">- ${escapeHtml(av)}</div>`);
+        if (bv !== undefined) out.push(`<div class="diff-line add">+ ${escapeHtml(bv)}</div>`);
+      }
+    }
+    return out.join('');
+  }
+
+  function showExport() {
+    const s = state.summary;
+    const summaryChanges = {};
+    if (bulletsChanged(s.currentWhat, s.originalWhat)) summaryChanges[sectionMap.summaryWhat] = { original: s.originalWhat, current: s.currentWhat };
+    if (bulletsChanged(s.currentWhy, s.originalWhy)) summaryChanges[sectionMap.summaryWhy] = { original: s.originalWhy, current: s.currentWhy };
+    const payload = {
+      generatedAt: new Date().toISOString(),
+      specTitle: data.title,
+      specPath: data.specPath || null,
+      summary: summaryChanges,
+      diagrams: state.diagrams
+        .map(d => ({
+          id: d.id,
+          kind: d.kind,
+          title: d.title,
+          sourceChanged: d.currentSource !== d.originalSource,
+          captionChanged: d.currentCaption !== d.originalCaption,
+          detailChanged: d.currentDetail !== d.originalDetail,
+          notesChanged: d.currentNotes !== d.originalNotes,
+          descriptionsChanged: JSON.stringify(d.descriptions) !== JSON.stringify(d.originalDescriptions),
+          originalSource: d.originalSource,
+          currentSource: d.currentSource,
+          originalCaption: d.originalCaption,
+          currentCaption: d.currentCaption,
+          originalDetail: d.originalDetail,
+          currentDetail: d.currentDetail,
+          originalNotes: d.originalNotes,
+          currentNotes: d.currentNotes,
+          originalDescriptions: d.originalDescriptions,
+          descriptions: d.descriptions,
+          nodePositions: d.nodePositions,
+          edgeWaypoints: d.edgeWaypoints,
+          annotations: d.annotations
+        }))
+        .filter(d =>
+          d.sourceChanged ||
+          d.captionChanged ||
+          d.detailChanged ||
+          d.notesChanged ||
+          d.descriptionsChanged ||
+          Object.keys(d.nodePositions).length ||
+          Object.keys(d.edgeWaypoints).length ||
+          d.annotations.length
+        )
+    };
+    document.getElementById('export-json').value = JSON.stringify(payload, null, 2);
+    document.getElementById('export-modal').classList.add('open');
+  }
+
+  function escapeHtml(s) {
+    return String(s ?? '').replace(/[&<>"']/g, (c) => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[c]));
+  }
+  // Render **bold** markdown segments as <strong>. Text is escape-safe.
+  function mdBold(s) {
+    return escapeHtml(s).replace(/\*\*([^*\n]+?)\*\*/g, '<strong>$1</strong>');
+  }
+
+  // Given a series of {indent, text} items, build nested <ul><li> HTML.
+  function renderListItems(items) {
+    if (!items.length) return '';
+    // Normalize the smallest indent to 0 so we always start at the top of a <ul>.
+    const minIndent = Math.min.apply(null, items.map(i => i.indent));
+    const norm = items.map(i => ({ indent: i.indent - minIndent, text: i.text }));
+    let html = '';
+    const openStack = [];
+    for (const item of norm) {
+      while (openStack.length && openStack[openStack.length - 1] > item.indent) {
+        html += '</li></ul>'; openStack.pop();
+      }
+      if (!openStack.length || openStack[openStack.length - 1] < item.indent) {
+        html += '<ul>'; openStack.push(item.indent);
+      } else {
+        html += '</li>';
+      }
+      html += `<li>${mdBold(item.text)}`;
+    }
+    while (openStack.length) { html += '</li></ul>'; openStack.pop(); }
+    return html;
+  }
+
+  // Full markdown-lite renderer: blank-line-separated paragraphs, plus
+  // `- ` / `  - ` nested bullet lists, with **bold** inline.
+  function mdRich(text) {
+    if (!text) return '';
+    const lines = String(text).split(/\r?\n/);
+    let html = '';
+    let listBuf = [];
+    let paraLines = [];
+    const flushList = () => {
+      if (listBuf.length) { html += renderListItems(listBuf); listBuf = []; }
+    };
+    const flushPara = () => {
+      if (paraLines.length) {
+        const p = paraLines.join(' ').trim();
+        if (p) html += `<p>${mdBold(p)}</p>`;
+        paraLines = [];
+      }
+    };
+    for (const line of lines) {
+      const m = /^(\s*)(?:[-*])\s+(.*)$/.exec(line);
+      if (m) {
+        flushPara();
+        listBuf.push({ indent: Math.floor(m[1].length / 2), text: m[2] });
+      } else if (line.trim() === '') {
+        flushList();
+        flushPara();
+      } else {
+        flushList();
+        paraLines.push(line);
+      }
+    }
+    flushList();
+    flushPara();
+    return html;
+  }
+
+  // For a single summary bullet: first non-empty line is the bullet's own text
+  // (rendered with bold), any following `  - ` lines become a nested sub-list.
+  function bulletInnerHTML(bulletText) {
+    const lines = String(bulletText || '').split(/\r?\n/);
+    // First non-empty line is the primary text
+    let firstIdx = lines.findIndex(l => l.trim());
+    if (firstIdx < 0) return '';
+    const first = lines[firstIdx].replace(/^\s*(?:[-*])\s+/, ''); // tolerate leading `- ` too
+    let html = mdBold(first);
+    const rest = lines.slice(firstIdx + 1);
+    const subItems = [];
+    for (const line of rest) {
+      const m = /^(\s*)(?:[-*])\s+(.*)$/.exec(line);
+      if (m) subItems.push({ indent: Math.floor(m[1].length / 2), text: m[2] });
+    }
+    if (subItems.length) html += renderListItems(subItems);
+    return html;
+  }
+})();
+</script>
+</body>
+</html>

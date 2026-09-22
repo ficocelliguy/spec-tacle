@@ -1,0 +1,43 @@
+{
+  "name": "spec-tacle",
+  "version": "0.1.0",
+  "description": "Turn a software spec into an editable HTML visualizer — technical summary, mermaid diagrams, per-node/arrow descriptions, and round-trip back to the spec file.",
+  "bin": {
+    "spec-tacle": "./bin/spec-tacle.js"
+  },
+  "files": [
+    "bin",
+    "lib",
+    "skill",
+    "example",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  },
+  "keywords": [
+    "spec",
+    "mermaid",
+    "diagram",
+    "documentation",
+    "visualizer",
+    "software-spec",
+    "claude",
+    "ai-editor",
+    "round-trip"
+  ],
+  "author": "Michael Ficocelli",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/michaelficocelli/spec-tacle"
+  },
+  "homepage": "https://github.com/michaelficocelli/spec-tacle#readme",
+  "bugs": {
+    "url": "https://github.com/michaelficocelli/spec-tacle/issues"
+  }
+}
