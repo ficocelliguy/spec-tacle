@@ -112,6 +112,10 @@
   button:hover { background: var(--accent-soft); border-color: var(--accent); }
   button.primary { background: var(--accent); color: white; border-color: var(--accent); }
   button.primary:hover { opacity: 0.9; }
+  /* One-way action — softer red border + ink so a stray click reads as
+     "this looks destructive" before the confirm dialog. */
+  button.danger { color: var(--warn); border-color: var(--warn); }
+  button.danger:hover { background: color-mix(in oklab, var(--warn) 12%, transparent); }
 
   main { padding: 20px 24px; max-width: 1200px; margin: 0 auto; }
 
@@ -175,6 +179,23 @@
   }
   section.summary .add-bullet:hover { color: var(--accent); border-color: var(--accent); background: transparent; }
   section.summary .edit-hint { font-size: 11px; color: var(--ink-dim); margin-top: 8px; font-style: italic; }
+  section.summary.open-questions {
+    margin-top: 8px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 16px;
+  }
+  section.summary.open-questions .summary-heading h2 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    line-height: 1.2;
+    color: var(--ink);
+    text-transform: none;
+    letter-spacing: 0;
+  }
+  section.summary.open-questions .summary-heading .jump-to-spec { margin-left: auto; }
 
   .diagram-card {
     background: var(--panel);
@@ -194,13 +215,16 @@
   }
   .diagram-header h3 { margin: 0; font-size: 16px; font-weight: 600; }
   .diagram-header .kind {
-    font-size: 11px;
+    font-size: 12px;
+    font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.6px;
     color: var(--accent);
     background: var(--accent-soft);
-    padding: 2px 8px;
+    padding: 3px 10px;
     border-radius: 10px;
+    border: 1px solid var(--accent-soft);
+    white-space: nowrap;
   }
   .diagram-caption {
     padding: 8px 16px;
@@ -995,20 +1019,101 @@
     padding: 6px 2px;
   }
 
-  /* Spec content, rendered as monospace pre — keeps markdown formatting readable. */
+  /* Spec content, rendered from markdown into proportional typography.
+     `.drawer-spec-md` marks the rendered-markdown tree so element rules only
+     apply inside the drawer, not to the whole page. */
   #spec-drawer .drawer-spec {
     flex: 1 1 auto;
-    padding: 14px 18px 24px;
+    padding: 14px 22px 32px;
     overflow: auto;
-    font: 13px/1.55 "SF Mono", Menlo, Consolas, monospace;
-    white-space: pre-wrap;
-    word-break: break-word;
+    font: 14px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
     color: var(--ink);
+    word-wrap: break-word;
   }
+  #spec-drawer .drawer-spec.drawer-spec-md > *:first-child { margin-top: 0; }
+  #spec-drawer .drawer-spec.drawer-spec-md > *:last-child { margin-bottom: 0; }
+  #spec-drawer .drawer-spec-md h1,
+  #spec-drawer .drawer-spec-md h2,
+  #spec-drawer .drawer-spec-md h3,
+  #spec-drawer .drawer-spec-md h4,
+  #spec-drawer .drawer-spec-md h5,
+  #spec-drawer .drawer-spec-md h6 {
+    color: var(--accent);
+    font-weight: 600;
+    line-height: 1.25;
+    margin: 1.4em 0 0.5em;
+  }
+  #spec-drawer .drawer-spec-md h1 { font-size: 1.55em; border-bottom: 1px solid var(--line); padding-bottom: 0.25em; }
+  #spec-drawer .drawer-spec-md h2 { font-size: 1.3em;  border-bottom: 1px solid var(--line); padding-bottom: 0.2em; }
+  #spec-drawer .drawer-spec-md h3 { font-size: 1.12em; }
+  #spec-drawer .drawer-spec-md h4 { font-size: 1em; }
+  #spec-drawer .drawer-spec-md h5,
+  #spec-drawer .drawer-spec-md h6 { font-size: 0.95em; color: var(--ink-dim); }
+  #spec-drawer .drawer-spec-md p { margin: 0.6em 0; }
+  #spec-drawer .drawer-spec-md ul,
+  #spec-drawer .drawer-spec-md ol { margin: 0.5em 0; padding-left: 1.6em; }
+  #spec-drawer .drawer-spec-md li { margin: 0.2em 0; }
+  #spec-drawer .drawer-spec-md li > p { margin: 0.2em 0; }
+  #spec-drawer .drawer-spec-md a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+  #spec-drawer .drawer-spec-md a:hover { text-decoration-thickness: 2px; }
+  #spec-drawer .drawer-spec-md strong { font-weight: 600; }
+  #spec-drawer .drawer-spec-md em { font-style: italic; }
+  #spec-drawer .drawer-spec-md blockquote {
+    margin: 0.8em 0;
+    padding: 0.2em 0.9em;
+    color: var(--ink-dim);
+    border-left: 3px solid var(--line);
+    background: rgba(127, 127, 127, 0.05);
+  }
+  #spec-drawer .drawer-spec-md code {
+    font: 0.88em/1.4 "SF Mono", Menlo, Consolas, monospace;
+    background: rgba(127, 127, 127, 0.12);
+    padding: 0.1em 0.35em;
+    border-radius: 3px;
+  }
+  #spec-drawer .drawer-spec-md pre {
+    font: 12.5px/1.5 "SF Mono", Menlo, Consolas, monospace;
+    background: rgba(127, 127, 127, 0.08);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 10px 12px;
+    margin: 0.8em 0;
+    overflow: auto;
+  }
+  #spec-drawer .drawer-spec-md pre code {
+    background: transparent;
+    padding: 0;
+    border-radius: 0;
+    font-size: inherit;
+  }
+  #spec-drawer .drawer-spec-md hr {
+    border: 0;
+    border-top: 1px solid var(--line);
+    margin: 1.4em 0;
+  }
+  #spec-drawer .drawer-spec-md table {
+    border-collapse: collapse;
+    margin: 0.8em 0;
+    font-size: 0.95em;
+    display: block;
+    overflow-x: auto;
+    max-width: 100%;
+  }
+  #spec-drawer .drawer-spec-md th,
+  #spec-drawer .drawer-spec-md td {
+    border: 1px solid var(--line);
+    padding: 5px 10px;
+    text-align: left;
+    vertical-align: top;
+  }
+  #spec-drawer .drawer-spec-md th { background: rgba(127, 127, 127, 0.08); font-weight: 600; }
+  #spec-drawer .drawer-spec-md img { max-width: 100%; height: auto; }
+  /* Flash the block a jump-to-marker landed on. Attached to a block-level
+     element (heading, paragraph, list, table) rather than a span, so the
+     highlight covers the whole target region. */
   #spec-drawer .drawer-spec .anchor-flash {
     background: var(--warn);
     color: #fff;
-    padding: 2px 4px;
     border-radius: 3px;
     animation: anchor-flash-fade 1.4s ease forwards;
   }
@@ -1016,17 +1121,18 @@
     0%   { background: var(--warn); color: #fff; }
     100% { background: transparent; color: inherit; }
   }
-  /* Lines added or changed by the most recent Update spec. Cleared on the next
+  /* Blocks changed by the most recent Update spec. Cleared on the next
      Update, a manual Refresh, or an external file-change event — so the
      highlight always reflects only the freshest diff. The .consistency variant
-     colors auto-applied lines from a follow-up consistency pass in blue so a
-     reader can tell them apart from lines they hand-edited themselves. */
+     colors auto-applied blocks from a follow-up consistency pass in blue so a
+     reader can tell them apart from blocks they hand-edited themselves. */
   #spec-drawer .drawer-spec .spec-line-changed {
     background: var(--diff-add);
     box-shadow: inset 3px 0 0 var(--ok);
-    padding: 1px 6px;
-    margin: 0 -6px;
-    border-radius: 2px;
+    padding: 2px 8px;
+    margin-left: -8px;
+    margin-right: -8px;
+    border-radius: 3px;
     animation: spec-line-highlight-in 0.9s ease;
   }
   #spec-drawer .drawer-spec .spec-line-changed.consistency {
@@ -1159,12 +1265,6 @@
     flex-shrink: 0;
   }
   #spec-drawer .drawer-spec .marker-line { color: var(--ink-dim); font-style: italic; }
-  /* Anchor comments (<!-- spec-tacle:… -->) are plumbing, not content — the raw
-     file keeps them so /update-spec can find its way, but the reader never
-     needs to see them. Kept in the DOM (display:none) so jump-to-marker line
-     math still lines up; the flash walks past hidden lines. */
-  #spec-drawer .drawer-spec .spec-anchor-line { display: none; }
-  #spec-drawer .drawer-spec .heading-line { color: var(--accent); font-weight: 600; }
   #spec-drawer-toggle {
     position: fixed;
     top: 50%;
@@ -1220,6 +1320,44 @@
     flex-shrink: 0;
   }
   @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* --- Non-blocking toast messages (replaces alert() for soft failures) --- */
+  #toast-stack {
+    position: fixed;
+    right: 16px;
+    bottom: 16px;
+    z-index: 200;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-end;
+    pointer-events: none;
+  }
+  .toast {
+    pointer-events: auto;
+    background: var(--panel);
+    color: var(--ink);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--accent);
+    border-radius: 6px;
+    padding: 10px 14px;
+    font-size: 13px;
+    line-height: 1.35;
+    max-width: 360px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
+    opacity: 0;
+    transform: translateX(20px);
+    transition: opacity 0.18s ease, transform 0.18s ease;
+    cursor: pointer;
+  }
+  .toast.visible { opacity: 1; transform: translateX(0); }
+  .toast.warn { border-left-color: var(--warn); }
+  .toast code {
+    background: rgba(127, 127, 127, 0.15);
+    padding: 0 4px;
+    border-radius: 3px;
+    font-size: 12px;
+  }
 </style>
 </head>
 <body>
@@ -1237,6 +1375,7 @@
     <button id="btn-undo-spec" title="Restore the spec file from the most recent backup">Undo</button>
     <button id="btn-export" title="Copy or download a JSON payload of every in-browser edit">Export JSON</button>
     <button id="btn-reset" title="Discard all in-browser edits (does not touch the spec file)">Reset</button>
+    <button id="btn-finalize" class="danger" title="Strip spec-tacle markers + auto-generated inventories, delete backups and the consistency queue — leave a clean markdown spec">Finalize</button>
     <span id="server-status" class="server-note"></span>
   </div>
   <div id="consistency-banner" class="consistency-banner" role="status" aria-live="polite">
@@ -1266,13 +1405,15 @@
       <summary title="Recent updates that touched this spec. Collapsed by default so the spec text stays the focus.">Recent updates <span id="drawer-diffs-count" style="color: var(--ink-dim); font-weight: 400;"></span></summary>
       <div class="diffs-scroll" id="drawer-diffs-body"></div>
     </details>
-    <pre class="drawer-spec" id="drawer-spec" tabindex="0"></pre>
+    <div class="drawer-spec" id="drawer-spec" tabindex="0"></div>
   </div>
 </aside>
 
 <div id="loading-overlay" role="status" aria-live="polite" aria-hidden="true">
   <div class="box"><div class="spinner"></div><span id="loading-message">Saving spec…</span></div>
 </div>
+
+<div id="toast-stack" role="status" aria-live="polite"></div>
 
 <div id="shape-menu" role="menu"></div>
 
@@ -1292,6 +1433,7 @@
 <script id="specdata" type="application/json">__SPEC_DATA__</script>
 
 <script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/markdown-it@14.1.0/dist/markdown-it.min.js"></script>
 <script>
 (function () {
   const data = JSON.parse(document.getElementById('specdata').textContent);
@@ -1300,8 +1442,16 @@
 
   // Summary is bullets. Accept a string for back-compat by splitting on newlines.
   const asBullets = (v) => Array.isArray(v) ? v.slice() : (v ? String(v).split(/\r?\n/).map(s => s.replace(/^[-*]\s+/, '').trim()).filter(Boolean) : []);
-  const initialWhat = asBullets(data.summary?.what);
-  const initialWhy  = asBullets(data.summary?.why);
+  const initialWhat  = asBullets(data.summary?.what);
+  const initialWhy   = asBullets(data.summary?.why);
+  const initialRules = asBullets(data.summary?.rules);
+  // Open questions appear as a section below the diagrams. Present only when
+  // the spec has any — either declared in data.summary.openQuestions, or opted
+  // in via sectionMap.summaryOpenQuestions so the section stays available for
+  // adding new ones in-browser even after the last one is cleared.
+  const initialOpenQuestions = asBullets(data.summary?.openQuestions);
+  const openQuestionsOptedIn = Array.isArray(data.summary?.openQuestions) ||
+    (data.sectionMap && typeof data.sectionMap.summaryOpenQuestions === 'string');
 
   const summarySection = document.createElement('section');
   summarySection.className = 'summary';
@@ -1322,13 +1472,19 @@
       <ul id="summary-why-list" class="summary-list" data-summary="why"></ul>
       <button type="button" class="add-bullet" data-target="why" title="Add a new bullet to the Why list">+ Add bullet</button>
     </div>
+    <div class="block">
+      <div class="block-label">Rules</div>
+      <ul id="summary-rules-list" class="summary-list" data-summary="rules"></ul>
+      <button type="button" class="add-bullet" data-target="rules" title="Add a new bullet to the Rules list">+ Add bullet</button>
+    </div>
     <div class="edit-hint">Double-click a bullet to edit. Wrap key terms in **double asterisks** to bold them. Enter commits, Esc cancels, empty commit removes the bullet.</div>
   `;
   document.getElementById('app').appendChild(summarySection);
   document.getElementById('doc-title').textContent = data.title || 'Spec-tacle';
   document.getElementById('doc-subtitle').textContent = data.subtitle || '';
-  const whatUl = document.getElementById('summary-what-list');
-  const whyUl  = document.getElementById('summary-why-list');
+  const whatUl  = document.getElementById('summary-what-list');
+  const whyUl   = document.getElementById('summary-why-list');
+  const rulesUl = document.getElementById('summary-rules-list');
 
   mermaid.initialize({
     startOnLoad: false,
@@ -1342,7 +1498,11 @@
       originalWhat: initialWhat.slice(),
       currentWhat: initialWhat.slice(),
       originalWhy: initialWhy.slice(),
-      currentWhy: initialWhy.slice()
+      currentWhy: initialWhy.slice(),
+      originalRules: initialRules.slice(),
+      currentRules: initialRules.slice(),
+      originalOpenQuestions: initialOpenQuestions.slice(),
+      currentOpenQuestions: initialOpenQuestions.slice()
     },
     diagrams: data.diagrams.map(d => ({
       ...d,
@@ -1365,7 +1525,7 @@
     }))
   };
 
-  const sectionMap = Object.assign({ summaryWhat: 'summary:what', summaryWhy: 'summary:why' }, data.sectionMap || {});
+  const sectionMap = Object.assign({ summaryWhat: 'summary:what', summaryWhy: 'summary:why', summaryRules: 'summary:rules', summaryOpenQuestions: 'summary:open-questions' }, data.sectionMap || {});
   const serverBase = data.demoMode
     ? null // static demo: no round-trip regardless of origin
     : (data.serverUrl || (location.protocol === 'file:' ? null : location.origin));
@@ -1382,7 +1542,9 @@
     return JSON.stringify({
       summary: {
         currentWhat: state.summary.currentWhat,
-        currentWhy: state.summary.currentWhy
+        currentWhy: state.summary.currentWhy,
+        currentRules: state.summary.currentRules,
+        currentOpenQuestions: state.summary.currentOpenQuestions
       },
       diagrams: state.diagrams.map(d => ({
         currentSource: d.currentSource,
@@ -1408,8 +1570,12 @@
     const s = JSON.parse(snap);
     state.summary.currentWhat = s.summary.currentWhat.slice();
     state.summary.currentWhy = s.summary.currentWhy.slice();
+    state.summary.currentRules = (s.summary.currentRules || []).slice();
+    state.summary.currentOpenQuestions = (s.summary.currentOpenQuestions || []).slice();
     renderBullets('what');
     renderBullets('why');
+    renderBullets('rules');
+    renderBullets('openQuestions');
     s.diagrams.forEach((d, i) => {
       const cur = state.diagrams[i];
       const changed =
@@ -1476,12 +1642,34 @@
   });
 
 
-  const HINT_MERMAID = 'Hover a node or arrow to see a description tooltip; click the tooltip to edit it. Click a node to select it, then Delete/Backspace to remove it (and its edges). Drag a node to reposition; arrows and labels follow. Hover a node for its four side dots and shape-picker (◇). Drag a side dot to another node to create a new arrow, or into empty space to spawn a new node in edit mode. Hover an arrow for its handles: drag the blue circle (or the label itself) to bend, drag the green/orange endpoints to reconnect. Double-click a node, edge label, caption, detail, or bullet to edit its text inline — the cursor lands where you clicked, so triple-click when you want to replace everything. Click the "Add notes…" area below to jot general thoughts about this diagram. Wrap key terms in double asterisks to bold them. Ctrl/⌘+Z undoes the last edit.';
+  const HINT_MERMAID = 'Hover a node or arrow to see a description tooltip; click the tooltip to edit it. Click a node to select it, then Delete/Backspace to remove it (and its edges). Drag a node to reposition; arrows and labels follow. Hover a node for its four side dots and shape-picker (◇). Drag a side dot to another node to create a new arrow, or into empty space to spawn a new node in edit mode. Hover an arrow for its handles: drag the blue circle (or the label itself) to bend, drag the green/orange endpoints to reconnect. Double-click a node, edge label, caption, detail, or bullet to edit its text inline — the cursor lands where you clicked, so triple-click when you want to replace everything. Double-click an unlabeled arrow to add a new label. Click the "Add notes…" area below to jot general thoughts about this diagram. Wrap key terms in double asterisks to bold them. Ctrl/⌘+Z undoes the last edit.';
   const HINT_TABLE = 'Double-click a header or cell to edit it in place; the cursor lands where you clicked, triple-click to select the whole cell. Enter commits, Esc cancels. Wrap key terms in double asterisks to bold them. To add or remove columns or rows, open the Source pane on the right and edit the markdown table directly — the visualizer re-renders when you re-render. Caption, detail, and notes all edit inline the same way. Ctrl/⌘+Z undoes the last edit.';
   const SOURCE_HINT_MERMAID = 'Show or hide the mermaid source for this diagram';
   const SOURCE_HINT_TABLE = 'Show or hide the raw markdown table source';
   const SOURCE_EDIT_HINT_MERMAID = 'Edit the mermaid source directly';
   const SOURCE_EDIT_HINT_TABLE = 'Edit the markdown table source directly';
+
+  // Human-friendly labels for the type badge in each diagram header. Falls back
+  // to a title-cased version of whatever `kind` string the data JSON carries,
+  // so a novel kind still reads as a real label rather than a lowercase token.
+  const KIND_LABELS = {
+    'architecture': 'Architecture Diagram',
+    'user flow': 'User Flow',
+    'information flow': 'Information Flow',
+    'dependency map': 'Dependency Map',
+    'decision chart': 'Decision Chart',
+    'state': 'State Diagram',
+    'sequence': 'Sequence Diagram',
+    'data summary': 'Data Summary',
+    'histogram': 'Histogram',
+    'table': 'Table',
+  };
+  function kindLabel(kind) {
+    const k = String(kind || '').trim().toLowerCase();
+    if (!k) return 'Diagram';
+    if (KIND_LABELS[k]) return KIND_LABELS[k];
+    return k.replace(/\b\w/g, c => c.toUpperCase());
+  }
 
   data.diagrams.forEach((diagram, idx) => {
     const isTable = diagram.kind === 'table';
@@ -1491,7 +1679,7 @@
     card.innerHTML = `
       <div class="diagram-header">
         <h3>${escapeHtml(diagram.title)}</h3>
-        <span class="kind">${escapeHtml(diagram.kind || 'diagram')}</span>
+        <span class="kind" title="Diagram type">${escapeHtml(kindLabel(diagram.kind))}</span>
         <button type="button" class="jump-to-spec" data-jump-marker="diagram:${escapeHtml(diagram.id)}" title="Open the spec drawer and jump to this diagram in the source file">View in spec</button>
       </div>
       <div class="diagram-caption" data-caption-idx="${idx}" title="Double-click to edit (wrap key terms in **double asterisks** to bold)">${mdBold(diagram.caption || '')}</div>
@@ -1522,6 +1710,30 @@
     `;
     document.getElementById('app').appendChild(card);
   });
+
+  // Open questions section: rendered at the bottom, after the diagrams. Only
+  // built when the spec has any open questions declared (or the sectionMap
+  // opts the section in), so specs without open items don't grow an empty
+  // pane. Same edit / round-trip gestures as the top summary lists.
+  let openQuestionsUl = null;
+  if (openQuestionsOptedIn) {
+    const openQuestionsSection = document.createElement('section');
+    openQuestionsSection.className = 'summary open-questions';
+    openQuestionsSection.innerHTML = `
+      <div class="summary-heading">
+        <h2>Open questions</h2>
+        <span class="section-label">Unresolved</span>
+        <button type="button" class="jump-to-spec" data-jump-marker="${escapeHtml(sectionMap.summaryOpenQuestions)}" title="Open the spec drawer and jump to Open questions in the source file">View in spec</button>
+      </div>
+      <div class="block">
+        <ul id="summary-open-questions-list" class="summary-list" data-summary="openQuestions"></ul>
+        <button type="button" class="add-bullet" data-target="openQuestions" title="Add a new open question">+ Add question</button>
+      </div>
+      <div class="edit-hint">Double-click a question to edit. Wrap key terms in **double asterisks** to bold them. Enter commits, Esc cancels, empty commit removes the bullet.</div>
+    `;
+    document.getElementById('app').appendChild(openQuestionsSection);
+    openQuestionsUl = document.getElementById('summary-open-questions-list');
+  }
 
   state.diagrams.forEach((_, idx) => renderDiagram(idx));
 
@@ -1599,13 +1811,22 @@
 
   // --- Editable summary bullets ---
   function bulletsFor(key) {
-    return key === 'what' ? state.summary.currentWhat : state.summary.currentWhy;
+    if (key === 'what') return state.summary.currentWhat;
+    if (key === 'why') return state.summary.currentWhy;
+    if (key === 'openQuestions') return state.summary.currentOpenQuestions;
+    return state.summary.currentRules;
   }
-  function ulFor(key) { return key === 'what' ? whatUl : whyUl; }
+  function ulFor(key) {
+    if (key === 'what') return whatUl;
+    if (key === 'why') return whyUl;
+    if (key === 'openQuestions') return openQuestionsUl;
+    return rulesUl;
+  }
 
   function renderBullets(key) {
-    const list = bulletsFor(key);
     const ul = ulFor(key);
+    if (!ul) return;
+    const list = bulletsFor(key);
     ul.innerHTML = list.map((b, i) =>
       `<li data-i="${i}" title="Double-click to edit. Shift+Enter for a new line. Add sub-bullets with two-space indented lines. Wrap key terms in **double asterisks** to bold.">${bulletInnerHTML(b)}</li>`
     ).join('');
@@ -1623,8 +1844,9 @@
     }, { allowEmpty: true, multiline: true, event });
   }
 
-  ['what', 'why'].forEach(key => {
+  ['what', 'why', 'rules', 'openQuestions'].forEach(key => {
     const ul = ulFor(key);
+    if (!ul) return;
     ul.addEventListener('dblclick', (e) => {
       // If the user is already editing (contenteditable is on), let the browser
       // handle the double-click natively — that selects the word under the cursor.
@@ -1716,16 +1938,19 @@
   if (data.demoMode) {
     document.getElementById('btn-update-spec').disabled = true;
     document.getElementById('btn-undo-spec').disabled = true;
+    document.getElementById('btn-finalize').disabled = true;
   } else if (!serverBase) {
     setServerStatus('Opened via file:// — run `npx spec-tacle_skill serve` and load through that server to enable Update spec.', 'err');
     document.getElementById('btn-update-spec').disabled = true;
     document.getElementById('btn-undo-spec').disabled = true;
+    document.getElementById('btn-finalize').disabled = true;
   } else {
     setServerStatus(`server ${serverBase}`, 'ok');
   }
 
   document.getElementById('btn-update-spec').addEventListener('click', updateSpec);
   document.getElementById('btn-undo-spec').addEventListener('click', undoSpec);
+  document.getElementById('btn-finalize').addEventListener('click', finalizeSpec);
 
   async function updateSpec() {
     if (!serverBase) return;
@@ -1740,6 +1965,12 @@
     }
     if (bulletsChanged(state.summary.currentWhy, state.summary.originalWhy)) {
       payload.sections[sectionMap.summaryWhy] = toMarkdownBullets(state.summary.currentWhy);
+    }
+    if (bulletsChanged(state.summary.currentRules, state.summary.originalRules)) {
+      payload.sections[sectionMap.summaryRules] = toMarkdownBullets(state.summary.currentRules);
+    }
+    if (bulletsChanged(state.summary.currentOpenQuestions, state.summary.originalOpenQuestions)) {
+      payload.sections[sectionMap.summaryOpenQuestions] = toMarkdownBullets(state.summary.currentOpenQuestions);
     }
     state.diagrams.forEach(d => {
       // Descriptions decorate the per-diagram Nodes/Edges inventory the server
@@ -1797,6 +2028,8 @@
       // alongside the other fields.
       state.summary.originalWhat = state.summary.currentWhat.slice();
       state.summary.originalWhy = state.summary.currentWhy.slice();
+      state.summary.originalRules = state.summary.currentRules.slice();
+      state.summary.originalOpenQuestions = state.summary.currentOpenQuestions.slice();
       state.diagrams.forEach(d => {
         d.originalSource = d.currentSource;
         d.originalCaption = d.currentCaption;
@@ -1830,6 +2063,65 @@
       }
     } catch (err) {
       setServerStatus(`update failed: ${err.message}. Is \`npx spec-tacle_skill serve\` running?`, 'err');
+    } finally {
+      if (window.__specTacleHideLoading) window.__specTacleHideLoading();
+    }
+  }
+
+  // One-way clean pass: ask the server to strip spec-tacle markers + auto-
+  // inventories from the spec file, then delete backups, the consistency
+  // queue, and agent logs. Update/Undo become meaningless afterward (nothing
+  // for them to write into), so they're disabled once the server confirms.
+  // The spec's actual content stays intact — a re-run of spec-tacle on the
+  // file will re-insert markers on the next Update.
+  async function finalizeSpec() {
+    if (!serverBase) return;
+    const msg = [
+      'Finalize this spec?',
+      '',
+      'This will:',
+      '  • strip every <!-- spec-tacle:… --> marker comment from the spec file',
+      '  • drop the auto-generated Nodes/Edges inventory before each mermaid fence',
+      '  • delete the backups/ directory next to the spec',
+      '  • clear the consistency queue and delete agent logs',
+      '',
+      'Your prose, mermaid sources, and tables stay intact — this only removes',
+      'spec-tacle scaffolding. Update spec and Undo will be disabled afterward.',
+      '',
+      'Continue?',
+    ].join('\n');
+    if (!confirm(msg)) return;
+    setServerStatus('finalizing…');
+    if (window.__specTacleShowLoading) window.__specTacleShowLoading('Finalizing spec…');
+    if (window.__specTacleMarkLocalWrite) window.__specTacleMarkLocalWrite();
+    try {
+      const res = await fetch(`${serverBase}/finalize`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ specPath: data.specPath })
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok || !body.ok) {
+        setServerStatus(`finalize failed: ${body.error || res.statusText || res.status}`, 'err');
+        return;
+      }
+      const removed = Array.isArray(body.removed) ? body.removed : [];
+      const summary = removed.length
+        ? `finalized — removed ${removed.join('; ')}`
+        : 'finalized — nothing to remove';
+      setServerStatus(summary, 'ok');
+      // Update/Undo would just re-inject markers or restore backups we
+      // just deleted. Both are meaningless post-finalize, so lock them.
+      for (const id of ['btn-update-spec', 'btn-undo-spec', 'btn-finalize']) {
+        const b = document.getElementById(id);
+        if (b) b.disabled = true;
+      }
+      if (window.__specTacleHotReload) {
+        try { await window.__specTacleHotReload(); }
+        catch (_) { /* surfaced inside drawer */ }
+      }
+    } catch (err) {
+      setServerStatus(`finalize failed: ${err.message}. Is \`npx spec-tacle_skill serve\` running?`, 'err');
     } finally {
       if (window.__specTacleHideLoading) window.__specTacleHideLoading();
     }
@@ -1869,7 +2161,7 @@
   }
   function markGlobalDirty() {
     const s = state.summary;
-    const summaryDirty = bulletsChanged(s.currentWhat, s.originalWhat) || bulletsChanged(s.currentWhy, s.originalWhy);
+    const summaryDirty = bulletsChanged(s.currentWhat, s.originalWhat) || bulletsChanged(s.currentWhy, s.originalWhy) || bulletsChanged(s.currentRules, s.originalRules) || bulletsChanged(s.currentOpenQuestions, s.originalOpenQuestions);
     const diagramsDirty = state.diagrams.some(d =>
       d.currentSource !== d.originalSource ||
       d.currentCaption !== d.originalCaption ||
@@ -1902,8 +2194,12 @@
     pushUndo();
     state.summary.currentWhat = state.summary.originalWhat.slice();
     state.summary.currentWhy = state.summary.originalWhy.slice();
+    state.summary.currentRules = state.summary.originalRules.slice();
+    state.summary.currentOpenQuestions = state.summary.originalOpenQuestions.slice();
     renderBullets('what');
     renderBullets('why');
+    renderBullets('rules');
+    renderBullets('openQuestions');
     state.diagrams.forEach((d, i) => {
       d.currentSource = d.originalSource;
       d.currentCaption = d.originalCaption;
@@ -2622,6 +2918,32 @@
     return (clone.textContent || '').trim();
   }
 
+  // Insert a label onto an edge that currently has none (Form A: `A --> B`).
+  // Rebuilds the edge's fullText with `|"label"|` right after the arrow, then
+  // does a single string replace in the source. Returns true on success.
+  function addEdgeLabelInSource(idx, edge, newLabel) {
+    if (!edge || !edge.fullText || edge.label != null) return false;
+    const src = state.diagrams[idx].currentSource;
+    const arrow = edge.arrow;
+    // Find where the arrow sits inside fullText. lastIndexOf so `<-->` matches
+    // the trailing `>` correctly and we insert after the whole token.
+    const i = edge.fullText.indexOf(arrow);
+    if (i < 0) return false;
+    const escaped = newLabel.replace(/"/g, '\\"');
+    const newFull =
+      edge.fullText.substring(0, i + arrow.length) +
+      `|"${escaped}"|` +
+      edge.fullText.substring(i + arrow.length);
+    const next = src.replace(edge.fullText, newFull);
+    if (next === src) return false;
+    pushUndo();
+    state.diagrams[idx].currentSource = next;
+    const ta = document.querySelector(`textarea[data-source-idx="${idx}"]`);
+    if (ta) ta.value = next;
+    markDirty(idx);
+    return true;
+  }
+
   function replaceInSource(idx, oldLabel, newLabel) {
     // Escape the old label for a literal regex; then require it to sit inside
     // a mermaid label bracket (["..."], [...], {"..."}, {...}, ((...)), (...), etc.)
@@ -2773,7 +3095,7 @@
           inlineEdit(editTarget, current, (next) => {
             const ok = replaceInSource(idx, current, next);
             if (ok) renderDiagram(idx);
-            else alert(`Could not locate "${current}" in the source. Edit it manually on the right.`);
+            else toast(`Could not locate "${current}" in the source. Edit it manually on the right.`, { warn: true });
           }, { event: e });
         } else {
           // Fallback: overlay an HTML input right on top of the node
@@ -2787,7 +3109,7 @@
               if (next === current) return;
               const ok = replaceInSource(idx, current, next);
               if (ok) renderDiagram(idx);
-              else alert(`Could not locate "${current}" in the source. Edit it manually on the right.`);
+              else toast(`Could not locate "${current}" in the source. Edit it manually on the right.`, { warn: true });
             }
           });
         }
@@ -2888,6 +3210,26 @@
         );
       });
       hoverOverlay.addEventListener('pointerleave', queueHideTooltip);
+
+      // Double-click the arrow itself to add a label when it has none. Mermaid
+      // emits an empty label group for unlabeled edges, so there's nothing on
+      // the label to hit — the arrow overlay becomes the target. If the edge
+      // already has a label the label's own dblclick handles editing instead.
+      hoverOverlay.addEventListener('dblclick', (e) => {
+        if (!sourceEdge || sourceEdge.label != null) return;
+        e.stopPropagation();
+        overlayInput(canvas, e.clientX, e.clientY, {
+          initialValue: '',
+          placeholder: 'New label',
+          width: 200,
+          onCommit: (next) => {
+            if (!next) return;
+            const ok = addEdgeLabelInSource(idx, sourceEdge, next);
+            if (ok) renderDiagram(idx);
+            else toast('Could not add a label to this arrow — edit source on the right.', { warn: true });
+          }
+        });
+      });
 
 
       // Bend handle: <g> wrap containing a fat transparent hit-circle and a
@@ -3052,7 +3394,7 @@
               if (!newId || newId === currentId) { renderDiagram(idx); return; }
               let nextSrc = reconnectEdge(state.diagrams[idx].currentSource, sourceEdge, side, newId);
               if (!nextSrc) {
-                alert(`Could not update the source for this edge. Edit it manually on the right (${sourceEdge.fullText}).`);
+                toast(`Could not update the source for this edge. Edit it manually on the right (<code>${sourceEdge.fullText}</code>).`, { html: true, warn: true });
                 renderDiagram(idx);
                 return;
               }
@@ -3071,7 +3413,7 @@
               const withReconnect = reconnectEdge(nextSrc, sourceEdge, side, newId);
               pushUndo();
               if (!withReconnect) {
-                alert(`Added node "${newId}" but could not wire it into this edge — edit source on the right.`);
+                toast(`Added node "${newId}" but could not wire it into this edge — edit source on the right.`, { warn: true });
                 state.diagrams[idx].currentSource = preserveOrphan(nextSrc);
               } else {
                 state.diagrams[idx].currentSource = preserveOrphan(withReconnect);
@@ -3428,7 +3770,29 @@
         e.stopPropagation();
         const current = readEdgeLabel(labelEl);
         if (!current) {
-          alert('This edge has no label yet. Add one by editing the source (e.g. `A -->|new label| B`).');
+          // No label yet — open an inline overlay to add one, then splice it into
+          // the source alongside the arrow. Falls back to a toast if we can't find
+          // the edge in the source (parseEdges couldn't match this one).
+          if (!entry.sourceEdge) {
+            toast('This arrow has no label yet, and its edge could not be located in the source — add one on the right (e.g. <code>A --&gt;|new label| B</code>).', { html: true, warn: true });
+            return;
+          }
+          const r = labelEl.getBoundingClientRect();
+          // Empty label groups often have zero-width rects; anchor the input at
+          // the click point so it lands under the cursor either way.
+          const cx = r.width ? r.left + r.width / 2 : e.clientX;
+          const cy = r.height ? r.top + r.height / 2 : e.clientY;
+          overlayInput(canvas, cx, cy, {
+            initialValue: '',
+            placeholder: 'New label',
+            width: 200,
+            onCommit: (next) => {
+              if (!next) return;
+              const ok = addEdgeLabelInSource(idx, entry.sourceEdge, next);
+              if (ok) renderDiagram(idx);
+              else toast('Could not add a label to this arrow — edit source on the right.', { warn: true });
+            }
+          });
           return;
         }
         const editTarget = findEditableTarget(labelEl);
@@ -3436,7 +3800,7 @@
           inlineEdit(editTarget, current, (next) => {
             const ok = replaceInSource(idx, current, next);
             if (ok) renderDiagram(idx);
-            else alert(`Could not locate "${current}" in the source. Edit it manually on the right.`);
+            else toast(`Could not locate "${current}" in the source. Edit it manually on the right.`, { warn: true });
           }, { event: e });
         } else {
           const r = labelEl.getBoundingClientRect();
@@ -3448,7 +3812,7 @@
               if (next === current) return;
               const ok = replaceInSource(idx, current, next);
               if (ok) renderDiagram(idx);
-              else alert(`Could not locate "${current}" in the source. Edit it manually on the right.`);
+              else toast(`Could not locate "${current}" in the source. Edit it manually on the right.`, { warn: true });
             }
           });
         }
@@ -3686,6 +4050,30 @@
     return el;
   }
 
+  // Non-blocking notification. Stacks in the corner, auto-dismisses, click to close.
+  // Use this instead of alert() so soft failures don't halt whatever the user is doing.
+  function toast(message, opts) {
+    opts = opts || {};
+    const stack = document.getElementById('toast-stack');
+    if (!stack) return;
+    const el = document.createElement('div');
+    el.className = 'toast' + (opts.warn ? ' warn' : '');
+    // Allow inline <code> in messages so file paths / snippets read cleanly.
+    if (opts.html) el.innerHTML = message;
+    else el.textContent = message;
+    stack.appendChild(el);
+    // Force a reflow so the transition kicks in from the initial off-screen state.
+    void el.offsetWidth;
+    el.classList.add('visible');
+    const dismiss = () => {
+      if (!el.parentNode) return;
+      el.classList.remove('visible');
+      setTimeout(() => { if (el.parentNode) el.remove(); }, 200);
+    };
+    el.addEventListener('click', dismiss);
+    setTimeout(dismiss, opts.duration || 4000);
+  }
+
   // Shared hover tooltip for node/arrow descriptions. Content shows a stored
   // description (or the auto-summary as a placeholder) and becomes contenteditable
   // when clicked. Blur/Enter commits, Escape cancels.
@@ -3918,6 +4306,8 @@
     const summaryChanges = {};
     if (bulletsChanged(s.currentWhat, s.originalWhat)) summaryChanges[sectionMap.summaryWhat] = { original: s.originalWhat, current: s.currentWhat };
     if (bulletsChanged(s.currentWhy, s.originalWhy)) summaryChanges[sectionMap.summaryWhy] = { original: s.originalWhy, current: s.currentWhy };
+    if (bulletsChanged(s.currentRules, s.originalRules)) summaryChanges[sectionMap.summaryRules] = { original: s.originalRules, current: s.currentRules };
+    if (bulletsChanged(s.currentOpenQuestions, s.originalOpenQuestions)) summaryChanges[sectionMap.summaryOpenQuestions] = { original: s.originalOpenQuestions, current: s.currentOpenQuestions };
     const payload = {
       generatedAt: new Date().toISOString(),
       specTitle: data.title,
@@ -4082,27 +4472,92 @@
     }[c]));
   }
 
+  // markdown-it instance (lazy-inited on first render). Configured to pass
+  // raw HTML through — spec-tacle anchor comments (<!-- spec-tacle:… -->) are
+  // HTML comments in the source, and letting them through as comments keeps
+  // them invisible without our having to strip them (which would throw off
+  // the token.map line numbers we use for jump-to-marker + diff highlights).
+  let mdInstance = null;
+  function getMd() {
+    if (mdInstance) return mdInstance;
+    if (typeof window.markdownit !== 'function') return null;
+    const md = window.markdownit({
+      html: true,
+      linkify: true,
+      breaks: false,
+      typographer: false,
+    });
+    // Copy each block token's source-line range onto its opening HTML tag so
+    // renderSpecMd/jumpToMarkerInDrawer can map DOM back to spec lines.
+    md.core.ruler.push('spec-tacle:source-line', function (state) {
+      state.tokens.forEach(function (token) {
+        if (token.map && token.type.endsWith('_open')) {
+          token.attrSet('data-source-line', String(token.map[0]));
+          token.attrSet('data-source-end',  String(token.map[1]));
+        }
+      });
+    });
+    mdInstance = md;
+    return md;
+  }
+
+  // A leading YAML `--- … ---` frontmatter block is treated by markdown-it as
+  // a setext h2 (the closing `---` underlines the frontmatter body) and
+  // renders as a giant misleading heading. Rewrite the fence lines to a
+  // fenced code block instead — line count stays identical, so source-line
+  // math against the raw file is untouched.
+  function swapFrontmatterFences(text) {
+    const lines = text.split('\n');
+    if (lines[0] !== '---') return text;
+    for (let i = 1; i < lines.length; i++) {
+      if (lines[i] === '---') {
+        lines[0] = '```yaml';
+        lines[i] = '```';
+        return lines.join('\n');
+      }
+    }
+    return text;
+  }
+
   function renderSpecPre(text, changedLines, highlightKind) {
     if (!text) { drawerSpecEl.innerHTML = '<span class="marker-line">(spec is empty)</span>'; return; }
+    const md = getMd();
+    if (!md) {
+      // markdown-it failed to load (offline CDN). Fall back to escaped raw
+      // text so the drawer still shows something useful.
+      drawerSpecEl.classList.remove('drawer-spec-md');
+      drawerSpecEl.style.whiteSpace = 'pre-wrap';
+      drawerSpecEl.style.fontFamily = '"SF Mono", Menlo, Consolas, monospace';
+      drawerSpecEl.textContent = text;
+      return;
+    }
+    drawerSpecEl.style.whiteSpace = '';
+    drawerSpecEl.style.fontFamily = '';
+    drawerSpecEl.classList.add('drawer-spec-md');
+    drawerSpecEl.innerHTML = md.render(swapFrontmatterFences(text));
+
     const changed = (changedLines instanceof Set) ? changedLines : null;
-    const anchorRe = /^<!--\s*\/?spec-tacle:[^-]/;
-    // 'consistency' → auto-applied by the follow-up pass (blue). Anything else
-    // (including undefined) → user-driven Update spec (green).
-    const highlightCls = highlightKind === 'consistency' ? 'spec-line-changed consistency' : 'spec-line-changed';
-    const out = text.split('\n').map((line, idx) => {
-      const esc = escapeHtmlLite(line);
-      let inner;
-      if (anchorRe.test(line)) inner = `<span class="spec-anchor-line">${esc}</span>`;
-      else if (/^#{1,6}\s/.test(line)) inner = `<span class="heading-line">${esc}</span>`;
-      else inner = esc;
-      // Skip highlighting anchor lines — they're display:none and would leak
-      // a green stripe into the gap between real lines.
-      if (changed && changed.has(idx) && !anchorRe.test(line)) {
-        return `<span class="${highlightCls}">${inner}</span>`;
+    if (!changed || !changed.size) return;
+    // 'consistency' → auto-applied by the follow-up pass (blue). Anything
+    // else (including undefined) → user-driven Update spec (green).
+    const isConsistency = highlightKind === 'consistency';
+    // Walk annotated blocks and flag any whose source-line range overlaps a
+    // changed line. A block spans [start, end); highlight the whole block
+    // even when only one of its lines changed — cleaner than trying to
+    // decorate a partial paragraph.
+    const blocks = drawerSpecEl.querySelectorAll('[data-source-line]');
+    blocks.forEach((block) => {
+      const start = parseInt(block.getAttribute('data-source-line'), 10);
+      const end   = parseInt(block.getAttribute('data-source-end'),  10);
+      if (!Number.isFinite(start) || !Number.isFinite(end)) return;
+      let hit = false;
+      for (let i = start; i < end; i++) {
+        if (changed.has(i)) { hit = true; break; }
       }
-      return inner;
-    }).join('\n');
-    drawerSpecEl.innerHTML = out;
+      if (!hit) return;
+      block.classList.add('spec-line-changed');
+      if (isConsistency) block.classList.add('consistency');
+    });
   }
 
   // Line-based LCS diff — returns a Set of 0-based line indices in `newText`
@@ -4159,31 +4614,42 @@
       return;
     }
     setDrawerStatus('', null);
-    // Render already ran — walk children to find the line by counting newlines
-    // in text content. The marker itself is hidden (spec-anchor-line has
-    // display:none), so scrolling to it lands at the boundary but the flash
-    // wouldn't be visible. Walk past hidden anchor lines to the next real
-    // content line and flash that instead.
-    const specHtml = drawerSpecEl.innerHTML;
-    const lines = specHtml.split('\n');
-    let target = loc.line - 1;
-    while (target < lines.length && /class="spec-anchor-line"/.test(lines[target])) target++;
-    if (target >= lines.length) target = Math.max(0, loc.line - 1);
-    if (target < lines.length) {
-      lines[target] = `<span class="anchor-flash">${lines[target]}</span>`;
-      drawerSpecEl.innerHTML = lines.join('\n');
-      const flash = drawerSpecEl.querySelector('.anchor-flash');
-      if (flash) {
-        flash.scrollIntoView({ block: 'center', behavior: 'smooth' });
-        // Remove the flash class after animation so the wrapper doesn't stick around.
-        setTimeout(() => {
-          if (flash.parentNode) {
-            const raw = flash.textContent;
-            flash.replaceWith(document.createTextNode(raw));
-          }
-        }, 1500);
+    // loc.line is 1-based; token.map[start] is 0-based. Find the rendered
+    // block whose source-line range covers or immediately follows the marker
+    // line — the anchor comment itself is invisible (HTML comment), so we
+    // flash the first real block at-or-after the marker.
+    const target0 = loc.line - 1;
+    const blocks = Array.from(drawerSpecEl.querySelectorAll('[data-source-line]'));
+    let chosen = null;
+    let bestStart = -1;
+    for (const el of blocks) {
+      const start = parseInt(el.getAttribute('data-source-line'), 10);
+      const end   = parseInt(el.getAttribute('data-source-end'),  10);
+      if (!Number.isFinite(start)) continue;
+      // Prefer the deepest block that contains the line.
+      if (start <= target0 && (Number.isFinite(end) ? target0 < end : true)) {
+        if (start >= bestStart) { chosen = el; bestStart = start; }
       }
     }
+    if (!chosen) {
+      // No block spans the line (marker sits alone on a line between blocks).
+      // Fall back to the first block that starts on or after the marker line.
+      let bestGap = Infinity;
+      for (const el of blocks) {
+        const start = parseInt(el.getAttribute('data-source-line'), 10);
+        if (!Number.isFinite(start) || start < target0) continue;
+        const gap = start - target0;
+        if (gap < bestGap) { bestGap = gap; chosen = el; }
+      }
+    }
+    if (!chosen) return;
+    chosen.classList.add('anchor-flash');
+    // 'auto' (instant) — 'smooth' silently no-ops on the drawer's overflow
+    // container in some browsers; the flash animation carries the visual
+    // continuity instead.
+    chosen.scrollIntoView({ block: 'center', behavior: 'auto' });
+    // Strip the flash class after the animation so it doesn't stick.
+    setTimeout(() => { chosen.classList.remove('anchor-flash'); }, 1500);
   }
 
   function openDrawer() {
@@ -4436,6 +4902,27 @@
       if (consistencyBannerSub) consistencyBannerSub.textContent = `no heartbeat since ${formatClock(e.claimExpiresAt)}. Ping your agent again, or release the claim.`;
       addBannerButton('Release claim', () => releaseClaim(e.id));
       addBannerButton('Copy prompt', () => copyAgentPrompt(e));
+    } else if (e.spawnError) {
+      // The auto-agent subprocess crashed on spawn (bad shell quoting in the
+      // prompt, missing `claude` binary, unrecognized --model, immediate auth
+      // refusal). The server already released the claim and stamped
+      // spawnError onto the entry — render the failure immediately instead
+      // of waiting out the 30s handoff timer, and show the operator the log
+      // tail so they know what to fix without opening the log file.
+      consistencyBanner.classList.add('stale');
+      const err = e.spawnError;
+      const how = err.signal ? `signal ${err.signal}` : `exit ${err.exitCode}`;
+      const durSec = Number.isFinite(err.durationMs) ? (err.durationMs / 1000).toFixed(1) : '?';
+      if (consistencyBannerTitle) consistencyBannerTitle.textContent = `Auto-agent crashed on spawn (${how} in ${durSec}s)`;
+      const tailHint = err.tail
+        ? err.tail.split('\n').filter(Boolean).slice(-2).join(' · ')
+        : 'no output before exit';
+      if (consistencyBannerSub) {
+        consistencyBannerSub.textContent = err.logPath
+          ? `${tailHint} — full log: ${err.logPath}`
+          : tailHint;
+      }
+      addBannerButton('Copy prompt', () => copyAgentPrompt(e));
     } else {
       // Unclaimed. Split into three sub-states so a healthy auto-agent
       // handoff isn't nagged at, but a real stall (or a server without a
@@ -4680,6 +5167,15 @@
         if (!data.specPath || msg.specPath !== data.specPath) return;
         refreshConsistencyStatus();
       });
+      es.addEventListener('consistency-spawn-failed', (ev) => {
+        let msg = {};
+        try { msg = JSON.parse(ev.data); } catch (_) { return; }
+        if (!data.specPath || msg.specPath !== data.specPath) return;
+        // The server has already stamped spawnError onto the queue entry and
+        // released the claim; refreshing pulls the decorated entry back and
+        // renderConsistencyBanner switches to the spawn-failed branch.
+        refreshConsistencyStatus();
+      });
       es.addEventListener('consistency-applied', (ev) => {
         let msg = {};
         try { msg = JSON.parse(ev.data); } catch (_) { return; }
@@ -4698,6 +5194,26 @@
         refreshConsistencyStatus();
       });
       es.addEventListener('consistency-dismissed', () => { refreshConsistencyStatus(); });
+      es.addEventListener('spec-finalized', (ev) => {
+        // A finalize elsewhere (another tab, curl, the CLI) invalidates
+        // Update/Undo on this tab too — the file no longer has markers to
+        // write into. Mirror the local finalize UX: lock the buttons, tell
+        // the user, hot-reload the drawer so it shows the cleaned spec.
+        let msg = {};
+        try { msg = JSON.parse(ev.data); } catch (_) { return; }
+        if (!data.specPath || msg.specPath !== data.specPath) return;
+        for (const id of ['btn-update-spec', 'btn-undo-spec', 'btn-finalize']) {
+          const b = document.getElementById(id);
+          if (b) b.disabled = true;
+        }
+        const removed = Array.isArray(msg.removed) ? msg.removed : [];
+        const line = removed.length
+          ? `spec finalized elsewhere — removed ${removed.join('; ')}`
+          : 'spec finalized elsewhere';
+        setServerStatus(line, 'ok');
+        if (window.__specTacleWasLocalWriteRecent && window.__specTacleWasLocalWriteRecent()) return;
+        if (window.__specTacleHotReload) window.__specTacleHotReload();
+      });
       es.addEventListener('error', () => { /* browser reconnects; open handler will re-sync */ });
     } catch (_) { /* no push channel — refreshConsistencyStatus + poll still work */ }
   }
@@ -4737,6 +5253,7 @@
     // --- Summary bullets ---
     const summaryWhatKey = sectionMap.summaryWhat;
     const summaryWhyKey = sectionMap.summaryWhy;
+    const summaryRulesKey = sectionMap.summaryRules;
     if (Object.prototype.hasOwnProperty.call(sections, summaryWhatKey)) {
       const next = parseBulletMarkdown(sections[summaryWhatKey]);
       const s = state.summary;
@@ -4763,6 +5280,35 @@
         if (list) flashElement(list);
       } else {
         console.info('[spec-tacle] consistency pass rewrote summary:why; kept your unsaved edits.');
+      }
+    }
+    if (Object.prototype.hasOwnProperty.call(sections, summaryRulesKey)) {
+      const next = parseBulletMarkdown(sections[summaryRulesKey]);
+      const s = state.summary;
+      const userDirty = bulletsChanged(s.currentRules, s.originalRules);
+      s.originalRules = next.slice();
+      if (!userDirty) {
+        s.currentRules = next.slice();
+        renderBullets('rules');
+        const list = document.querySelector('[data-summary="rules"]');
+        if (list) flashElement(list);
+      } else {
+        console.info('[spec-tacle] consistency pass rewrote summary:rules; kept your unsaved edits.');
+      }
+    }
+    const summaryOpenQuestionsKey = sectionMap.summaryOpenQuestions;
+    if (openQuestionsUl && Object.prototype.hasOwnProperty.call(sections, summaryOpenQuestionsKey)) {
+      const next = parseBulletMarkdown(sections[summaryOpenQuestionsKey]);
+      const s = state.summary;
+      const userDirty = bulletsChanged(s.currentOpenQuestions, s.originalOpenQuestions);
+      s.originalOpenQuestions = next.slice();
+      if (!userDirty) {
+        s.currentOpenQuestions = next.slice();
+        renderBullets('openQuestions');
+        const list = document.querySelector('[data-summary="openQuestions"]');
+        if (list) flashElement(list);
+      } else {
+        console.info('[spec-tacle] consistency pass rewrote summary:open-questions; kept your unsaved edits.');
       }
     }
 

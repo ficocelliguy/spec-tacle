@@ -57,8 +57,8 @@ function usage() {
     '      Print the skill instructions (for use with Claude or other AI editors).',
     '',
     '  npx spec-tacle_skill install [--dir PATH] [--force] [--skip-user-perms]',
-    '      Install SKILL.md into ~/.claude/skills/spec-tacle_skill/ and, when',
-    '      Codex is installed, ~/.codex/skills/spec-tacle_skill/ (or --dir for a',
+    '      Install SKILL.md into ~/.claude/skills/spec-tacle/ and, when',
+    '      Codex is installed, ~/.codex/skills/spec-tacle/ (or --dir for a',
     '      single custom path). Refuses to overwrite unless --force. Also merges',
     '      a narrow set of pre-approvals into ~/.claude/settings.json — just',
     '      `Skill(spec-tacle)` and `Bash(npx spec-tacle_skill:*)`/`Bash(npx',
@@ -234,12 +234,26 @@ function cmdInstallSkill(args) {
   if (dirFlag) {
     targets.push(path.resolve(dirFlag));
   } else {
-    const claudeDir = path.join(os.homedir(), '.claude', 'skills', 'spec-tacle_skill');
-    const codexDir  = path.join(os.homedir(), '.codex',  'skills', 'spec-tacle_skill');
+    const claudeDir = path.join(os.homedir(), '.claude', 'skills', 'spec-tacle');
+    const codexDir  = path.join(os.homedir(), '.codex',  'skills', 'spec-tacle');
     targets.push(claudeDir);
     // Only touch ~/.codex if the user has codex installed (parent dir exists).
     // Skips the noise of creating an empty ~/.codex tree on Claude-only machines.
     if (fs.existsSync(path.join(os.homedir(), '.codex'))) targets.push(codexDir);
+  }
+
+  // Older versions installed to `spec-tacle_skill/`; if that stale directory
+  // is still around, remove its SKILL.md so the skill doesn't show up twice
+  // (once under each name) in the editor's skill listing.
+  if (!dirFlag) {
+    for (const root of ['.claude', '.codex']) {
+      const legacy = path.join(os.homedir(), root, 'skills', 'spec-tacle_skill', 'SKILL.md');
+      if (fs.existsSync(legacy)) {
+        try { fs.rmSync(legacy); } catch (_) { /* best-effort */ }
+        try { fs.rmdirSync(path.dirname(legacy)); } catch (_) { /* keep parent if not empty */ }
+        console.log(`Removed legacy skill install at ${legacy}`);
+      }
+    }
   }
 
   const conflicts = targets

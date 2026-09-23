@@ -4,8 +4,10 @@
   "specPath": "example/example-spec.md",
   "serverUrl": null,
   "sectionMap": {
-    "summaryWhat": "summary:what",
-    "summaryWhy": "summary:why"
+    "summaryWhat":  "summary:what",
+    "summaryWhy":   "summary:why",
+    "summaryRules": "summary:rules",
+    "summaryOpenQuestions": "summary:open-questions"
   },
   "summary": {
     "what": [
@@ -21,6 +23,20 @@
       "Tasky picks a deliberately narrow shape (**one list per team**) so the state of the world is unambiguous",
       "Invests in optimistic UI and live sync so the shared list feels trustworthy enough to actually rely on",
       "Magic-link guests remove account friction for read-only stakeholders"
+    ],
+    "rules": [
+      "**Guests are read-only** — magic-link sessions cannot create, edit, comment on, or delete tasks under any circumstance",
+      "Exactly **one list per team**; teams cannot fork, merge, or share lists across team boundaries",
+      "A task's owner is always a member of the same team; reassigning to a non-member is rejected server-side",
+      "Real-time events must reach every open browser for the team within 1 second of the API write; a slower fan-out is a bug, not degradation",
+      "Audit-log entries for task creation, reassignment, and archive are append-only and never deleted, even when a team is archived"
+    ],
+    "openQuestions": [
+      "Do we need per-user notification preferences at launch, or is one global setting enough?",
+      "Should archived tasks be purgeable, or retained forever for the activity log?",
+      "What's the max team size we design for? Working assumption: 25.",
+      "**Admin role capabilities** are guessed as a super-user across teams (team lifecycle, lead promotion, audit-log access). Confirm or correct.",
+      "**Logging scope and retention.** What events should the logging server capture (errors only, warnings, debug traces)? How long should logs be retained?"
     ]
   },
   "diagrams": [

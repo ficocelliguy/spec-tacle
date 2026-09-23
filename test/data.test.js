@@ -23,12 +23,24 @@ test('example data JSON has required top-level fields', () => {
   assert.notEqual(data.title.trim(), '');
 });
 
-test('summary has what/why as non-empty string arrays of short bullets', () => {
+test('summary has what/why/rules/openQuestions as string arrays of short bullets', () => {
   const data = JSON.parse(fs.readFileSync(DATA_PATH, 'utf-8'));
+  // what/why are required and must be non-empty; rules and openQuestions are
+  // optional (may be absent, or an empty array).
   for (const key of ['what', 'why']) {
     const arr = data.summary[key];
     assert.ok(Array.isArray(arr), `summary.${key} must be an array`);
     assert.ok(arr.length > 0, `summary.${key} must have at least one bullet`);
+  }
+  if ('rules' in data.summary) {
+    assert.ok(Array.isArray(data.summary.rules), 'summary.rules must be an array if present');
+  }
+  if ('openQuestions' in data.summary) {
+    assert.ok(Array.isArray(data.summary.openQuestions), 'summary.openQuestions must be an array if present');
+  }
+  for (const key of ['what', 'why', 'rules', 'openQuestions']) {
+    const arr = data.summary[key];
+    if (!Array.isArray(arr)) continue;
     for (const bullet of arr) {
       assert.equal(typeof bullet, 'string', `summary.${key} bullet must be a string`);
       const firstLine = bullet.split(/\r?\n/)[0].trim();
@@ -61,6 +73,8 @@ test('bold markers are balanced (** ... **) across all prose fields', () => {
   const strings = [];
   for (const b of data.summary.what) strings.push(b);
   for (const b of data.summary.why) strings.push(b);
+  for (const b of (data.summary.rules || [])) strings.push(b);
+  for (const b of (data.summary.openQuestions || [])) strings.push(b);
   for (const d of data.diagrams) {
     strings.push(d.caption || '');
     strings.push(d.detail || '');

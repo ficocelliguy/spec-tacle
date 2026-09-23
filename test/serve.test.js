@@ -11,6 +11,8 @@ const http = require('node:http');
 const {
   applyUpdates, replaceBetweenMarkers, start, makeServer,
   readConsistencyQueue, CONSISTENCY_QUEUE_FILENAME, extractMarkerContent,
+  deriveProgressFromStreamJson,
+  stripSpecTacleArtifacts,
 } = require(path.join(__dirname, '..', 'lib', 'serve.js'));
 
 test('replaceBetweenMarkers rewrites content between spec-tacle markers', () => {
@@ -276,6 +278,229 @@ test('HTTP: /consistency-dismiss clears a queue entry without touching the spec'
     server.close();
     fs.rmSync(tmp, { recursive: true, force: true });
   }
+});
+
+test('stripSpecTacleArtifacts removes markers and keeps their content', () => {
+  const src = [
+    '# Title',
+    '',
+    '<!-- spec-tacle:summary:what -->',
+    '- bullet 1',
+    '- bullet 2',
+    '<!-- /spec-tacle:summary:what -->',
+    '',
+    '<!-- spec-tacle:summary:why -->',
+    '- reason 1',
+    '<!-- /spec-tacle:summary:why -->',
+    '',
+  ].join('\n');
+  const out = stripSpecTacleArtifacts(src);
+  assert.doesNotMatch(out, /<!-- spec-tacle:/);
+  assert.doesNotMatch(out, /<!-- \/spec-tacle:/);
+  assert.match(out, /- bullet 1/);
+  assert.match(out, /- bullet 2/);
+  assert.match(out, /- reason 1/);
+});
+
+test('stripSpecTacleArtifacts drops the auto-inventory but keeps the mermaid fence', () => {
+  const src = [
+    '<!-- spec-tacle:diagram:arch -->',
+    '**Nodes**',
+    '',
+    '- `A`: node A.',
+    '- `B`: node B.',
+    '',
+    '**Edges**',
+    '',
+    '- `A` → `B`: edge label.',
+    '',
+    '```mermaid',
+    'flowchart LR',
+    '  A --> B',
+    '```',
+    '<!-- /spec-tacle:diagram:arch -->',
+  ].join('\n');
+  const out = stripSpecTacleArtifacts(src);
+  assert.doesNotMatch(out, /\*\*Nodes\*\*/);
+  assert.doesNotMatch(out, /\*\*Edges\*\*/);
+  assert.doesNotMatch(out, /`A` → `B`/);
+  assert.match(out, /```mermaid[\s\S]+A --> B[\s\S]+```/);
+  assert.doesNotMatch(out, /<!-- spec-tacle:/);
+});
+
+test('stripSpecTacleArtifacts leaves table diagram bodies alone', () => {
+  const src = [
+    '<!-- spec-tacle:diagram:roles -->',
+    '| role | can edit | can view |',
+    '|---|---|---|',
+    '| admin | ✓ | ✓ |',
+    '| viewer | — | ✓ |',
+    '<!-- /spec-tacle:diagram:roles -->',
+  ].join('\n');
+  const out = stripSpecTacleArtifacts(src);
+  assert.match(out, /\| role \| can edit \| can view \|/);
+  assert.match(out, /\| admin \| ✓ \| ✓ \|/);
+  assert.doesNotMatch(out, /<!-- spec-tacle:/);
+});
+
+test('stripSpecTacleArtifacts removes empty caption/detail/notes marker blocks entirely', () => {
+  const src = [
+    '### Architecture',
+    '<!-- spec-tacle:diagram:arch:caption -->',
+    'Caption text.',
+    '<!-- /spec-tacle:diagram:arch:caption -->',
+    '',
+    '<!-- spec-tacle:diagram:arch:notes -->',
+    '',
+    '<!-- /spec-tacle:diagram:arch:notes -->',
+    '',
+    'After.',
+  ].join('\n');
+  const out = stripSpecTacleArtifacts(src);
+  assert.match(out, /Caption text\./);
+  assert.match(out, /After\./);
+  assert.doesNotMatch(out, /<!-- spec-tacle:diagram:arch:notes/);
+  assert.doesNotMatch(out, /<!-- spec-tacle:/);
+});
+
+test('stripSpecTacleArtifacts is a no-op on a spec with no markers', () => {
+  const src = '# Clean spec\n\nJust some prose.\n\n```mermaid\nflowchart LR\n  A --> B\n```\n';
+  assert.equal(stripSpecTacleArtifacts(src), src);
+});
+
+test('HTTP round-trip: /finalize strips markers, deletes backups, drops queue entries', async () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'spec-tacle-finalize-test-'));
+  const specName = 'spec.md';
+  const specPath = path.join(tmp, specName);
+  const originalSpec = [
+    '# Test',
+    '',
+    '<!-- spec-tacle:summary:what -->',
+    '- one',
+    '<!-- /spec-tacle:summary:what -->',
+    '',
+    '<!-- spec-tacle:diagram:arch -->',
+    '**Nodes**',
+    '',
+    '- `A`: node A.',
+    '',
+    '```mermaid',
+    'flowchart LR',
+    '  A --> B',
+    '```',
+    '<!-- /spec-tacle:diagram:arch -->',
+    '',
+  ].join('\n');
+  fs.writeFileSync(specPath, originalSpec, 'utf-8');
+
+  const server = start({ root: tmp, port: 0, portRetries: 0 });
+  // start() doesn't return the port; we passed port: 0 which node uses as
+  // "pick any free port," but the CLI banner would tell us. Simplify by
+  // running a fresh update-spec flow that triggers a backup + queue entry,
+  // then hit /finalize and assert cleanup.
+  //
+  // start() doesn't accept port 0 in this shape — it binds to `port` and
+  // increments on EADDRINUSE. Use a random high port instead.
+  await new Promise((resolve) => setTimeout(resolve, 30));
+  server.close();
+
+  const port = 19000 + Math.floor(Math.random() * 1000);
+  const server2 = start({ root: tmp, port, portRetries: 5 });
+  await new Promise((resolve) => setTimeout(resolve, 60));
+
+  try {
+    // Trigger a real Update spec so the server writes a backup and a queue
+    // entry; that lets us assert /finalize removes both.
+    const upd = await httpPost(port, '/update-spec', JSON.stringify({
+      specPath: specName,
+      sections: { 'summary:what': '- one\n- two' },
+      diagrams: {},
+    }));
+    assert.equal(upd.status, 200);
+    assert.ok(upd.json.ok);
+    assert.ok(fs.existsSync(path.join(tmp, 'backups')), 'update wrote a backup dir');
+    assert.ok(fs.existsSync(path.join(tmp, CONSISTENCY_QUEUE_FILENAME)), 'update enqueued a consistency entry');
+
+    // Finalize.
+    const fin = await httpPost(port, '/finalize', JSON.stringify({ specPath: specName }));
+    assert.equal(fin.status, 200);
+    assert.ok(fin.json.ok);
+    assert.equal(fin.json.specChanged, true);
+    assert.ok(Array.isArray(fin.json.removed) && fin.json.removed.length >= 2, 'reports what was removed');
+
+    const cleaned = fs.readFileSync(specPath, 'utf-8');
+    assert.doesNotMatch(cleaned, /<!-- spec-tacle:/, 'no markers left');
+    assert.doesNotMatch(cleaned, /\*\*Nodes\*\*/, 'inventory stripped');
+    assert.match(cleaned, /```mermaid[\s\S]+A --> B[\s\S]+```/, 'mermaid fence kept');
+    assert.match(cleaned, /- one/);
+    assert.match(cleaned, /- two/);
+
+    assert.equal(fs.existsSync(path.join(tmp, 'backups')), false, 'backups dir removed');
+    assert.equal(fs.existsSync(path.join(tmp, CONSISTENCY_QUEUE_FILENAME)), false, 'queue file removed when empty');
+  } finally {
+    server2.close();
+    try { fs.rmSync(tmp, { recursive: true, force: true }); } catch (_) {}
+  }
+});
+
+test('deriveProgressFromStreamJson translates a Bash tool_use into a phase + note', () => {
+  const ev = {
+    type: 'assistant',
+    message: { content: [{ type: 'tool_use', name: 'Bash', input: { command: 'curl -sS http://127.0.0.1:8765/consistency-apply -d @edits.json' } }] },
+  };
+  const p = deriveProgressFromStreamJson(ev, 3);
+  assert.equal(p.phase, 'Bash');
+  assert.equal(p.note, 'posting follow-up edits to /consistency-apply');
+  // percent formula: 15 + 7 * toolCount, capped at 90
+  assert.equal(p.percent, 15 + 7 * 3);
+});
+
+test('deriveProgressFromStreamJson picks a file_path note for Read/Edit/Write', () => {
+  const read = deriveProgressFromStreamJson(
+    { type: 'assistant', message: { content: [{ type: 'tool_use', name: 'Read', input: { file_path: '/root/example-spec.md' } }] } },
+    1
+  );
+  assert.equal(read.phase, 'Read');
+  assert.equal(read.note, '/root/example-spec.md');
+
+  const edit = deriveProgressFromStreamJson(
+    { type: 'assistant', message: { content: [{ type: 'tool_use', name: 'Edit', input: { file_path: '/root/example-spec.md', old_string: 'x', new_string: 'y' } }] } },
+    2
+  );
+  assert.equal(edit.phase, 'Edit');
+  assert.equal(edit.note, '/root/example-spec.md');
+});
+
+test('deriveProgressFromStreamJson caps percent at 90 for long passes', () => {
+  const p = deriveProgressFromStreamJson(
+    { type: 'assistant', message: { content: [{ type: 'tool_use', name: 'Read', input: { file_path: '/x' } }] } },
+    100
+  );
+  assert.equal(p.percent, 90);
+});
+
+test('deriveProgressFromStreamJson returns null for text-only assistant turns', () => {
+  const p = deriveProgressFromStreamJson(
+    { type: 'assistant', message: { content: [{ type: 'text', text: 'Thinking about it…' }] } },
+    5
+  );
+  assert.equal(p, null);
+});
+
+test('deriveProgressFromStreamJson returns a "wrapping up" beat on a result event', () => {
+  const p = deriveProgressFromStreamJson({ type: 'result', is_error: false }, 8);
+  assert.equal(p.phase, 'wrapping up');
+  assert.equal(p.percent, 95);
+
+  const err = deriveProgressFromStreamJson({ type: 'result', is_error: true, error: 'model refused' }, 8);
+  assert.equal(err.phase, 'auto-agent errored');
+  assert.equal(err.note, 'model refused');
+});
+
+test('deriveProgressFromStreamJson returns a booting beat on a system init event', () => {
+  const p = deriveProgressFromStreamJson({ type: 'system', subtype: 'init' }, 0);
+  assert.equal(p.phase, 'auto-agent booting');
+  assert.equal(p.percent, 10);
 });
 
 function httpGet(port, path) {

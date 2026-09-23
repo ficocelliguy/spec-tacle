@@ -16,8 +16,8 @@ version: 0.1
 - Postgres stores users, teams, tasks, comments; Redis pub/sub carries real-time events
 - A separate **WebSocket gateway** holds live connections and fans events out to every open browser for the team
 - A mail worker sends invites and notifications through a third-party provider
-- Four roles (member, team lead, magic-link guest, admin) and two surfaces (list, team settings)
-- a logging server to capture error logs
+- Four roles (member, team lead, magic-link guest, admin) and three surfaces (list, team settings, list item detail)
+- a logging server to capture error logs and user logins
 <!-- /spec-tacle:summary:what -->
 
 **Why it earns the effort**
@@ -28,6 +28,16 @@ version: 0.1
 - Invests in optimistic UI and live sync so the shared list feels trustworthy enough to actually rely on
 - Magic-link guests remove account friction for read-only stakeholders
 <!-- /spec-tacle:summary:why -->
+
+**Rules the system must uphold**
+
+<!-- spec-tacle:summary:rules -->
+- **Guests are read-only** — magic-link sessions cannot create, edit, comment on, or delete tasks under any circumstance
+- Exactly **one list per team**; teams cannot fork, merge, or share lists across team boundaries
+- A task's owner is always a member of the same team; reassigning to a non-member is rejected server-side
+- Real-time events must reach every open browser for the team within 1 second of the API write; a slower fan-out is a bug, not degradation
+- Audit-log entries for task creation, reassignment, and archive are append-only and never deleted, even when a team is archived
+<!-- /spec-tacle:summary:rules -->
 
 ## Problem Statement
 
@@ -42,10 +52,11 @@ Small teams juggle to-do lists across Slack threads, sticky notes, and half-aban
 
 ## Solution Overview
 
-A single web app with two primary surfaces:
+A single web app with three primary surfaces:
 
 1. A **list view** where tasks are grouped by status (todo, doing, done) and sortable by owner or due date.
-2. A **team settings** page where team leads invite new members, assign roles, manage team composition, and control archive behavior.
+2. A **list item detail** view where any team member can see a single task's full context—owner, status, due date, comments—and take actions (complete, reassign, comment) based on their role. Guests can view details but not edit.
+3. A **team settings** page where team leads invite new members, assign roles, manage team composition, and control archive behavior.
 
 Behind it: a small REST API, a Postgres database, and a Redis pub/sub channel that pushes changes to open browsers so two people editing the same list see each other's changes within a second.
 
@@ -115,11 +126,13 @@ The web client sends the POST to the API server, which validates and writes to P
 
 ## Open Questions
 
+<!-- spec-tacle:summary:open-questions -->
 - Do we need per-user notification preferences at launch, or is one global setting enough?
 - Should archived tasks be purgeable, or retained forever for the activity log?
-- What's the max team size we design for? (Working assumption: 25.)
-- **Admin role capabilities.** The Users section and roles-matrix table both currently reflect a guessed super-user shape (everything a team lead can do on any team, plus team lifecycle, lead promotion, and audit-log access). Confirm or correct in the visualizer.
+- What's the max team size we design for? Working assumption: 25.
+- **Admin role capabilities** are guessed as a super-user across teams (team lifecycle, lead promotion, audit-log access). Confirm or correct.
 - **Logging scope and retention.** What events should the logging server capture (errors only, warnings, debug traces)? How long should logs be retained?
+<!-- /spec-tacle:summary:open-questions -->
 
 ## Diagrams
 

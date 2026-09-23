@@ -17,7 +17,7 @@ spec-tacle turns any technical document into a page that is actually readable an
 npx spec-tacle_skill install
 ```
 
-That writes `SKILL.md` to `~/.claude/skills/spec-tacle_skill/` and, if Codex is installed, to `~/.codex/skills/spec-tacle_skill/` as well. For any other editor with named skills, pass `--dir <path>` to point at whichever directory it reads skills from.
+That writes `SKILL.md` to `~/.claude/skills/spec-tacle/` and, if Codex is installed, to `~/.codex/skills/spec-tacle/` as well. For any other editor with named skills, pass `--dir <path>` to point at whichever directory it reads skills from.
 
 `install` also merges a narrow set of pre-approvals into `~/.claude/settings.json` — just `Skill(spec-tacle)` and `Bash(npx spec-tacle_skill:*)` / `Bash(npx spec-tacle:*)` — so future Claude sessions can invoke the skill and run the CLI without a Bash-approval prompt. Read/Edit permissions are scoped tighter and install per-project on first `serve --auto-agent`. Pass `--skip-user-perms` to install SKILL.md only.
 

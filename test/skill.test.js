@@ -14,6 +14,8 @@ test('SKILL.md documents every marker anchor pair the server round-trips', () =>
   const required = [
     'spec-tacle:summary:what',
     'spec-tacle:summary:why',
+    'spec-tacle:summary:rules',
+    'spec-tacle:summary:open-questions',
     'spec-tacle:diagram:<id>:caption',
     'spec-tacle:diagram:<id>:detail',
     'spec-tacle:diagram:<id>:notes',

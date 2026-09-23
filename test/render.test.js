@@ -55,6 +55,12 @@ test('all summary bullets and captions appear in the embedded data', () => {
   const rendered = JSON.parse(scriptDataMatch[1]);
   assert.deepEqual(rendered.summary.what, data.summary.what);
   assert.deepEqual(rendered.summary.why, data.summary.why);
+  if (data.summary.rules) {
+    assert.deepEqual(rendered.summary.rules, data.summary.rules);
+  }
+  if (data.summary.openQuestions) {
+    assert.deepEqual(rendered.summary.openQuestions, data.summary.openQuestions);
+  }
   for (let i = 0; i < data.diagrams.length; i++) {
     assert.equal(rendered.diagrams[i].caption, data.diagrams[i].caption);
     assert.equal(rendered.diagrams[i].detail || '', data.diagrams[i].detail || '');
