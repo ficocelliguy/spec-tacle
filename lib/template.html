@@ -117,6 +117,38 @@
   button.danger { color: var(--warn); border-color: var(--warn); }
   button.danger:hover { background: color-mix(in oklab, var(--warn) 12%, transparent); }
 
+  header.sticky-header .header-actions [data-tip] { position: relative; }
+  header.sticky-header .header-actions [data-tip]::after {
+    content: attr(data-tip);
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--ink);
+    color: var(--panel);
+    padding: 7px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 1.4;
+    text-align: left;
+    white-space: normal;
+    width: max-content;
+    max-width: 280px;
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.12s ease 0.35s, visibility 0s linear 0.47s;
+    z-index: 30;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+  }
+  header.sticky-header .header-actions [data-tip]:hover::after,
+  header.sticky-header .header-actions [data-tip]:focus-visible::after {
+    opacity: 1;
+    visibility: visible;
+    transition: opacity 0.12s ease 0.35s, visibility 0s linear 0.35s;
+  }
+
   main { padding: 20px 24px; max-width: 1200px; margin: 0 auto; }
 
   section.summary {
@@ -1371,11 +1403,11 @@
 
 <header class="sticky-header">
   <div class="header-actions">
-    <button id="btn-update-spec" class="primary" title="Save all edits back into the spec file (creates a timestamped backup first)">Update spec</button>
-    <button id="btn-undo-spec" title="Restore the spec file from the most recent backup">Undo</button>
-    <button id="btn-export" title="Copy or download a JSON payload of every in-browser edit">Export JSON</button>
-    <button id="btn-reset" title="Discard all in-browser edits (does not touch the spec file)">Reset</button>
-    <button id="btn-finalize" class="danger" title="Strip spec-tacle markers + auto-generated inventories, delete backups and the consistency queue — leave a clean markdown spec">Finalize</button>
+    <button id="btn-update-spec" class="primary" aria-label="Update spec — save all edits back into the spec file, creating a timestamped backup first" data-tip="Save every in-browser edit back into the spec file on disk. Snapshots the current file to a timestamped backup first, so Undo can restore it.">Update spec</button>
+    <button id="btn-undo-spec" aria-label="Undo — restore the spec file from the most recent backup" data-tip="Restore the spec file from the most recent backup created by Update spec. In-browser edits stay put.">Undo</button>
+    <button id="btn-export" aria-label="Export JSON — copy or download a JSON payload of every in-browser edit" data-tip="Copy or download a JSON payload of every in-browser edit — the raw diff between what's on disk and what you're looking at. Handy for review or debugging.">Export JSON</button>
+    <button id="btn-reset" aria-label="Reset — discard all in-browser edits without touching the spec file" data-tip="Discard every in-browser edit and re-render from the spec on disk. Does not touch the spec file.">Reset</button>
+    <button id="btn-finalize" class="danger" aria-label="Finalize — strip spec-tacle markers and generated inventories, delete backups and the consistency queue, leaving a clean markdown spec" data-tip="One-way cleanup: strips spec-tacle markers and auto-generated inventories, deletes backups and the consistency queue. Leaves a clean markdown spec. Undo will no longer work.">Finalize</button>
     <span id="server-status" class="server-note"></span>
   </div>
   <div id="consistency-banner" class="consistency-banner" role="status" aria-live="polite">
@@ -4713,6 +4745,24 @@
     // the highlight-off path.
     const previousText = (opts.previousText != null) ? opts.previousText : specText;
     if (!serverBase || !data.specPath) {
+      // Inline fallback: static demos (demoMode / file:// preview) can embed
+      // the spec markdown in the data JSON so the drawer still shows something
+      // useful. Read-only — Update/Undo are already disabled here.
+      if (typeof data.specSource === 'string' && data.specSource) {
+        if (drawerPathEl) drawerPathEl.textContent = data.specPath || '(embedded)';
+        specText = data.specSource;
+        specLoaded = true;
+        renderSpecPre(specText, null, null);
+        drawerDiffsCt.textContent = '';
+        drawerDiffsBd.innerHTML = '<div class="diff-empty">Static demo — no update history.</div>';
+        setDrawerStatus('Static demo — spec source is embedded and read-only.', null);
+        if (pendingJumpMarker) {
+          const m = pendingJumpMarker;
+          pendingJumpMarker = null;
+          jumpToMarkerInDrawer(m);
+        }
+        return;
+      }
       setDrawerStatus('Spec drawer needs the round-trip server — the file:// preview cannot fetch the spec source.', 'err');
       drawerSpecEl.innerHTML = '<span class="marker-line">(no server)</span>';
       drawerDiffsCt.textContent = '';

@@ -24,9 +24,9 @@ version: 0.1
 
 <!-- spec-tacle:summary:why -->
 - Small teams currently juggle lists across Slack, sticky notes, and half-abandoned tools, so ownership and status drift
-- Tasky picks a deliberately narrow shape (**one list per team**) so the state of the world is unambiguous
-- Invests in optimistic UI and live sync so the shared list feels trustworthy enough to actually rely on
-- Magic-link guests remove account friction for read-only stakeholders
+- A deliberately **narrow shape** keeps the mental model small enough to fit on one screen
+- Optimistic UI and live sync so the shared list feels trustworthy enough to actually rely on
+- Magic-link access removes account friction for stakeholders who only need to watch
 <!-- /spec-tacle:summary:why -->
 
 **Rules the system must uphold**
@@ -286,6 +286,63 @@ flowchart TD
   Signup -- no --> Register --> Join
 ```
 <!-- /spec-tacle:diagram:invite-flow -->
+
+### Information flow — a task record from write to every screen
+
+<!-- spec-tacle:diagram:task-record-flow:caption -->
+The task record's journey from a keystroke in one browser to the same row appearing in every other open browser for the team. **Redis** is the fan-out; the activity log is written on the same Postgres transaction as the row itself.
+<!-- /spec-tacle:diagram:task-record-flow:caption -->
+
+<!-- spec-tacle:diagram:task-record-flow:detail -->
+- Follows the data, not the user: each node is a state or store the task record occupies, each edge is the transform that moves it forward
+- **Same-transaction guarantee**: the `tasks` row and its `activity_log` entry are written in one Postgres transaction, so a reader never sees a task without its creation event
+- Redis carries only the event payload, not the row itself; the WS gateway re-serializes what the client actually needs before pushing the frame
+- **Fan-out** is a "publish once, receive N times" hop: one Redis publish becomes one WS frame per open browser for the team
+- Read this alongside the create-task user flow — that picture is what the human does; this one is what the row does
+<!-- /spec-tacle:diagram:task-record-flow:detail -->
+
+<!-- spec-tacle:diagram:task-record-flow:notes -->
+
+<!-- /spec-tacle:diagram:task-record-flow:notes -->
+
+<!-- spec-tacle:diagram:task-record-flow -->
+**Nodes**
+
+- `Draft`: In-memory task draft in the writer's browser (title + team).
+- `Post`: `POST /tasks` JSON payload on the wire.
+- `Row`: Canonical `tasks` row in Postgres (id, title, status, team, owner).
+- `Audit`: `activity_log` entry appended in the same transaction as `Row`.
+- `Event`: `task.created` payload on the Redis pub/sub channel.
+- `Frame`: WebSocket frame the gateway pushes to each open browser.
+- `Local`: Local task record reconciled into every reader's state.
+
+**Edges**
+
+- `Draft` → `Post`: "member submits".
+- `Post` → `Row`: "API validates and inserts".
+- `Row` → `Audit`: "same txn: append".
+- `Row` → `Event`: "publish on Redis".
+- `Event` → `Frame`: "WS gateway subscribes".
+- `Frame` → `Local`: "reconcile".
+
+```mermaid
+flowchart LR
+  Draft["Task draft\n(title + team)"]
+  Post["POST /tasks JSON"]
+  Row[(tasks row\nin Postgres)]
+  Audit[(activity_log entry)]
+  Event(["task.created\non Redis"])
+  Frame["WS frame\n(one per open browser)"]
+  Local["Local task record\non every reader"]
+
+  Draft -->|"member submits"| Post
+  Post -->|"API validates + inserts"| Row
+  Row -->|"same txn: append"| Audit
+  Row -->|"publish on Redis"| Event
+  Event -->|"WS gateway subscribes"| Frame
+  Frame -->|"reconcile"| Local
+```
+<!-- /spec-tacle:diagram:task-record-flow -->
 
 ### Key decisions and what they shape
 
