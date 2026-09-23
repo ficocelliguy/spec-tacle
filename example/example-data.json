@@ -1,7 +1,7 @@
 {
   "title": "Tasky — a shared to-do list webapp",
   "subtitle": "Example spec-tacle output · example-spec.md",
-  "specPath": "example-spec.md",
+  "specPath": "example/example-spec.md",
   "serverUrl": null,
   "sectionMap": {
     "summaryWhat": "summary:what",
@@ -13,7 +13,8 @@
       "Postgres stores users, teams, tasks, comments; Redis pub/sub carries real-time events",
       "A separate **WebSocket gateway** holds live connections and fans events out to every open browser for the team",
       "A mail worker sends invites and notifications through a third-party provider",
-      "Three roles (member, team lead, magic-link guest) and three surfaces (list, task detail, team settings)"
+      "Four roles (member, team lead, magic-link guest, admin) and two surfaces (list, team settings)",
+      "a logging server to capture error logs"
     ],
     "why": [
       "Small teams currently juggle lists across Slack, sticky notes, and half-abandoned tools, so ownership and status drift",
@@ -28,8 +29,8 @@
       "kind": "architecture",
       "title": "System architecture and data flow",
       "caption": "The full data plane. **HTTPS** for CRUD, a **WebSocket** for pushed events, and **Redis pub/sub** as the fan-out that keeps every open browser in sync within a second.",
-      "detail": "- **Read/write path**: browser → API → Postgres\n- **Real-time path**: API publishes to Redis, WS gateway subscribes and fans events out to every open client for that team\n- **Async work**: API enqueues onto the mail worker, which hands off to a third-party email provider\n- **How to read**: primary data plane runs across the top, real-time loop-back runs through Redis and the WS gateway on the right, async email path branches down at the bottom",
-      "source": "flowchart LR\n  Browser[\"Web client\\n(SPA)\"]\n  API[\"API server\\n(stateless Node)\"]\n  WS[\"WebSocket gateway\"]\n  PG[(Postgres)]\n  Redis[(Redis pub/sub)]\n  Mail[\"Mail worker\"]\n  Provider([Email provider])\n\n  Browser -->|\"HTTPS: CRUD\"| API\n  Browser <-->|\"WebSocket: events\"| WS\n  API -->|\"read/write\"| PG\n  API -->|\"publish events\"| Redis\n  Redis -->|\"subscribe\"| WS\n  API -->|\"enqueue invites\"| Mail\n  Mail -->|\"send email\"| Provider"
+      "detail": "- **Read/write path**: browser → API → Postgres\n- **Real-time path**: API publishes to Redis, WS gateway subscribes and fans events out to every open client for that team\n- **Async work**: API enqueues onto the mail worker, which hands off to a third-party email provider\n- **Error logging**: API and WS gateway report errors and warnings to the logging server for observability\n- **How to read**: primary data plane runs across the top, real-time loop-back runs through Redis and the WS gateway on the right, async email path branches down at the bottom, error path flows to the logging server",
+      "source": "flowchart LR\n  Browser[\"Web client\\n(SPA)\"]\n  API[\"API server\\n(stateless Node)\"]\n  WS[\"WebSocket gateway\"]\n  PG[(Postgres)]\n  Redis[(Redis pub/sub)]\n  Mail[\"Mail worker\"]\n  Provider([Email provider])\n  Logger[\"Logging server\"]\n\n  Browser -->|\"HTTPS: CRUD\"| API\n  Browser <-->|\"WebSocket: events\"| WS\n  API -->|\"read/write\"| PG\n  API -->|\"publish events\"| Redis\n  Redis -->|\"subscribe\"| WS\n  API -->|\"enqueue invites\"| Mail\n  Mail -->|\"send email\"| Provider\n  API -->|\"send errors/warnings\"| Logger\n  WS -->|\"send errors\"| Logger\n  PG --> Logger"
     },
     {
       "id": "create-task-flow",
@@ -44,7 +45,7 @@
       "kind": "user flow",
       "title": "User flow — invite a teammate",
       "caption": "How a team lead brings a new member onto the team, from typing an email address to the invitee landing on the shared list with the right **role**.",
-      "detail": "- Team lead opens Team Settings, enters an email, picks a role\n- API creates a pending invite row and enqueues the outbound email\n- Mail worker sends the invite via a third-party provider\n- Invitee follows the link:\n  - Already has an account: signs in and lands on the team with the pre-selected role\n  - No account yet: completes signup, then lands on the team\n- Eleven steps including the account-branch diamond, so the diagram runs top-down",
+      "detail": "- Team lead opens User Management, enters an email, picks a role\n- API creates a pending invite row and enqueues the outbound email\n- Mail worker sends the invite via a third-party provider\n- Invitee follows the link:\n  - Already has an account: signs in and lands on the team with the pre-selected role\n  - No account yet: completes signup, then lands on the team\n- Eleven steps including the account-branch diamond, so the diagram runs top-down",
       "source": "flowchart TD\n  Lead([Team lead])\n  Settings[\"Open Team Settings\"]\n  Enter[\"Enter email + pick role\"]\n  Invite[\"Click Invite\"]\n  API1[\"API creates pending invite\"]\n  Queue[\"Enqueue in mail worker\"]\n  Send[\"Send email via provider\"]\n  Click[\"Invitee clicks link\"]\n  Signup{\"Has account?\"}\n  Login[\"Log in\"]\n  Register[\"Sign up\"]\n  Join[\"Added to team with role\"]\n\n  Lead --> Settings --> Enter --> Invite --> API1 --> Queue --> Send --> Click --> Signup\n  Signup -- yes --> Login --> Join\n  Signup -- no --> Register --> Join"
     },
     {
@@ -68,8 +69,8 @@
       "kind": "table",
       "title": "Roles × capabilities",
       "caption": "What each **role** can do on the shared list. Guests are read-only and can't reach team settings; only the team lead can invite or reassign.",
-      "detail": "- Three rows, one per role; each column is a distinct capability the API enforces.\n- **✓** = allowed, **—** = not allowed. A dash isn't the same as \"probably not\" — the API rejects it.\n- Use this table to reconcile the roles list with the surface list: every surface should map to a subset of the columns here.\n- If a new capability lands (attachments, mentions, etc.), add a column here first — the row a guest gets is usually the load-bearing answer.",
-      "source": "| Capability                | Member | Team lead | Guest |\n|---------------------------|--------|-----------|-------|\n| See the team list         | ✓      | ✓         | ✓     |\n| Open a task's detail      | ✓      | ✓         | ✓     |\n| Create a task             | ✓      | ✓         | —     |\n| Complete or reopen a task | ✓      | ✓         | —     |\n| Comment on a task         | ✓      | ✓         | —     |\n| Reassign a task's owner   | —      | ✓         | —     |\n| Archive completed items   | —      | ✓         | —     |\n| Invite a new teammate     | —      | ✓         | —     |\n| Change a member's role    | —      | ✓         | —     |"
+      "detail": "- Four columns, one per role; each row is a distinct capability the API enforces.\n- **✓** = allowed, **—** = not allowed. A dash isn't the same as \"probably not\"; the API rejects it.\n- Use this table to reconcile the roles list with the surface list: every surface should map to a subset of the rows here.\n- If a new capability lands (attachments, mentions, etc.), add a row here first. The cell a guest gets is usually the load-bearing answer.\n- **Assumption:** the Admin column reflects the guessed super-user shape from the Users section. Confirm it there before treating this table as authoritative.",
+      "source": "<!-- ASSUMPTION: Admin column is a best guess (super-user across teams). Confirm in the visualizer. -->\n| Capability                  | Member | Team lead | Guest | Admin |\n|-----------------------------|--------|-----------|-------|-------|\n| See the team list           | ✓      | ✓         | ✓     | ✓     |\n| Open a task's detail        | ✓      | ✓         | ✓     | ✓     |\n| Create a task               | ✓      | ✓         | —     | ✓     |\n| Complete or reopen a task   | ✓      | ✓         | —     | ✓     |\n| Comment on a task           | ✓      | ✓         | —     | ✓     |\n| Reassign a task's owner     | —      | ✓         | —     | ✓     |\n| Archive completed items     | —      | ✓         | —     | ✓     |\n| Invite a new teammate       | —      | ✓         | —     | ✓     |\n| Change a member's role      | —      | ✓         | —     | ✓     |\n| Create or archive a team    | —      | —         | —     | ✓     |\n| Promote a member to lead    | —      | —         | —     | ✓     |\n| View audit logs             | —      | —         | —     | ✓     |"
     }
   ]
 }

@@ -21,7 +21,13 @@ function loadTables() {
 }
 
 test('every diagram source starts with a valid mermaid directive', () => {
+  // Graphs (data-summary charts: pie, xychart-beta, quadrantChart, histograms)
+  // and tables carry directives that aren't in DIAGRAM_HEADERS or don't use a
+  // mermaid directive at all — skip them here. Their shapes are validated by
+  // the table test below and by the visualizer's own render error surface.
+  const CHART_KINDS = new Set(['data summary', 'histogram', 'table']);
   for (const d of loadDiagrams()) {
+    if (CHART_KINDS.has(d.kind)) continue;
     const first = d.source.split(/\r?\n/)[0].trim();
     assert.match(first, DIAGRAM_HEADERS, `diagram "${d.id}" does not start with a mermaid directive: ${first}`);
   }

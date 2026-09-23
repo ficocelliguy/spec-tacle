@@ -16,7 +16,8 @@ version: 0.1
 - Postgres stores users, teams, tasks, comments; Redis pub/sub carries real-time events
 - A separate **WebSocket gateway** holds live connections and fans events out to every open browser for the team
 - A mail worker sends invites and notifications through a third-party provider
-- Three roles (member, team lead, magic-link guest) and three surfaces (list, task detail, team settings)
+- Four roles (member, team lead, magic-link guest, admin) and two surfaces (list, team settings)
+- a logging server to capture error logs
 <!-- /spec-tacle:summary:what -->
 
 **Why it earns the effort**
@@ -37,14 +38,14 @@ Small teams juggle to-do lists across Slack threads, sticky notes, and half-aban
 - **Member** — creates and completes their own tasks, sees the team's list, comments on items.
 - **Team lead** — everything a member can do, plus reassigning tasks, archiving completed items, and inviting new members.
 - **Guest** — read-only view of a single shared list via magic link. No account.
+- **Admin** — **Assumption:** a super-user across the whole install. Everything a team lead can do on any team, plus creating and archiving teams, promoting a member to team lead, and viewing audit logs. Confirm in the visualizer or the Open Questions section.
 
 ## Solution Overview
 
-A single web app with three surfaces:
+A single web app with two primary surfaces:
 
 1. A **list view** where tasks are grouped by status (todo, doing, done) and sortable by owner or due date.
-2. A **task detail** panel that opens in place — description, owner, due date, comments, activity log.
-3. A **team settings** page for invites, roles, and archive controls.
+2. A **team settings** page where team leads invite new members, assign roles, manage team composition, and control archive behavior.
 
 Behind it: a small REST API, a Postgres database, and a Redis pub/sub channel that pushes changes to open browsers so two people editing the same list see each other's changes within a second.
 
@@ -83,6 +84,7 @@ Behind it: a small REST API, a Postgres database, and a Redis pub/sub channel th
 - **Postgres** — primary data store. Tables: `users`, `teams`, `memberships`, `tasks`, `comments`, `activity_log`, `invites`.
 - **Redis** — pub/sub channel for real-time events; also holds session tokens.
 - **Mail worker** — background worker that reads a queue and sends invite / notification emails via a third-party provider.
+- **Logging server** — **Assumption:** logs errors and warnings from API and other services for debugging and monitoring. Confirm scope and retention policy in Open Questions.
 
 ### Request flow (create task)
 
@@ -116,6 +118,8 @@ The web client sends the POST to the API server, which validates and writes to P
 - Do we need per-user notification preferences at launch, or is one global setting enough?
 - Should archived tasks be purgeable, or retained forever for the activity log?
 - What's the max team size we design for? (Working assumption: 25.)
+- **Admin role capabilities.** The Users section and roles-matrix table both currently reflect a guessed super-user shape (everything a team lead can do on any team, plus team lifecycle, lead promotion, and audit-log access). Confirm or correct in the visualizer.
+- **Logging scope and retention.** What events should the logging server capture (errors only, warnings, debug traces)? How long should logs be retained?
 
 ## Diagrams
 
@@ -131,7 +135,8 @@ The full data plane. **HTTPS** for CRUD, a **WebSocket** for pushed events, and 
 - **Read/write path**: browser → API → Postgres
 - **Real-time path**: API publishes to Redis, WS gateway subscribes and fans events out to every open client for that team
 - **Async work**: API enqueues onto the mail worker, which hands off to a third-party email provider
-- **How to read**: primary data plane runs across the top, real-time loop-back runs through Redis and the WS gateway on the right, async email path branches down at the bottom
+- **Error logging**: API and WS gateway report errors and warnings to the logging server for observability
+- **How to read**: primary data plane runs across the top, real-time loop-back runs through Redis and the WS gateway on the right, async email path branches down at the bottom, error path flows to the logging server
 <!-- /spec-tacle:diagram:architecture:detail -->
 
 <!-- spec-tacle:diagram:architecture:notes -->
@@ -139,6 +144,30 @@ The full data plane. **HTTPS** for CRUD, a **WebSocket** for pushed events, and 
 <!-- /spec-tacle:diagram:architecture:notes -->
 
 <!-- spec-tacle:diagram:architecture -->
+**Nodes**
+
+- `Browser`: Web client / (SPA).
+- `API`: API server / (stateless Node).
+- `WS`: WebSocket gateway.
+- `PG`: Postgres.
+- `Redis`: Redis pub/sub.
+- `Mail`: Mail worker.
+- `Provider`: Email provider.
+- `Logger`: Logging server.
+
+**Edges**
+
+- `Browser` → `API`: "HTTPS: CRUD".
+- `Browser` → `WS`: "WebSocket: events".
+- `API` → `PG`: "read/write".
+- `API` → `Redis`: "publish events".
+- `Redis` → `WS`: "subscribe".
+- `API` → `Mail`: "enqueue invites".
+- `Mail` → `Provider`: "send email".
+- `API` → `Logger`: "send errors/warnings".
+- `WS` → `Logger`: "send errors".
+- `PG` → `Logger`
+
 ```mermaid
 flowchart LR
   Browser["Web client\n(SPA)"]
@@ -148,6 +177,7 @@ flowchart LR
   Redis[(Redis pub/sub)]
   Mail["Mail worker"]
   Provider([Email provider])
+  Logger["Logging server"]
 
   Browser -->|"HTTPS: CRUD"| API
   Browser <-->|"WebSocket: events"| WS
@@ -156,6 +186,9 @@ flowchart LR
   Redis -->|"subscribe"| WS
   API -->|"enqueue invites"| Mail
   Mail -->|"send email"| Provider
+  API -->|"send errors/warnings"| Logger
+  WS -->|"send errors"| Logger
+  PG --> Logger
 ```
 <!-- /spec-tacle:diagram:architecture -->
 
@@ -206,7 +239,7 @@ How a team lead brings a new member onto the team, from typing an email address 
 <!-- /spec-tacle:diagram:invite-flow:caption -->
 
 <!-- spec-tacle:diagram:invite-flow:detail -->
-- Team lead opens Team Settings, enters an email, picks a role
+- Team lead opens User Management, enters an email, picks a role
 - API creates a pending invite row and enqueues the outbound email
 - Mail worker sends the invite via a third-party provider
 - Invitee follows the link:
@@ -315,10 +348,11 @@ What each **role** can do on the shared list. Guests are read-only and can't rea
 <!-- /spec-tacle:diagram:roles-matrix:caption -->
 
 <!-- spec-tacle:diagram:roles-matrix:detail -->
-- Three rows, one per role; each column is a distinct capability the API enforces.
-- **✓** = allowed, **—** = not allowed. A dash isn't the same as "probably not" — the API rejects it.
-- Use this table to reconcile the roles list with the surface list: every surface should map to a subset of the columns here.
-- If a new capability lands (attachments, mentions, etc.), add a column here first — the row a guest gets is usually the load-bearing answer.
+- Four columns, one per role; each row is a distinct capability the API enforces.
+- **✓** = allowed, **—** = not allowed. A dash isn't the same as "probably not"; the API rejects it.
+- Use this table to reconcile the roles list with the surface list: every surface should map to a subset of the rows here.
+- If a new capability lands (attachments, mentions, etc.), add a row here first. The cell a guest gets is usually the load-bearing answer.
+- **Assumption:** the Admin column reflects the guessed super-user shape from the Users section. Confirm it there before treating this table as authoritative.
 <!-- /spec-tacle:diagram:roles-matrix:detail -->
 
 <!-- spec-tacle:diagram:roles-matrix:notes -->
@@ -326,15 +360,21 @@ What each **role** can do on the shared list. Guests are read-only and can't rea
 <!-- /spec-tacle:diagram:roles-matrix:notes -->
 
 <!-- spec-tacle:diagram:roles-matrix -->
-| Capability                | Member | Team lead | Guest |
-|---------------------------|--------|-----------|-------|
-| See the team list         | ✓      | ✓         | ✓     |
-| Open a task's detail      | ✓      | ✓         | ✓     |
-| Create a task             | ✓      | ✓         | —     |
-| Complete or reopen a task | ✓      | ✓         | —     |
-| Comment on a task         | ✓      | ✓         | —     |
-| Reassign a task's owner   | —      | ✓         | —     |
-| Archive completed items   | —      | ✓         | —     |
-| Invite a new teammate     | —      | ✓         | —     |
-| Change a member's role    | —      | ✓         | —     |
+```mermaid
+<!-- ASSUMPTION: Admin column is a best guess (super-user across teams). Confirm in the visualizer. -->
+| Capability                  | Member | Team lead | Guest | Admin |
+|-----------------------------|--------|-----------|-------|-------|
+| See the team list           | ✓      | ✓         | ✓     | ✓     |
+| Open a task's detail        | ✓      | ✓         | ✓     | ✓     |
+| Create a task               | ✓      | ✓         | —     | ✓     |
+| Complete or reopen a task   | ✓      | ✓         | —     | ✓     |
+| Comment on a task           | ✓      | ✓         | —     | ✓     |
+| Reassign a task's owner     | —      | ✓         | —     | ✓     |
+| Archive completed items     | —      | ✓         | —     | ✓     |
+| Invite a new teammate       | —      | ✓         | —     | ✓     |
+| Change a member's role      | —      | ✓         | —     | ✓     |
+| Create or archive a team    | —      | —         | —     | ✓     |
+| Promote a member to lead    | —      | —         | —     | ✓     |
+| View audit logs             | —      | —         | —     | ✓     |
+```
 <!-- /spec-tacle:diagram:roles-matrix -->

@@ -1,0 +1,2 @@
+- update permissions for other agent types
+- light up spec diffs inline?

@@ -65,14 +65,13 @@
     top: 0;
     z-index: 20;
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
     padding: 8px 24px;
     background: var(--panel);
     border-bottom: 1px solid var(--line);
     box-shadow: 0 1px 8px rgba(0, 0, 0, 0.06);
-    flex-wrap: wrap;
   }
   header.sticky-header .header-title { display: flex; align-items: baseline; gap: 10px; min-width: 0; flex: 1 1 auto; }
   header.sticky-header h1 {
@@ -818,6 +817,409 @@
     background: var(--bg); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 12px;
   }
   #export-modal .row { display: flex; gap: 8px; margin-top: 12px; justify-content: flex-end; }
+
+  /* --- Jump-to-spec buttons (on summary + each diagram card) --- */
+  .jump-to-spec {
+    font-size: 11px;
+    padding: 3px 10px;
+    border: 1px dashed var(--line);
+    background: transparent;
+    color: var(--ink-dim);
+    border-radius: 12px;
+    cursor: pointer;
+    letter-spacing: 0.2px;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    flex-shrink: 0;
+  }
+  .jump-to-spec:hover { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
+  .jump-to-spec::before { content: "↗"; font-size: 13px; line-height: 1; }
+  section.summary .summary-heading .jump-to-spec { margin-left: auto; }
+  .diagram-header .jump-to-spec { margin-left: auto; }
+
+  /* --- Spec drawer (slide-out, collapsed by default) --- */
+  #spec-drawer-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.25);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.18s ease;
+    z-index: 40;
+  }
+  #spec-drawer-overlay.open { opacity: 1; pointer-events: auto; }
+  #spec-drawer {
+    position: fixed;
+    top: 0;
+    right: 0;
+    height: 100vh;
+    width: min(720px, 92vw);
+    background: var(--panel);
+    border-left: 1px solid var(--line);
+    box-shadow: -6px 0 18px rgba(0, 0, 0, 0.12);
+    transform: translateX(100%);
+    transition: transform 0.22s ease;
+    z-index: 50;
+    display: flex;
+    flex-direction: column;
+    color: var(--ink);
+  }
+  #spec-drawer.open { transform: translateX(0); }
+  #spec-drawer .drawer-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--line);
+    background: var(--panel);
+    flex-shrink: 0;
+  }
+  #spec-drawer .drawer-header h2 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--ink);
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  #spec-drawer .drawer-header .drawer-path {
+    font: 11px/1.4 "SF Mono", Menlo, Consolas, monospace;
+    color: var(--ink-dim);
+    flex-shrink: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  #spec-drawer .drawer-header button {
+    padding: 4px 10px;
+    font-size: 12px;
+    flex-shrink: 0;
+  }
+  #spec-drawer .drawer-body {
+    flex: 1 1 auto;
+    overflow: auto;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  #spec-drawer .drawer-status {
+    padding: 8px 16px;
+    font-size: 12px;
+    color: var(--ink-dim);
+    background: var(--bg);
+    border-bottom: 1px solid var(--line);
+  }
+  #spec-drawer .drawer-status.err { color: var(--warn); }
+  #spec-drawer .drawer-status.ok { color: var(--ok); }
+
+  /* Recent-diffs panel — collapsible so it doesn't hinder reading the spec. */
+  #spec-drawer .drawer-diffs {
+    border-bottom: 1px solid var(--line);
+    background: var(--bg);
+    font-size: 12px;
+    flex-shrink: 0;
+  }
+  #spec-drawer .drawer-diffs > summary {
+    padding: 8px 16px;
+    cursor: pointer;
+    color: var(--accent);
+    font-weight: 500;
+    user-select: none;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  #spec-drawer .drawer-diffs > summary::-webkit-details-marker { display: none; }
+  #spec-drawer .drawer-diffs > summary::before {
+    content: "▸";
+    display: inline-flex;
+    width: 18px;
+    height: 18px;
+    align-items: center;
+    justify-content: center;
+    background: var(--accent-soft);
+    color: var(--accent);
+    border-radius: 4px;
+    font-size: 14px;
+    transition: transform 0.15s;
+    flex-shrink: 0;
+  }
+  #spec-drawer .drawer-diffs[open] > summary::before { transform: rotate(90deg); }
+  #spec-drawer .drawer-diffs .diffs-scroll {
+    max-height: 240px;
+    overflow: auto;
+    padding: 0 16px 12px;
+  }
+  #spec-drawer .drawer-diffs .diff-entry {
+    border-top: 1px solid var(--line);
+    padding-top: 8px;
+    margin-top: 8px;
+  }
+  #spec-drawer .drawer-diffs .diff-entry:first-child { border-top: none; padding-top: 4px; margin-top: 0; }
+  #spec-drawer .drawer-diffs .diff-label {
+    color: var(--ink-dim);
+    font: 11px/1.4 "SF Mono", Menlo, Consolas, monospace;
+    margin-bottom: 4px;
+  }
+  #spec-drawer .drawer-diffs pre.diff-body {
+    margin: 0;
+    padding: 8px 10px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    font: 12px/1.45 "SF Mono", Menlo, Consolas, monospace;
+    white-space: pre-wrap;
+    word-break: break-word;
+    overflow-x: auto;
+  }
+  #spec-drawer .drawer-diffs .diff-line-add {
+    background: var(--diff-add);
+    display: block;
+    padding: 0 4px;
+    margin: 0 -4px;
+  }
+  #spec-drawer .drawer-diffs .diff-line-del {
+    background: var(--diff-del);
+    display: block;
+    padding: 0 4px;
+    margin: 0 -4px;
+  }
+  #spec-drawer .drawer-diffs .diff-empty {
+    color: var(--ink-dim);
+    font-style: italic;
+    padding: 6px 2px;
+  }
+
+  /* Spec content, rendered as monospace pre — keeps markdown formatting readable. */
+  #spec-drawer .drawer-spec {
+    flex: 1 1 auto;
+    padding: 14px 18px 24px;
+    overflow: auto;
+    font: 13px/1.55 "SF Mono", Menlo, Consolas, monospace;
+    white-space: pre-wrap;
+    word-break: break-word;
+    color: var(--ink);
+  }
+  #spec-drawer .drawer-spec .anchor-flash {
+    background: var(--warn);
+    color: #fff;
+    padding: 2px 4px;
+    border-radius: 3px;
+    animation: anchor-flash-fade 1.4s ease forwards;
+  }
+  @keyframes anchor-flash-fade {
+    0%   { background: var(--warn); color: #fff; }
+    100% { background: transparent; color: inherit; }
+  }
+  /* Lines added or changed by the most recent Update spec. Cleared on the next
+     Update, a manual Refresh, or an external file-change event — so the
+     highlight always reflects only the freshest diff. The .consistency variant
+     colors auto-applied lines from a follow-up consistency pass in blue so a
+     reader can tell them apart from lines they hand-edited themselves. */
+  #spec-drawer .drawer-spec .spec-line-changed {
+    background: var(--diff-add);
+    box-shadow: inset 3px 0 0 var(--ok);
+    padding: 1px 6px;
+    margin: 0 -6px;
+    border-radius: 2px;
+    animation: spec-line-highlight-in 0.9s ease;
+  }
+  #spec-drawer .drawer-spec .spec-line-changed.consistency {
+    background: var(--accent-soft);
+    box-shadow: inset 3px 0 0 var(--accent);
+    animation: spec-line-highlight-in-consistency 0.9s ease;
+  }
+  @keyframes spec-line-highlight-in {
+    0%   { background: var(--warn); color: #fff; }
+    60%  { background: var(--warn); color: #fff; }
+    100% { background: var(--diff-add); color: inherit; }
+  }
+  @keyframes spec-line-highlight-in-consistency {
+    0%   { background: var(--accent); color: #fff; }
+    60%  { background: var(--accent); color: #fff; }
+    100% { background: var(--accent-soft); color: inherit; }
+  }
+  /* Same distinct-highlight rules apply to visualizer fields (summary bullet
+     items, diagram caption/detail/notes containers) that the consistency pass
+     just rewrote. Fades out after a few seconds so it doesn't stick forever. */
+  .consistency-flash {
+    background: var(--accent-soft);
+    box-shadow: inset 3px 0 0 var(--accent);
+    border-radius: 3px;
+    animation: consistency-flash-fade 4s ease forwards;
+  }
+  @keyframes consistency-flash-fade {
+    0%   { background: var(--accent); color: #fff; }
+    30%  { background: var(--accent-soft); color: inherit; }
+    100% { background: transparent; box-shadow: none; color: inherit; }
+  }
+  /* Header banner shown for the current consistency-pass state:
+       queued  — a pending queue entry exists, no agent has claimed it
+       active  — an agent claimed and is reporting progress (percent bar)
+       stale   — a claim exists but its TTL elapsed (agent crashed / disconnected)
+       applied — brief green confirmation right after consistency-applied
+     The banner shows title + sub-line + optional progress bar + action buttons. */
+  .consistency-banner {
+    display: none;
+    align-items: center;
+    gap: 8px;
+    padding: 3px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    line-height: 1.3;
+    background: var(--accent-soft);
+    color: var(--accent);
+    border: 1px solid var(--accent);
+  }
+  .consistency-banner.visible { display: flex; }
+  .consistency-banner .banner-title { font-weight: 600; flex-shrink: 0; }
+  .consistency-banner .banner-sub {
+    font-size: 11px;
+    opacity: 0.85;
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .consistency-banner .banner-actions { display: flex; gap: 6px; flex-shrink: 0; }
+  .consistency-banner .banner-btn {
+    background: transparent;
+    border: 1px solid currentColor;
+    color: inherit;
+    border-radius: 3px;
+    padding: 1px 7px;
+    font: inherit;
+    font-size: 11px;
+    cursor: pointer;
+  }
+  .consistency-banner .banner-btn:hover { background: rgba(127, 127, 127, 0.12); }
+  .consistency-banner .banner-spinner {
+    width: 10px; height: 10px;
+    border: 2px solid var(--line);
+    border-top-color: currentColor;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    flex-shrink: 0;
+  }
+  .consistency-banner .banner-progress {
+    flex: 0 0 120px;
+    height: 4px;
+    background: rgba(127, 127, 127, 0.18);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .consistency-banner .banner-progress .fill {
+    display: block;
+    height: 100%;
+    width: 0%;
+    background: currentColor;
+    transition: width 0.25s ease;
+  }
+  /* Queued: no agent has grabbed it — the user needs to ping one. */
+  .consistency-banner.queued { background: rgba(180, 83, 9, 0.10); border-color: var(--warn); color: var(--warn); }
+  .consistency-banner.queued .banner-spinner,
+  .consistency-banner.queued .banner-progress,
+  .consistency-banner.stale  .banner-spinner,
+  .consistency-banner.stale  .banner-progress,
+  .consistency-banner.applied .banner-spinner,
+  .consistency-banner.applied .banner-progress { display: none; }
+  /* Stale: claim TTL expired, agent likely dropped. */
+  .consistency-banner.stale  { background: rgba(180, 83, 9, 0.10); border-color: var(--warn); color: var(--warn); }
+  /* Active: an agent is on it and reporting progress. */
+  .consistency-banner.active { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+  /* Applied: brief green confirmation. */
+  .consistency-banner.applied { background: transparent; border-color: var(--ok); color: var(--ok); }
+  /* Drawer loading state — dims the spec while a fetch is in flight and spins
+     the status bar so the reader sees the flyout catching up. */
+  #spec-drawer .drawer-spec.loading {
+    opacity: 0.4;
+    transition: opacity 0.15s;
+  }
+  #spec-drawer .drawer-status.loading {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--accent);
+  }
+  #spec-drawer .drawer-status.loading::before {
+    content: "";
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border: 2px solid var(--line);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    flex-shrink: 0;
+  }
+  #spec-drawer .drawer-spec .marker-line { color: var(--ink-dim); font-style: italic; }
+  /* Anchor comments (<!-- spec-tacle:… -->) are plumbing, not content — the raw
+     file keeps them so /update-spec can find its way, but the reader never
+     needs to see them. Kept in the DOM (display:none) so jump-to-marker line
+     math still lines up; the flash walks past hidden lines. */
+  #spec-drawer .drawer-spec .spec-anchor-line { display: none; }
+  #spec-drawer .drawer-spec .heading-line { color: var(--accent); font-weight: 600; }
+  #spec-drawer-toggle {
+    position: fixed;
+    top: 50%;
+    right: 0;
+    transform: translateY(-50%);
+    z-index: 30;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 6px 0 0 6px;
+    padding: 12px 6px;
+    font-size: 12px;
+    font-weight: 600;
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    cursor: pointer;
+    letter-spacing: 0.8px;
+    box-shadow: -2px 0 6px rgba(0, 0, 0, 0.12);
+  }
+  #spec-drawer-toggle:hover { opacity: 0.9; }
+  #spec-drawer-toggle.open { display: none; }
+
+  /* --- Global loading overlay used by Update spec --- */
+  #loading-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.3);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+  }
+  #loading-overlay.visible { display: flex; }
+  #loading-overlay .box {
+    background: var(--panel);
+    color: var(--ink);
+    border-radius: 8px;
+    padding: 22px 28px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    font-size: 14px;
+    min-width: 220px;
+  }
+  #loading-overlay .spinner {
+    width: 22px;
+    height: 22px;
+    border: 3px solid var(--line);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    flex-shrink: 0;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
 </style>
 </head>
 <body>
@@ -837,9 +1239,40 @@
     <button id="btn-reset" title="Discard all in-browser edits (does not touch the spec file)">Reset</button>
     <span id="server-status" class="server-note"></span>
   </div>
+  <div id="consistency-banner" class="consistency-banner" role="status" aria-live="polite">
+    <span class="banner-spinner" aria-hidden="true"></span>
+    <span class="banner-title">Consistency pass</span>
+    <span class="banner-sub"></span>
+    <div class="banner-progress" aria-hidden="true"><span class="fill"></span></div>
+    <span class="banner-actions"></span>
+  </div>
 </header>
 
 <main id="app"></main>
+
+<button id="spec-drawer-toggle" title="Open the spec drawer to read the source markdown and recent updates">View spec</button>
+
+<div id="spec-drawer-overlay" hidden></div>
+<aside id="spec-drawer" aria-hidden="true" hidden>
+  <div class="drawer-header">
+    <h2>Spec</h2>
+    <span class="drawer-path" id="drawer-path"></span>
+    <button id="drawer-refresh" title="Reload the spec source and recent diffs from disk">Refresh</button>
+    <button id="drawer-close" title="Close the spec drawer">Close</button>
+  </div>
+  <div class="drawer-body">
+    <div class="drawer-status" id="drawer-status">Opening spec…</div>
+    <details class="drawer-diffs" id="drawer-diffs">
+      <summary title="Recent updates that touched this spec. Collapsed by default so the spec text stays the focus.">Recent updates <span id="drawer-diffs-count" style="color: var(--ink-dim); font-weight: 400;"></span></summary>
+      <div class="diffs-scroll" id="drawer-diffs-body"></div>
+    </details>
+    <pre class="drawer-spec" id="drawer-spec" tabindex="0"></pre>
+  </div>
+</aside>
+
+<div id="loading-overlay" role="status" aria-live="polite" aria-hidden="true">
+  <div class="box"><div class="spinner"></div><span id="loading-message">Saving spec…</span></div>
+</div>
 
 <div id="shape-menu" role="menu"></div>
 
@@ -877,6 +1310,7 @@
       <h1 id="doc-title"></h1>
       <span class="section-label">Technical summary</span>
       <span class="subtitle" id="doc-subtitle"></span>
+      <button type="button" class="jump-to-spec" data-jump-marker="summary:what" title="Open the spec drawer and jump to the summary in the source file">View in spec</button>
     </div>
     <div class="block">
       <div class="block-label">What</div>
@@ -1042,8 +1476,8 @@
   });
 
 
-  const HINT_MERMAID = 'Hover a node or arrow to see a description tooltip; click the tooltip to edit it. Click a node to select it, then Delete/Backspace to remove it (and its edges). Drag a node to reposition; arrows and labels follow. Hover a node for its four side dots and shape-picker (◇). Drag a side dot to another node to create a new arrow, or into empty space to spawn a new node in edit mode. Hover an arrow for its handles: drag the blue circle (or the label itself) to bend, drag the green/orange endpoints to reconnect. Double-click a node, edge label, caption, detail, or bullet to edit its text inline. Click the "Add notes…" area below to jot general thoughts about this diagram. Wrap key terms in double asterisks to bold them. Ctrl/⌘+Z undoes the last edit.';
-  const HINT_TABLE = 'Double-click a header or cell to edit it in place; Enter commits, Esc cancels. Wrap key terms in double asterisks to bold them. To add or remove columns or rows, open the Source pane on the right and edit the markdown table directly — the visualizer re-renders when you re-render. Caption, detail, and notes all edit inline the same way. Ctrl/⌘+Z undoes the last edit.';
+  const HINT_MERMAID = 'Hover a node or arrow to see a description tooltip; click the tooltip to edit it. Click a node to select it, then Delete/Backspace to remove it (and its edges). Drag a node to reposition; arrows and labels follow. Hover a node for its four side dots and shape-picker (◇). Drag a side dot to another node to create a new arrow, or into empty space to spawn a new node in edit mode. Hover an arrow for its handles: drag the blue circle (or the label itself) to bend, drag the green/orange endpoints to reconnect. Double-click a node, edge label, caption, detail, or bullet to edit its text inline — the cursor lands where you clicked, so triple-click when you want to replace everything. Click the "Add notes…" area below to jot general thoughts about this diagram. Wrap key terms in double asterisks to bold them. Ctrl/⌘+Z undoes the last edit.';
+  const HINT_TABLE = 'Double-click a header or cell to edit it in place; the cursor lands where you clicked, triple-click to select the whole cell. Enter commits, Esc cancels. Wrap key terms in double asterisks to bold them. To add or remove columns or rows, open the Source pane on the right and edit the markdown table directly — the visualizer re-renders when you re-render. Caption, detail, and notes all edit inline the same way. Ctrl/⌘+Z undoes the last edit.';
   const SOURCE_HINT_MERMAID = 'Show or hide the mermaid source for this diagram';
   const SOURCE_HINT_TABLE = 'Show or hide the raw markdown table source';
   const SOURCE_EDIT_HINT_MERMAID = 'Edit the mermaid source directly';
@@ -1058,6 +1492,7 @@
       <div class="diagram-header">
         <h3>${escapeHtml(diagram.title)}</h3>
         <span class="kind">${escapeHtml(diagram.kind || 'diagram')}</span>
+        <button type="button" class="jump-to-spec" data-jump-marker="diagram:${escapeHtml(diagram.id)}" title="Open the spec drawer and jump to this diagram in the source file">View in spec</button>
       </div>
       <div class="diagram-caption" data-caption-idx="${idx}" title="Double-click to edit (wrap key terms in **double asterisks** to bold)">${mdBold(diagram.caption || '')}</div>
       <details class="diagram-detail" open>
@@ -1177,7 +1612,7 @@
     markGlobalDirty();
   }
 
-  function editBulletAt(key, i) {
+  function editBulletAt(key, i, event) {
     const li = ulFor(key).querySelector(`li[data-i="${i}"]`);
     if (!li) return;
     const original = bulletsFor(key)[i] || '';
@@ -1185,16 +1620,19 @@
       const arr = bulletsFor(key);
       if (!next) arr.splice(i, 1); else arr[i] = next;
       renderBullets(key);
-    }, { allowEmpty: true, multiline: true });
+    }, { allowEmpty: true, multiline: true, event });
   }
 
   ['what', 'why'].forEach(key => {
     const ul = ulFor(key);
     ul.addEventListener('dblclick', (e) => {
+      // If the user is already editing (contenteditable is on), let the browser
+      // handle the double-click natively — that selects the word under the cursor.
+      if (e.target.closest('[contenteditable="true"]')) return;
       const li = e.target.closest('li[data-i]');
       if (!li) return;
       e.stopPropagation();
-      editBulletAt(key, +li.dataset.i);
+      editBulletAt(key, +li.dataset.i, e);
     });
     renderBullets(key);
   });
@@ -1213,17 +1651,21 @@
   // --- Editable diagram caption + detail ---
   document.querySelectorAll('.diagram-caption').forEach(el => {
     el.addEventListener('dblclick', (e) => {
+      // Already editing → let the browser select the word natively.
+      if (el.getAttribute('contenteditable') === 'true') return;
       e.stopPropagation();
       const idx = +el.dataset.captionIdx;
       inlineEdit(el, state.diagrams[idx].currentCaption, (next) => {
         state.diagrams[idx].currentCaption = next;
         el.innerHTML = mdBold(next);
         markDirty(idx);
-      }, { allowEmpty: true });
+      }, { allowEmpty: true, event: e });
     });
   });
   document.querySelectorAll('.detail-content').forEach(el => {
     el.addEventListener('dblclick', (e) => {
+      // Already editing → let the browser select the word natively.
+      if (el.getAttribute('contenteditable') === 'true') return;
       e.stopPropagation();
       const idx = +el.dataset.detailIdx;
       const wrapper = el.closest('details');
@@ -1232,7 +1674,7 @@
         state.diagrams[idx].currentDetail = next;
         el.innerHTML = mdRich(next);
         markDirty(idx);
-      }, { multiline: true, allowEmpty: true });
+      }, { multiline: true, allowEmpty: true, event: e });
     });
   });
 
@@ -1252,7 +1694,7 @@
   document.querySelectorAll('.diagram-notes').forEach(el => {
     const idx = +el.dataset.notesIdx;
     renderNotes(idx);
-    el.addEventListener('click', () => {
+    el.addEventListener('click', (e) => {
       if (el.getAttribute('contenteditable') === 'true') return;
       el.classList.remove('empty');
       // inlineEdit sets textContent to raw text (with any ** and - lines visible)
@@ -1260,7 +1702,7 @@
         state.diagrams[idx].currentNotes = next;
         renderNotes(idx);
         markDirty(idx);
-      }, { multiline: true, allowEmpty: true });
+      }, { multiline: true, allowEmpty: true, event: e });
     });
   });
 
@@ -1300,11 +1742,22 @@
       payload.sections[sectionMap.summaryWhy] = toMarkdownBullets(state.summary.currentWhy);
     }
     state.diagrams.forEach(d => {
-      if (d.currentSource !== d.originalSource) {
-        // Send the kind so the server can pick the right block wrapper: 'table'
-        // writes the source as raw markdown; every other kind gets a mermaid
-        // code fence. The old "string only" shape still works for legacy callers.
-        payload.diagrams[d.id] = { source: d.currentSource, kind: d.kind || '' };
+      // Descriptions decorate the per-diagram Nodes/Edges inventory the server
+      // writes back into the spec, so a change to a tooltip is a spec-level
+      // edit too. Trigger a diagram write when EITHER the mermaid source or
+      // the descriptions map changed.
+      const sourceChanged = d.currentSource !== d.originalSource;
+      const descriptionsChanged = !deepEqual(d.descriptions, d.originalDescriptions);
+      if (sourceChanged || descriptionsChanged) {
+        // 'table' writes raw markdown; every other kind gets an agent-readable
+        // inventory (Nodes + Edges, States + Transitions, or Actors + Messages
+        // depending on the mermaid) followed by the mermaid fence. The old
+        // "string only" shape still works for legacy callers.
+        payload.diagrams[d.id] = {
+          source: d.currentSource,
+          kind: d.kind || '',
+          descriptions: d.descriptions,
+        };
       }
       if (d.currentCaption !== d.originalCaption) {
         payload.sections[`diagram:${d.id}:caption`] = d.currentCaption;
@@ -1319,6 +1772,12 @@
     const nChanges = Object.keys(payload.sections).length + Object.keys(payload.diagrams).length;
     if (!nChanges) { setServerStatus('nothing to update', 'ok'); return; }
     setServerStatus('saving…');
+    if (window.__specTacleShowLoading) window.__specTacleShowLoading('Saving spec…');
+    // Snapshot the currently-cached spec text so the drawer can diff it against
+    // the freshly-written file for line-level highlights. Empty when the drawer
+    // has never opened — in that case highlight is skipped.
+    const previousSpecText = (typeof specText === 'string' && specLoaded) ? specText : '';
+    if (window.__specTacleMarkLocalWrite) window.__specTacleMarkLocalWrite();
     try {
       const res = await fetch(`${serverBase}/update-spec`, {
         method: 'POST',
@@ -1328,14 +1787,14 @@
       const body = await res.json().catch(() => ({}));
       if (!res.ok || !body.ok) {
         setServerStatus(`update failed: ${body.error || res.statusText || res.status}`, 'err');
+        if (window.__specTacleHideLoading) window.__specTacleHideLoading();
         return;
       }
       // Adopt the new baseline for the fields the server actually wrote, so
-      // further edits diff against the freshly-saved spec. Descriptions are
-      // NOT round-tripped by /update-spec (they only leave the browser via
-      // Export JSON), so we deliberately leave originalDescriptions alone —
-      // otherwise the "edited" indicator would go off and the user would
-      // think their tooltip edits were saved when a refresh would drop them.
+      // further edits diff against the freshly-saved spec. Descriptions ARE
+      // round-tripped now — the server bakes them into the diagram inventory
+      // block — so we sync originalDescriptions to the freshly-saved state
+      // alongside the other fields.
       state.summary.originalWhat = state.summary.currentWhat.slice();
       state.summary.originalWhy = state.summary.currentWhy.slice();
       state.diagrams.forEach(d => {
@@ -1343,6 +1802,7 @@
         d.originalCaption = d.currentCaption;
         d.originalDetail = d.currentDetail;
         d.originalNotes = d.currentNotes;
+        d.originalDescriptions = JSON.parse(JSON.stringify(d.descriptions || {}));
       });
       state.diagrams.forEach((_, i) => markDirty(i));
       markGlobalDirty();
@@ -1355,8 +1815,23 @@
       } else {
         setServerStatus(body.changed ? `saved · backup ${body.backup}` : 'saved (no changes)', 'ok');
       }
+      // Hot-reload the drawer contents so a reader sees the freshly-written
+      // spec + a new entry in the recent-diffs panel, without touching the
+      // in-browser diagram state (positions, annotations, undo stack). The
+      // highlightChanges flag tells the drawer to diff previousSpecText
+      // against the newly-loaded file and color the added/changed lines.
+      if (body.changed && window.__specTacleHotReload) {
+        try {
+          await window.__specTacleHotReload({
+            highlightChanges: true,
+            previousText: previousSpecText,
+          });
+        } catch (_) { /* drawer error is surfaced inside the drawer itself */ }
+      }
     } catch (err) {
       setServerStatus(`update failed: ${err.message}. Is \`npx spec-tacle_skill serve\` running?`, 'err');
+    } finally {
+      if (window.__specTacleHideLoading) window.__specTacleHideLoading();
     }
   }
 
@@ -1364,6 +1839,8 @@
     if (!serverBase) return;
     if (!confirm('Undo the most recent Update — restore the last backup? The visualizer will still show your current in-browser edits until you refresh.')) return;
     setServerStatus('undoing…');
+    if (window.__specTacleShowLoading) window.__specTacleShowLoading('Restoring backup…');
+    if (window.__specTacleMarkLocalWrite) window.__specTacleMarkLocalWrite();
     try {
       const res = await fetch(`${serverBase}/undo`, {
         method: 'POST',
@@ -1376,8 +1853,14 @@
         return;
       }
       setServerStatus(`restored from ${body.restored_from} · ${body.remaining_backups} backup(s) remain · refresh to reload diagrams`, 'ok');
+      if (window.__specTacleHotReload) {
+        try { await window.__specTacleHotReload(); }
+        catch (_) { /* surfaced inside drawer */ }
+      }
     } catch (err) {
       setServerStatus(`undo failed: ${err.message}. Is \`npx spec-tacle_skill serve\` running?`, 'err');
+    } finally {
+      if (window.__specTacleHideLoading) window.__specTacleHideLoading();
     }
   }
 
@@ -1558,6 +2041,8 @@
   function wireTableCellEditing(canvas, idx) {
     canvas.querySelectorAll('th[data-cell], td[data-cell]').forEach(cell => {
       cell.addEventListener('dblclick', (e) => {
+        // Already editing → let the browser select the word natively.
+        if (cell.getAttribute('contenteditable') === 'true') return;
         e.stopPropagation();
         const parsed = safeParseTable(state.diagrams[idx].currentSource);
         if (!parsed) return;
@@ -1571,7 +2056,7 @@
           syncSourceTextarea(idx);
           markDirty(idx);
           renderTableDiagram(canvas, idx);
-        }, { allowEmpty: true, multiline: false });
+        }, { allowEmpty: true, multiline: false, event: e });
       });
     });
   }
@@ -1742,7 +2227,7 @@
 
   function appendEdgeLine(source, fromId, toId) {
     const trailing = source.endsWith('\n') ? '' : '\n';
-    return `${source}${trailing}  ${fromId} --> ${toId}`;
+    return `${source}${trailing}  ${fromId} -->|"label"| ${toId}`;
   }
 
   // Drop a node from mermaid source: its standalone shape declaration and any
@@ -2014,6 +2499,26 @@
     if (ta) ta.value = state.diagrams[idx].currentSource;
   }
 
+  function caretRangeAtPoint(target, clientX, clientY) {
+    const r = document.createRange();
+    if (Number.isFinite(clientX) && Number.isFinite(clientY)) {
+      if (document.caretRangeFromPoint) {
+        const hit = document.caretRangeFromPoint(clientX, clientY);
+        if (hit && target.contains(hit.startContainer)) return hit;
+      } else if (document.caretPositionFromPoint) {
+        const cp = document.caretPositionFromPoint(clientX, clientY);
+        if (cp && target.contains(cp.offsetNode)) {
+          r.setStart(cp.offsetNode, cp.offset);
+          r.collapse(true);
+          return r;
+        }
+      }
+    }
+    r.selectNodeContents(target);
+    r.collapse(false);
+    return r;
+  }
+
   function inlineEdit(target, originalText, onCommit, opts) {
     opts = opts || {};
     const multiline = !!opts.multiline;
@@ -2023,12 +2528,23 @@
     target.setAttribute('spellcheck', 'false');
     target.textContent = originalText;
     target.focus();
-    // Select all
+    // Place the caret. On a double-click entry (event.detail === 2) we drop the
+    // caret at the click point so the user can start typing in place instead of
+    // wiping out the existing text. Triple-click is handled natively by the
+    // browser once the element is contenteditable (the third click selects the
+    // line/paragraph). No event (programmatic entry, e.g. a freshly added empty
+    // bullet) or event.detail >= 3 falls back to select-all.
     const sel = window.getSelection();
-    const range = document.createRange();
-    range.selectNodeContents(target);
     sel.removeAllRanges();
-    sel.addRange(range);
+    const ev = opts.event;
+    const wantSelectAll = !ev || (typeof ev.detail === 'number' && ev.detail >= 3) || !originalText;
+    if (wantSelectAll) {
+      const range = document.createRange();
+      range.selectNodeContents(target);
+      sel.addRange(range);
+    } else {
+      sel.addRange(caretRangeAtPoint(target, ev.clientX, ev.clientY));
+    }
 
     const readText = () => {
       // innerText preserves line breaks from <br> etc.; textContent flattens them.
@@ -2246,6 +2762,9 @@
         selectNode(idx, nodeId);
       });
       node.addEventListener('dblclick', (e) => {
+        // If the click landed on text that's already contenteditable, let the
+        // browser handle the double-click natively (word selection).
+        if (e.target.closest && e.target.closest('[contenteditable="true"]')) return;
         e.stopPropagation();
         if (pendingClick) { clearTimeout(pendingClick); pendingClick = null; }
         const current = readNodeLabel(node);
@@ -2255,7 +2774,7 @@
             const ok = replaceInSource(idx, current, next);
             if (ok) renderDiagram(idx);
             else alert(`Could not locate "${current}" in the source. Edit it manually on the right.`);
-          });
+          }, { event: e });
         } else {
           // Fallback: overlay an HTML input right on top of the node
           const canvasEl = canvas;
@@ -2904,6 +3423,8 @@
       labelEl.addEventListener('pointerleave', queueHideTooltip);
 
       labelEl.addEventListener('dblclick', (e) => {
+        // Already editing → let the browser handle word selection natively.
+        if (e.target.closest && e.target.closest('[contenteditable="true"]')) return;
         e.stopPropagation();
         const current = readEdgeLabel(labelEl);
         if (!current) {
@@ -2916,7 +3437,7 @@
             const ok = replaceInSource(idx, current, next);
             if (ok) renderDiagram(idx);
             else alert(`Could not locate "${current}" in the source. Edit it manually on the right.`);
-          });
+          }, { event: e });
         } else {
           const r = labelEl.getBoundingClientRect();
           overlayInput(canvas, r.left + r.width / 2, r.top + r.height / 2, {
@@ -3527,6 +4048,783 @@
     }
     if (subItems.length) html += renderListItems(subItems);
     return html;
+  }
+
+  // --- Spec drawer, recent-diffs panel, jump-to-spec, hot reload ---
+
+  const drawer         = document.getElementById('spec-drawer');
+  const drawerOverlay  = document.getElementById('spec-drawer-overlay');
+  const drawerToggle   = document.getElementById('spec-drawer-toggle');
+  const drawerCloseBtn = document.getElementById('drawer-close');
+  const drawerRefresh  = document.getElementById('drawer-refresh');
+  const drawerPathEl   = document.getElementById('drawer-path');
+  const drawerStatusEl = document.getElementById('drawer-status');
+  const drawerSpecEl   = document.getElementById('drawer-spec');
+  const drawerDiffs    = document.getElementById('drawer-diffs');
+  const drawerDiffsCt  = document.getElementById('drawer-diffs-count');
+  const drawerDiffsBd  = document.getElementById('drawer-diffs-body');
+
+  // Cache of the last-loaded spec text so jumps don't have to refetch.
+  let specText = '';
+  let specLoaded = false;
+  let specLoadingPromise = null;
+  let pendingJumpMarker = null;
+
+  function setDrawerStatus(msg, cls) {
+    drawerStatusEl.textContent = msg || '';
+    drawerStatusEl.className = 'drawer-status' + (cls ? ' ' + cls : '');
+    drawerStatusEl.style.display = msg ? '' : 'none';
+  }
+
+  function escapeHtmlLite(s) {
+    return String(s).replace(/[&<>"']/g, (c) => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[c]));
+  }
+
+  function renderSpecPre(text, changedLines, highlightKind) {
+    if (!text) { drawerSpecEl.innerHTML = '<span class="marker-line">(spec is empty)</span>'; return; }
+    const changed = (changedLines instanceof Set) ? changedLines : null;
+    const anchorRe = /^<!--\s*\/?spec-tacle:[^-]/;
+    // 'consistency' → auto-applied by the follow-up pass (blue). Anything else
+    // (including undefined) → user-driven Update spec (green).
+    const highlightCls = highlightKind === 'consistency' ? 'spec-line-changed consistency' : 'spec-line-changed';
+    const out = text.split('\n').map((line, idx) => {
+      const esc = escapeHtmlLite(line);
+      let inner;
+      if (anchorRe.test(line)) inner = `<span class="spec-anchor-line">${esc}</span>`;
+      else if (/^#{1,6}\s/.test(line)) inner = `<span class="heading-line">${esc}</span>`;
+      else inner = esc;
+      // Skip highlighting anchor lines — they're display:none and would leak
+      // a green stripe into the gap between real lines.
+      if (changed && changed.has(idx) && !anchorRe.test(line)) {
+        return `<span class="${highlightCls}">${inner}</span>`;
+      }
+      return inner;
+    }).join('\n');
+    drawerSpecEl.innerHTML = out;
+  }
+
+  // Line-based LCS diff — returns a Set of 0-based line indices in `newText`
+  // that were added or changed relative to `oldText`. Skipped for very large
+  // files (dp table would balloon) so the drawer never freezes on a huge spec.
+  function diffChangedLineSet(oldText, newText) {
+    const oldLines = oldText.split('\n');
+    const newLines = newText.split('\n');
+    const m = oldLines.length, n = newLines.length;
+    if (m * n > 1000000) return null;
+    const dp = new Array(m + 1);
+    for (let i = 0; i <= m; i++) dp[i] = new Uint32Array(n + 1);
+    for (let i = 0; i < m; i++) {
+      const oi = oldLines[i];
+      for (let j = 0; j < n; j++) {
+        dp[i + 1][j + 1] = (oi === newLines[j])
+          ? dp[i][j] + 1
+          : Math.max(dp[i + 1][j], dp[i][j + 1]);
+      }
+    }
+    const added = new Set();
+    let i = m, j = n;
+    while (j > 0) {
+      if (i > 0 && oldLines[i - 1] === newLines[j - 1]) { i--; j--; }
+      else if (i === 0 || dp[i][j - 1] >= dp[i - 1][j]) { added.add(j - 1); j--; }
+      else i--;
+    }
+    return added;
+  }
+
+  function markerLocationInText(text, marker) {
+    const open = `<!-- spec-tacle:${marker} -->`;
+    const alt  = `<!-- /spec-tacle:${marker} -->`;
+    let idx = text.indexOf(open);
+    if (idx < 0) idx = text.indexOf(alt);
+    if (idx < 0) {
+      // Fallback: prefix match — e.g. jumping to "diagram:foo" hits "diagram:foo:caption"
+      // if the wrapping marker was never written. Better than nothing.
+      const re = new RegExp('<!--\\s*/?spec-tacle:' + marker.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+      const m = re.exec(text);
+      if (m) idx = m.index;
+    }
+    if (idx < 0) return null;
+    const before = text.slice(0, idx);
+    const line = before.split('\n').length; // 1-based
+    return { charIndex: idx, line };
+  }
+
+  function jumpToMarkerInDrawer(marker) {
+    if (!specLoaded) { pendingJumpMarker = marker; return; }
+    const loc = markerLocationInText(specText, marker);
+    if (!loc) {
+      setDrawerStatus(`Could not find marker "${marker}" in spec — the section anchor may not be written to this file yet.`, 'err');
+      return;
+    }
+    setDrawerStatus('', null);
+    // Render already ran — walk children to find the line by counting newlines
+    // in text content. The marker itself is hidden (spec-anchor-line has
+    // display:none), so scrolling to it lands at the boundary but the flash
+    // wouldn't be visible. Walk past hidden anchor lines to the next real
+    // content line and flash that instead.
+    const specHtml = drawerSpecEl.innerHTML;
+    const lines = specHtml.split('\n');
+    let target = loc.line - 1;
+    while (target < lines.length && /class="spec-anchor-line"/.test(lines[target])) target++;
+    if (target >= lines.length) target = Math.max(0, loc.line - 1);
+    if (target < lines.length) {
+      lines[target] = `<span class="anchor-flash">${lines[target]}</span>`;
+      drawerSpecEl.innerHTML = lines.join('\n');
+      const flash = drawerSpecEl.querySelector('.anchor-flash');
+      if (flash) {
+        flash.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        // Remove the flash class after animation so the wrapper doesn't stick around.
+        setTimeout(() => {
+          if (flash.parentNode) {
+            const raw = flash.textContent;
+            flash.replaceWith(document.createTextNode(raw));
+          }
+        }, 1500);
+      }
+    }
+  }
+
+  function openDrawer() {
+    drawer.hidden = false;
+    drawerOverlay.hidden = false;
+    // Force a reflow so the transition runs from the hidden state.
+    void drawer.offsetHeight;
+    drawer.classList.add('open');
+    drawerOverlay.classList.add('open');
+    drawer.setAttribute('aria-hidden', 'false');
+    drawerToggle.classList.add('open');
+    if (!specLoaded && !specLoadingPromise) loadSpecAndDiffs();
+  }
+
+  function closeDrawer() {
+    drawer.classList.remove('open');
+    drawerOverlay.classList.remove('open');
+    drawer.setAttribute('aria-hidden', 'true');
+    drawerToggle.classList.remove('open');
+    setTimeout(() => {
+      if (!drawer.classList.contains('open')) {
+        drawer.hidden = true;
+        drawerOverlay.hidden = true;
+      }
+    }, 240);
+  }
+
+  function isDrawerOpen() { return drawer.classList.contains('open'); }
+
+  drawerToggle.addEventListener('click', () => (isDrawerOpen() ? closeDrawer() : openDrawer()));
+  drawerCloseBtn.addEventListener('click', closeDrawer);
+  drawerOverlay.addEventListener('click', closeDrawer);
+  drawerRefresh.addEventListener('click', () => {
+    specLoaded = false;
+    loadSpecAndDiffs();
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && isDrawerOpen()) { e.stopPropagation(); closeDrawer(); }
+  }, true);
+
+  // Any element with data-jump-marker (summary + diagram cards) opens the drawer
+  // and scrolls to the matching <!-- spec-tacle:… --> anchor.
+  document.addEventListener('click', (e) => {
+    const btn = e.target && e.target.closest && e.target.closest('[data-jump-marker]');
+    if (!btn) return;
+    const marker = btn.dataset.jumpMarker;
+    if (!marker) return;
+    e.preventDefault();
+    openDrawer();
+    if (specLoaded) jumpToMarkerInDrawer(marker);
+    else pendingJumpMarker = marker;
+  });
+
+  async function loadSpecAndDiffs(opts) {
+    opts = opts || {};
+    const wantHighlight = !!opts.highlightChanges;
+    const highlightKind = opts.highlightKind || 'user';
+    // Captured at the caller's turn — used to diff against the freshly-loaded
+    // spec. Falls back to whatever specText currently holds, which is fine for
+    // the highlight-off path.
+    const previousText = (opts.previousText != null) ? opts.previousText : specText;
+    if (!serverBase || !data.specPath) {
+      setDrawerStatus('Spec drawer needs the round-trip server — the file:// preview cannot fetch the spec source.', 'err');
+      drawerSpecEl.innerHTML = '<span class="marker-line">(no server)</span>';
+      drawerDiffsCt.textContent = '';
+      drawerDiffsBd.innerHTML = '<div class="diff-empty">No server, no history.</div>';
+      return;
+    }
+    if (drawerPathEl) drawerPathEl.textContent = data.specPath;
+    setDrawerStatus(specLoaded ? 'Refreshing spec…' : 'Loading spec…', 'loading');
+    drawerSpecEl.classList.add('loading');
+    // Run source + history in parallel — both hit the server; no reason to serialize.
+    specLoadingPromise = (async () => {
+      const [srcRes, histRes] = await Promise.all([
+        fetch(`${serverBase}/spec-source?specPath=${encodeURIComponent(data.specPath)}`, { cache: 'no-store' }),
+        fetch(`${serverBase}/spec-history?specPath=${encodeURIComponent(data.specPath)}&limit=5`, { cache: 'no-store' }),
+      ]);
+      const srcBody  = await srcRes.json().catch(() => ({}));
+      const histBody = await histRes.json().catch(() => ({}));
+      if (!srcRes.ok || !srcBody.ok) throw new Error(srcBody.error || `spec-source ${srcRes.status}`);
+      const newText = srcBody.text || '';
+      // If a redundant reload (e.g. SSE echo of our own Update spec) brings
+      // the same bytes back and we're not asked to highlight, keep the current
+      // DOM so any existing highlight spans stick around.
+      const contentUnchanged = specLoaded && newText === specText;
+      specText = newText;
+      specLoaded = true;
+      if (!(contentUnchanged && !wantHighlight)) {
+        let changed = null;
+        if (wantHighlight && previousText && previousText !== newText) {
+          try { changed = diffChangedLineSet(previousText, newText); } catch (_) { changed = null; }
+        }
+        renderSpecPre(specText, changed, highlightKind);
+      }
+      const entries = (histBody && histBody.ok && Array.isArray(histBody.entries)) ? histBody.entries : [];
+      renderDiffs(entries);
+      setDrawerStatus('', null);
+      if (pendingJumpMarker) {
+        const m = pendingJumpMarker;
+        pendingJumpMarker = null;
+        jumpToMarkerInDrawer(m);
+      }
+    })();
+    try {
+      await specLoadingPromise;
+    } catch (err) {
+      specLoaded = false;
+      setDrawerStatus(`Could not load spec: ${err.message}`, 'err');
+    } finally {
+      drawerSpecEl.classList.remove('loading');
+      specLoadingPromise = null;
+    }
+  }
+
+  function renderDiffs(entries) {
+    if (!entries.length) {
+      drawerDiffsCt.textContent = '';
+      drawerDiffsBd.innerHTML = '<div class="diff-empty">No recent updates yet. Hit Update spec on the visualizer and the diff will show here.</div>';
+      return;
+    }
+    drawerDiffsCt.textContent = `(${entries.length})`;
+    const parts = entries.map((entry) => {
+      const changed = entry.ops.filter(o => o.op !== ' ');
+      if (!changed.length) {
+        return `<div class="diff-entry"><div class="diff-label">${escapeHtmlLite(entry.backup)}</div><div class="diff-empty">No line-level changes.</div></div>`;
+      }
+      // Collapse long ' ' runs to a single "…" line so context stays useful without
+      // dumping the whole file into the drawer.
+      const compact = [];
+      let ctxRun = 0;
+      const CTX = 2;
+      const total = entry.ops.length;
+      entry.ops.forEach((op, i) => {
+        if (op.op === ' ') {
+          ctxRun++;
+          const near = entry.ops.slice(Math.max(0, i - CTX), Math.min(total, i + CTX + 1)).some(o => o.op !== ' ');
+          if (near) compact.push(op);
+          else if (compact.length && compact[compact.length - 1].op !== '…') compact.push({ op: '…', line: '' });
+        } else {
+          ctxRun = 0;
+          compact.push(op);
+        }
+      });
+      const body = compact.map(op => {
+        if (op.op === '…') return `<span class="marker-line">    …</span>`;
+        if (op.op === '+') return `<span class="diff-line-add">+ ${escapeHtmlLite(op.line)}</span>`;
+        if (op.op === '-') return `<span class="diff-line-del">- ${escapeHtmlLite(op.line)}</span>`;
+        return `  ${escapeHtmlLite(op.line)}`;
+      }).join('\n');
+      const adds = entry.ops.filter(o => o.op === '+').length;
+      const dels = entry.ops.filter(o => o.op === '-').length;
+      return `<div class="diff-entry"><div class="diff-label">${escapeHtmlLite(entry.backup)} · +${adds} / −${dels}</div><pre class="diff-body">${body}</pre></div>`;
+    });
+    drawerDiffsBd.innerHTML = parts.join('');
+  }
+
+  // --- Loading overlay + hot reload after Update spec ---
+  const loadingOverlay = document.getElementById('loading-overlay');
+  const loadingMessage = document.getElementById('loading-message');
+  window.__specTacleShowLoading = function (msg) {
+    if (msg) loadingMessage.textContent = msg;
+    loadingOverlay.classList.add('visible');
+    loadingOverlay.setAttribute('aria-hidden', 'false');
+  };
+  window.__specTacleHideLoading = function () {
+    loadingOverlay.classList.remove('visible');
+    loadingOverlay.setAttribute('aria-hidden', 'true');
+  };
+  // After Update spec succeeds, refetch the spec source + history so the drawer
+  // reflects the freshly-written file (hot reload). Callers can pass
+  // { highlightChanges: true, previousText } to flag the diff in the drawer.
+  window.__specTacleHotReload = async function (opts) {
+    await loadSpecAndDiffs(opts);
+  };
+  // Suppresses the SSE-triggered reload that immediately follows our own
+  // Update spec / Undo — the direct call already refetched with the correct
+  // previousText, and the echo would clobber freshly-drawn highlights.
+  let lastLocalWriteAt = 0;
+  window.__specTacleMarkLocalWrite = function () { lastLocalWriteAt = Date.now(); };
+  window.__specTacleWasLocalWriteRecent = function () { return Date.now() - lastLocalWriteAt < 3000; };
+
+  // Push channel — server broadcasts a `spec-changed` event whenever the spec
+  // file changes (via /update-spec on any tab, an /undo, or a plain-editor save
+  // on disk). We hot-reload the drawer's spec text + diff history, but leave
+  // the diagrams, drag positions, annotations, and unsaved edits alone. A full
+  // page reload would eat those; this doesn't. If EventSource is unavailable
+  // (older browsers, sandboxed contexts) we silently fall back to the existing
+  // manual Refresh button in the drawer.
+  // --- Consistency-pass banner + partial hot-reload ---
+  // The banner is a small state machine driven by three inputs, in priority order:
+  //   1. Server-authoritative state — GET /consistency-pending on load + reconnect
+  //      + fallback poll while any entry is known. This is what survives any SSE
+  //      drop; the queue file is the source of truth.
+  //   2. SSE events (consistency-pending, consistency-claimed, consistency-progress,
+  //      consistency-released, consistency-applied, consistency-dismissed).
+  //   3. Local optimism — showAppliedFlash() paints the brief green after a
+  //      known /consistency-apply so the user sees the finish immediately.
+  const consistencyBanner = document.getElementById('consistency-banner');
+  const consistencyBannerTitle = consistencyBanner ? consistencyBanner.querySelector('.banner-title') : null;
+  const consistencyBannerSub = consistencyBanner ? consistencyBanner.querySelector('.banner-sub') : null;
+  const consistencyBannerActions = consistencyBanner ? consistencyBanner.querySelector('.banner-actions') : null;
+  const consistencyBannerFill = consistencyBanner ? consistencyBanner.querySelector('.banner-progress .fill') : null;
+
+  // The most recent server-decorated entry for this tab's spec (or null),
+  // plus the hookArmed flag from /consistency-pending. Everything the banner
+  // renders comes from these two values — that way whichever path updated
+  // them last, the render is the same function of state.
+  let currentPendingEntry = null;
+  let hookArmed = false;
+  let bannerFlashTimer = null;
+  let staleWatchTimer = null;
+  let handoffWatchTimer = null;
+  let pollTimer = null;
+
+  // How long an unclaimed entry gets to sit before we treat the handoff as
+  // stalled. Auto-agent startup + skill load usually lands the first claim
+  // inside ~15s; 30s is enough headroom that a healthy run never trips it,
+  // short enough that a real stall (permission dialog, missing binary) is
+  // visible before the reader wanders off.
+  const HANDOFF_STALL_MS = 30 * 1000;
+
+  function renderConsistencyBanner() {
+    if (!consistencyBanner) return;
+    if (bannerFlashTimer) return; // an "applied" flash is showing; leave it alone
+    const e = currentPendingEntry;
+    consistencyBanner.classList.remove('visible', 'queued', 'active', 'stale', 'applied');
+    if (consistencyBannerActions) consistencyBannerActions.innerHTML = '';
+    if (handoffWatchTimer) { clearTimeout(handoffWatchTimer); handoffWatchTimer = null; }
+    if (!e) {
+      if (staleWatchTimer) { clearTimeout(staleWatchTimer); staleWatchTimer = null; }
+      return;
+    }
+    consistencyBanner.classList.add('visible');
+    const state = e.claimState || 'unclaimed';
+    if (state === 'active') {
+      consistencyBanner.classList.add('active');
+      const percent = e.progress && Number.isFinite(e.progress.percent) ? e.progress.percent : 0;
+      const phase = e.progress && e.progress.phase ? e.progress.phase : 'working';
+      const note = e.progress && e.progress.note ? e.progress.note : '';
+      const agent = (e.claim && e.claim.agent) || 'an agent';
+      if (consistencyBannerTitle) consistencyBannerTitle.textContent = `${agent} — ${phase} (${percent}%)`;
+      if (consistencyBannerSub) consistencyBannerSub.textContent = note || `claim expires ${formatClock(e.claimExpiresAt)}`;
+      if (consistencyBannerFill) consistencyBannerFill.style.width = `${percent}%`;
+      scheduleStaleWatch(e);
+    } else if (state === 'stale') {
+      consistencyBanner.classList.add('stale');
+      const agent = (e.claim && e.claim.agent) || 'an agent';
+      if (consistencyBannerTitle) consistencyBannerTitle.textContent = `${agent} — claim expired`;
+      if (consistencyBannerSub) consistencyBannerSub.textContent = `no heartbeat since ${formatClock(e.claimExpiresAt)}. Ping your agent again, or release the claim.`;
+      addBannerButton('Release claim', () => releaseClaim(e.id));
+      addBannerButton('Copy prompt', () => copyAgentPrompt(e));
+    } else {
+      // Unclaimed. Split into three sub-states so a healthy auto-agent
+      // handoff isn't nagged at, but a real stall (or a server without a
+      // hook armed) still tells the reader what to do.
+      const now = Date.now();
+      const startedAt = e.hookFiredAt || e.changedAt || now;
+      const ageMs = now - startedAt;
+      const stalled = ageMs >= HANDOFF_STALL_MS;
+      if (hookArmed && !stalled) {
+        // Optimistic: hook fired, expect a claim any moment.
+        consistencyBanner.classList.add('active');
+        if (consistencyBannerTitle) consistencyBannerTitle.textContent = 'Consistency pass queued';
+        if (consistencyBannerSub) consistencyBannerSub.textContent = 'auto-agent picking this up…';
+        if (consistencyBannerFill) consistencyBannerFill.style.width = '0%';
+        // Re-render right at the threshold so the banner flips to the
+        // stalled state without waiting for the next poll or SSE.
+        const wait = Math.max(1000, HANDOFF_STALL_MS - ageMs + 250);
+        handoffWatchTimer = setTimeout(() => {
+          handoffWatchTimer = null;
+          renderConsistencyBanner();
+          refreshConsistencyStatus();
+        }, wait);
+      } else if (hookArmed && stalled) {
+        // Hook fired but nothing claimed in time — real problem.
+        consistencyBanner.classList.add('stale');
+        if (consistencyBannerTitle) consistencyBannerTitle.textContent = 'Auto-agent hasn’t picked this up';
+        const secs = Math.round(ageMs / 1000);
+        if (consistencyBannerSub) consistencyBannerSub.textContent = `no claim after ${secs}s. Likely the subprocess stalled on a permission dialog. Check the server log, or ping your agent.`;
+        addBannerButton('Copy prompt', () => copyAgentPrompt(e));
+      } else {
+        // No hook armed — user is the pickup path. Quiet nudge, not a warning.
+        consistencyBanner.classList.add('queued');
+        if (consistencyBannerTitle) consistencyBannerTitle.textContent = 'Consistency pass queued';
+        if (consistencyBannerSub) consistencyBannerSub.textContent = 'no auto-agent hook is armed — ping your agent to run the pass.';
+        addBannerButton('Copy prompt', () => copyAgentPrompt(e));
+      }
+    }
+  }
+
+  function addBannerButton(label, onClick) {
+    if (!consistencyBannerActions) return;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'banner-btn';
+    btn.textContent = label;
+    btn.addEventListener('click', onClick);
+    consistencyBannerActions.appendChild(btn);
+  }
+
+  function formatClock(ms) {
+    if (!Number.isFinite(ms)) return '';
+    const d = new Date(ms);
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  }
+
+  // Server marks a claim active/stale relative to its own clock. To flip the
+  // banner from active → stale between poll cycles, schedule a local re-render
+  // right at the reported expiry.
+  function scheduleStaleWatch(entry) {
+    if (staleWatchTimer) { clearTimeout(staleWatchTimer); staleWatchTimer = null; }
+    if (!entry || !Number.isFinite(entry.claimExpiresAt)) return;
+    const wait = Math.max(0, entry.claimExpiresAt - Date.now()) + 250;
+    if (wait > 24 * 3600 * 1000) return; // guard against nonsense values
+    staleWatchTimer = setTimeout(() => {
+      staleWatchTimer = null;
+      if (currentPendingEntry && currentPendingEntry.id === entry.id) {
+        currentPendingEntry = { ...currentPendingEntry, claimState: 'stale' };
+        renderConsistencyBanner();
+      }
+      // The next poll or SSE tick will confirm the transition against the server.
+      refreshConsistencyStatus();
+    }, wait);
+  }
+
+  function copyAgentPrompt(entry) {
+    const parts = [
+      'Please run the pending spec-tacle consistency pass.',
+      `Entry: ${entry.id}`,
+      `Spec: ${entry.specPath}`,
+    ];
+    const text = parts.join('\n');
+    try {
+      if (navigator && navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => {
+          setTemporarySub('prompt copied — paste into your agent.');
+        }, () => setTemporarySub('copy blocked; the prompt is in the console.'));
+      } else {
+        setTemporarySub('clipboard unavailable; the prompt is in the console.');
+      }
+    } catch (_) {
+      setTemporarySub('copy blocked; the prompt is in the console.');
+    }
+    // Always log — the copy path can fail silently in some browsers.
+    console.info('[spec-tacle] agent prompt:\n' + text);
+  }
+
+  function setTemporarySub(text) {
+    if (!consistencyBannerSub) return;
+    const previous = consistencyBannerSub.textContent;
+    consistencyBannerSub.textContent = text;
+    setTimeout(() => {
+      if (consistencyBannerSub && consistencyBannerSub.textContent === text) {
+        consistencyBannerSub.textContent = previous;
+      }
+    }, 3000);
+  }
+
+  function releaseClaim(entryId) {
+    if (!serverBase || !entryId) return;
+    fetch(`${serverBase}/consistency-release`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ entryId }),
+    }).catch(() => { /* the poll will re-sync */ }).finally(() => refreshConsistencyStatus());
+  }
+
+  // Server-authoritative fetch — the ONE path that guarantees the banner
+  // matches the queue file. Called on load, on every SSE reconnect, on a
+  // 30-second fallback poll while any entry is known, and after any local
+  // state-changing action (claim/release from the UI).
+  function refreshConsistencyStatus() {
+    if (!serverBase || !data.specPath) return;
+    fetch(`${serverBase}/consistency-pending?specPath=${encodeURIComponent(data.specPath)}`, { cache: 'no-store' })
+      .then(r => r.json())
+      .then(body => {
+        if (!body || !body.ok) return;
+        hookArmed = !!body.hookArmed;
+        // Pick the newest entry for this spec — the banner shows one at a time.
+        const entries = Array.isArray(body.entries) ? body.entries.slice() : [];
+        entries.sort((a, b) => (b.changedAt || 0) - (a.changedAt || 0));
+        currentPendingEntry = entries[0] || null;
+        renderConsistencyBanner();
+        schedulePoll();
+      })
+      .catch(() => { /* transient — the next poll retries */ });
+  }
+
+  // Poll every 5s while an entry is known pending; when the queue is empty
+  // we stay quiet. SSE is the primary channel, but progress feels sluggish
+  // when a dropped event forces a 30s wait — 5s is short enough to keep the
+  // bar honest, long enough not to hammer the server.
+  function schedulePoll() {
+    if (pollTimer) { clearTimeout(pollTimer); pollTimer = null; }
+    if (!currentPendingEntry) return;
+    pollTimer = setTimeout(refreshConsistencyStatus, 5000);
+  }
+
+  // Brief green flash after consistency-applied, then defer back to whatever
+  // the queue actually contains (usually empty, since apply clears the entry).
+  function showAppliedFlash(msg) {
+    if (!consistencyBanner) return;
+    if (bannerFlashTimer) { clearTimeout(bannerFlashTimer); bannerFlashTimer = null; }
+    consistencyBanner.classList.remove('queued', 'active', 'stale');
+    consistencyBanner.classList.add('visible', 'applied');
+    if (consistencyBannerActions) consistencyBannerActions.innerHTML = '';
+    const parts = [];
+    const sc = Object.keys((msg && msg.appliedSections) || {}).length;
+    const dc = Object.keys((msg && msg.appliedDiagrams) || {}).length;
+    if (sc) parts.push(`${sc} section${sc === 1 ? '' : 's'}`);
+    if (dc) parts.push(`${dc} diagram${dc === 1 ? '' : 's'}`);
+    if (consistencyBannerTitle) consistencyBannerTitle.textContent = 'Consistency pass applied';
+    if (consistencyBannerSub) consistencyBannerSub.textContent = `updated ${parts.join(' + ') || 'nothing'}.`;
+    bannerFlashTimer = setTimeout(() => {
+      bannerFlashTimer = null;
+      renderConsistencyBanner();
+    }, 4000);
+  }
+
+  if (serverBase && typeof EventSource !== 'undefined') {
+    try {
+      // Pass the spec path so the server arms an fs.watch on it immediately —
+      // otherwise the watcher wouldn't fire until the drawer was opened at
+      // least once and /spec-source had installed it as a side effect.
+      const q = data.specPath ? `?specPath=${encodeURIComponent(data.specPath)}` : '';
+      const es = new EventSource(`${serverBase}/events${q}`);
+      // The EventSource 'open' fires on the initial connection AND on every
+      // auto-reconnect. Re-fetching pending state here backfills anything the
+      // browser missed while the stream was down.
+      es.addEventListener('open', () => { refreshConsistencyStatus(); });
+      es.addEventListener('spec-changed', (ev) => {
+        let msg = {};
+        try { msg = JSON.parse(ev.data); } catch (_) { return; }
+        if (!data.specPath || msg.specPath !== data.specPath) return;
+        // Our own Update spec / Undo already ran a highlight-aware reload.
+        // The file-watcher echo would refetch the same bytes with no
+        // previousText, wiping the highlight spans — so skip while a local
+        // write is still fresh.
+        if (window.__specTacleWasLocalWriteRecent && window.__specTacleWasLocalWriteRecent()) return;
+        if (window.__specTacleHotReload) window.__specTacleHotReload();
+      });
+      es.addEventListener('consistency-pending', (ev) => {
+        let msg = {};
+        try { msg = JSON.parse(ev.data); } catch (_) { return; }
+        if (!data.specPath || msg.specPath !== data.specPath) return;
+        // Fast path — server now embeds the decorated entry, so we can paint
+        // the banner without a round-trip. The scheduled poll still fires
+        // 5s later for verification.
+        if (msg.entry) {
+          if (typeof msg.hookArmed === 'boolean') hookArmed = msg.hookArmed;
+          currentPendingEntry = msg.entry;
+          renderConsistencyBanner();
+          schedulePoll();
+        } else {
+          refreshConsistencyStatus();
+        }
+      });
+      es.addEventListener('consistency-claimed', (ev) => {
+        let msg = {};
+        try { msg = JSON.parse(ev.data); } catch (_) { return; }
+        if (!data.specPath || msg.specPath !== data.specPath) return;
+        if (msg.entry) {
+          currentPendingEntry = msg.entry;
+          renderConsistencyBanner();
+          schedulePoll();
+        } else {
+          refreshConsistencyStatus();
+        }
+      });
+      es.addEventListener('consistency-progress', (ev) => {
+        let msg = {};
+        try { msg = JSON.parse(ev.data); } catch (_) { return; }
+        if (!data.specPath || msg.specPath !== data.specPath) return;
+        if (msg.entry) {
+          currentPendingEntry = msg.entry;
+          renderConsistencyBanner();
+          schedulePoll();
+        } else if (currentPendingEntry && currentPendingEntry.id === msg.entryId) {
+          // Legacy path (older server without embedded entry): patch in place.
+          currentPendingEntry = {
+            ...currentPendingEntry,
+            progress: msg.progress || null,
+            claimExpiresAt: msg.claimExpiresAt || currentPendingEntry.claimExpiresAt,
+            claimState: 'active',
+          };
+          renderConsistencyBanner();
+          refreshConsistencyStatus();
+        }
+      });
+      es.addEventListener('consistency-released', (ev) => {
+        let msg = {};
+        try { msg = JSON.parse(ev.data); } catch (_) { return; }
+        if (!data.specPath || msg.specPath !== data.specPath) return;
+        refreshConsistencyStatus();
+      });
+      es.addEventListener('consistency-applied', (ev) => {
+        let msg = {};
+        try { msg = JSON.parse(ev.data); } catch (_) { return; }
+        if (!data.specPath || msg.specPath !== data.specPath) return;
+        if (window.__specTacleMarkLocalWrite) window.__specTacleMarkLocalWrite();
+        applyConsistencyPayload(msg);
+        const prev = specLoaded ? specText : '';
+        if (window.__specTacleHotReload) {
+          window.__specTacleHotReload({
+            highlightChanges: true,
+            highlightKind: 'consistency',
+            previousText: prev,
+          });
+        }
+        showAppliedFlash(msg);
+        refreshConsistencyStatus();
+      });
+      es.addEventListener('consistency-dismissed', () => { refreshConsistencyStatus(); });
+      es.addEventListener('error', () => { /* browser reconnects; open handler will re-sync */ });
+    } catch (_) { /* no push channel — refreshConsistencyStatus + poll still work */ }
+  }
+
+  // Belt-and-suspenders: on first load, ALWAYS ask the server what's pending —
+  // regardless of whether SSE opened. This is what makes a page reload
+  // discover an already-existing queue entry (e.g. the one that outlived the
+  // last agent session).
+  if (serverBase && data.specPath) refreshConsistencyStatus();
+
+  function parseBulletMarkdown(text) {
+    return String(text || '')
+      .split('\n')
+      .map(l => l.replace(/^\s*[-*]\s+/, '').trim())
+      .filter(l => l.length);
+  }
+
+  function flashElement(el) {
+    if (!el || !el.classList) return;
+    el.classList.remove('consistency-flash');
+    // Force reflow so re-adding the class restarts the animation on a repeated pass.
+    void el.offsetWidth;
+    el.classList.add('consistency-flash');
+    setTimeout(() => { if (el && el.classList) el.classList.remove('consistency-flash'); }, 4200);
+  }
+
+  // Applies the consistency-applied SSE payload to in-memory state and to the
+  // DOM without a full page reload. For each affected field: if the user has
+  // no unsaved edit (currentX === originalX), overwrite both and re-render so
+  // the freshly-agreed value shows immediately. If they DO have an unsaved
+  // edit, only update originalX so the "dirty" flag reflects the new base but
+  // their in-progress text isn't lost, and log a hint to the console.
+  function applyConsistencyPayload(payload) {
+    const sections = payload && payload.appliedSections ? payload.appliedSections : {};
+    const diagrams = payload && payload.appliedDiagrams ? payload.appliedDiagrams : {};
+
+    // --- Summary bullets ---
+    const summaryWhatKey = sectionMap.summaryWhat;
+    const summaryWhyKey = sectionMap.summaryWhy;
+    if (Object.prototype.hasOwnProperty.call(sections, summaryWhatKey)) {
+      const next = parseBulletMarkdown(sections[summaryWhatKey]);
+      const s = state.summary;
+      const userDirty = bulletsChanged(s.currentWhat, s.originalWhat);
+      s.originalWhat = next.slice();
+      if (!userDirty) {
+        s.currentWhat = next.slice();
+        renderBullets('what');
+        const list = document.querySelector('[data-summary="what"]');
+        if (list) flashElement(list);
+      } else {
+        console.info('[spec-tacle] consistency pass rewrote summary:what; kept your unsaved edits.');
+      }
+    }
+    if (Object.prototype.hasOwnProperty.call(sections, summaryWhyKey)) {
+      const next = parseBulletMarkdown(sections[summaryWhyKey]);
+      const s = state.summary;
+      const userDirty = bulletsChanged(s.currentWhy, s.originalWhy);
+      s.originalWhy = next.slice();
+      if (!userDirty) {
+        s.currentWhy = next.slice();
+        renderBullets('why');
+        const list = document.querySelector('[data-summary="why"]');
+        if (list) flashElement(list);
+      } else {
+        console.info('[spec-tacle] consistency pass rewrote summary:why; kept your unsaved edits.');
+      }
+    }
+
+    // --- Per-diagram caption / detail / notes come in via section names
+    // (diagram:<id>:caption, diagram:<id>:detail, diagram:<id>:notes). ---
+    state.diagrams.forEach((d, idx) => {
+      const capKey = `diagram:${d.id}:caption`;
+      const detKey = `diagram:${d.id}:detail`;
+      const notKey = `diagram:${d.id}:notes`;
+      if (Object.prototype.hasOwnProperty.call(sections, capKey)) {
+        const next = String(sections[capKey]);
+        const dirty = d.currentCaption !== d.originalCaption;
+        d.originalCaption = next;
+        if (!dirty) {
+          d.currentCaption = next;
+          const el = document.querySelector(`[data-caption-idx="${idx}"]`);
+          if (el) { el.innerHTML = mdBold(next); flashElement(el); }
+        }
+      }
+      if (Object.prototype.hasOwnProperty.call(sections, detKey)) {
+        const next = String(sections[detKey]);
+        const dirty = d.currentDetail !== d.originalDetail;
+        d.originalDetail = next;
+        if (!dirty) {
+          d.currentDetail = next;
+          const el = document.querySelector(`[data-detail-idx="${idx}"]`);
+          if (el) { el.innerHTML = mdRich(next); flashElement(el); }
+        }
+      }
+      if (Object.prototype.hasOwnProperty.call(sections, notKey)) {
+        const next = String(sections[notKey]);
+        const dirty = d.currentNotes !== d.originalNotes;
+        d.originalNotes = next;
+        if (!dirty) {
+          d.currentNotes = next;
+          renderNotes(idx);
+          const wrap = document.querySelector(`[data-notes-idx="${idx}"]`);
+          if (wrap) flashElement(wrap);
+        }
+      }
+    });
+
+    // --- Diagram source rewrites (mermaid or table markdown). ---
+    Object.keys(diagrams).forEach((id) => {
+      const entry = diagrams[id];
+      const idx = state.diagrams.findIndex(x => x.id === id);
+      if (idx < 0) return;
+      const d = state.diagrams[idx];
+      const next = String(entry && entry.source != null ? entry.source : '');
+      const dirty = d.currentSource !== d.originalSource;
+      d.originalSource = next;
+      if (!dirty) {
+        d.currentSource = next;
+        const ta = document.querySelector(`textarea[data-source-idx="${idx}"]`);
+        if (ta) ta.value = next;
+        renderDiagram(idx);
+        const canvas = document.querySelector(`[data-canvas-idx="${idx}"]`);
+        if (canvas) flashElement(canvas);
+      }
+    });
+
+    if (typeof markGlobalDirty === 'function') markGlobalDirty();
   }
 })();
 </script>

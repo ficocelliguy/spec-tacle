@@ -17,13 +17,15 @@ spec-tacle turns any technical document into a page that is actually readable an
 npx spec-tacle_skill install
 ```
 
-That writes `SKILL.md` to `~/.claude/skills/spec-tacle_skill/`. For Codex or any other editor with named skills, pass `--dir <path>` to point at whichever directory it reads skills from.
+That writes `SKILL.md` to `~/.claude/skills/spec-tacle_skill/` and, if Codex is installed, to `~/.codex/skills/spec-tacle_skill/` as well. For any other editor with named skills, pass `--dir <path>` to point at whichever directory it reads skills from.
+
+`install` also merges a narrow set of pre-approvals into `~/.claude/settings.json` — just `Skill(spec-tacle)` and `Bash(npx spec-tacle_skill:*)` / `Bash(npx spec-tacle:*)` — so future Claude sessions can invoke the skill and run the CLI without a Bash-approval prompt. Read/Edit permissions are scoped tighter and install per-project on first `serve --auto-agent`. Pass `--skip-user-perms` to install SKILL.md only.
 
 Then in a session:
 
-> spec-tacle this: docs/product-brief.md
+> spec-tacle docs/product-brief.md
 
-Invoke it alone ("spec-tacle this") and it'll ask what to include. Point it at a markdown file, a stack of files, a transcript, one or more images of a whiteboard, or a mix — it merges them into one spec first, then produces the visualizer.
+Invoke it alone ("spec-tacle") and it'll ask what to include. Point it at a markdown file, a stack of files, a transcript, one or more images of a whiteboard, or a mix — it merges them into one spec first, then produces the visualizer.
 
 Edit anything you want in the browser, hit Update spec. Your spec file now reflects your edits.
 
@@ -33,7 +35,9 @@ Edit anything you want in the browser, hit Update spec. Your spec file now refle
 npx spec-tacle_skill demo
 ```
 
-That stages the bundled Tasky example (a fictional shared to-do app spec) in a temp directory, renders it, and starts a local server. Open the URL it prints. Drag nodes around, rewrite a caption, add a note under a diagram, watch the source file change.
+That copies the bundled Tasky example (a fictional shared to-do app spec) into your current directory as `example-spec.md` (with a numbered suffix if that name is taken) and launches an interactive `claude` session pointed at your copy. Claude runs the spec-tacle skill end-to-end — writes the data JSON, renders the visualizer, starts the round-trip server, opens your browser. Drag nodes, rewrite a caption, add a note, hit Update spec, watch your `example-spec.md` change on disk.
+
+The demo needs [Claude Code](https://claude.com/claude-code) on your `PATH`. If your binary lives elsewhere, set `CLAUDE_BIN=/path/to/claude` before running. The demo also assumes the skill is installed (`npx spec-tacle_skill install`). Your copy of the spec stays in the cwd after you close the demo, so you can keep hacking on it, commit it, or delete it.
 
 
 ## Round-trip, in one paragraph
@@ -50,7 +54,7 @@ The skill embeds a strict subset of the [no-ai-slop](https://github.com/petergya
 git clone https://github.com/ficocelliguy/spec-tacle
 cd spec-tacle
 npm test
-node bin/spec-tacle.js demo
+node bin/spec-tacle.js demo    # requires `claude` on PATH
 ```
 
 Node 18+. Tests use `node:test`.

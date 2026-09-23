@@ -1,0 +1,18 @@
+{
+  "$note": "Pre-approves the tools a spec-tacle consistency-pass subprocess needs. Installed by `spec-tacle_skill serve --auto-agent` (and `demo`/`example`/`install-perms`) into <servedRoot>/.claude/settings.local.json when missing. Scoped to a claude session whose cwd is this directory. Safe to delete or narrow; the auto-agent will then stall on permission dialogs and you'll drive the pass manually.",
+  "permissions": {
+    "allow": [
+      "Read(**)",
+      "Edit(**)",
+      "Write(**)",
+      "Bash(node:*)",
+      "Bash(npx spec-tacle_skill:*)",
+      "Bash(npx spec-tacle:*)",
+      "Bash(curl:*)",
+      "Bash(grep:*)",
+      "Bash(sed:*)",
+      "Bash(mkdir:*)",
+      "Skill(spec-tacle)"
+    ]
+  }
+}
