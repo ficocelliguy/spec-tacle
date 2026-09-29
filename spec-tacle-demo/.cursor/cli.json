@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(**)",
+      "Write(**)",
+      "Shell(node)",
+      "Shell(npx:spec-tacle*)",
+      "Shell(curl)",
+      "Shell(grep)",
+      "Shell(sed)",
+      "Shell(mkdir)"
+    ]
+  }
+}
