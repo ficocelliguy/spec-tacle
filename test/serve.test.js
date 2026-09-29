@@ -13,6 +13,7 @@ const {
   readConsistencyQueue, CONSISTENCY_QUEUE_FILENAME, extractMarkerContent,
   deriveProgressFromStreamJson,
   stripSpecTacleArtifacts,
+  compareBackupNames,
 } = require(path.join(__dirname, '..', 'lib', 'serve.js'));
 
 test('replaceBetweenMarkers rewrites content between spec-tacle markers', () => {
@@ -166,6 +167,51 @@ test('HTTP round-trip: POST /update-spec writes a backup and rewrites the spec',
     const restored = fs.readFileSync(specFile, 'utf-8');
     assert.match(restored, /original/);
     assert.equal(fs.readdirSync(backupDir).length, 0);
+  } finally {
+    server.close();
+    fs.rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
+test('compareBackupNames orders same-second collisions by their counter', () => {
+  const names = [
+    'spec-2026-09-29T12-00-00.10.md',
+    'spec-2026-09-29T12-00-01.md',
+    'spec-2026-09-29T12-00-00.2.md',
+    'spec-2026-09-29T12-00-00.md',
+    'spec-2026-09-29T12-00-00.1.md',
+  ];
+  assert.deepEqual(names.sort(compareBackupNames), [
+    'spec-2026-09-29T12-00-00.md',
+    'spec-2026-09-29T12-00-00.1.md',
+    'spec-2026-09-29T12-00-00.2.md',
+    'spec-2026-09-29T12-00-00.10.md',
+    'spec-2026-09-29T12-00-01.md',
+  ]);
+});
+
+test('HTTP: /spec-history returns the oldest backup as the baseline across several updates', async () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'spec-tacle-serve-test-'));
+  const specFile = path.join(tmp, 'test-spec.md');
+  fs.writeFileSync(specFile,
+    '# Test\n\n<!-- spec-tacle:summary:what -->\noriginal\n<!-- /spec-tacle:summary:what -->\n');
+  const port = 18000 + Math.floor(Math.random() * 1000);
+  const server = start({ root: tmp, port });
+  try {
+    await new Promise((res) => setTimeout(res, 60));
+    const empty = await httpGet(port, '/spec-history?specPath=test-spec.md');
+    assert.equal(empty.json.baseline, null);
+    for (const bullet of ['- first', '- second']) {
+      const r = await httpPost(port, '/update-spec', JSON.stringify({
+        specPath: 'test-spec.md', sections: { 'summary:what': bullet },
+      }));
+      assert.equal(r.json.ok, true);
+    }
+    const hist = await httpGet(port, '/spec-history?specPath=test-spec.md&limit=1');
+    assert.equal(hist.json.entries.length, 1, 'limit still caps the per-update entries');
+    assert.ok(hist.json.baseline, 'baseline present once a backup exists');
+    assert.match(hist.json.baseline.text, /^original$/m);
+    assert.doesNotMatch(hist.json.baseline.text, /first|second/);
   } finally {
     server.close();
     fs.rmSync(tmp, { recursive: true, force: true });

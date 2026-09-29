@@ -6,9 +6,9 @@
  *   spec-tacle_skill render <data.json> [output.html]  Render a data JSON to HTML
  *   spec-tacle_skill serve [--port N] [--root DIR]     Start the round-trip server
  *   spec-tacle_skill skill                             Print the skill instructions
- *   spec-tacle_skill install [--dir PATH] [--force]    Install SKILL.md into a skills dir
+ *   spec-tacle_skill install [--dir PATH]              Install or update SKILL.md in a skills dir
  *   spec-tacle_skill example [dir]                     Copy the example spec + data JSON to a dir
- *   spec-tacle_skill demo                              Copy the bundled spec into the cwd and launch `claude` on it
+ *   spec-tacle_skill demo                              Copy the example into ./spec-tacle-demo and serve it with --auto-agent
  */
 'use strict';
 
@@ -22,6 +22,7 @@ const LIB = path.join(ROOT, 'lib');
 const TEMPLATE = path.join(LIB, 'template.html');
 const RENDER_MOD = path.join(LIB, 'render.js');
 const SERVE_MOD = path.join(LIB, 'serve.js');
+const AGENTS_MOD = path.join(LIB, 'agents.js');
 const SKILL_MD = path.join(ROOT, 'skill', 'SKILL.md');
 const EXAMPLE_DIR = path.join(ROOT, 'example');
 
@@ -37,48 +38,23 @@ function usage() {
     '      Render a data JSON into an HTML visualizer.',
     '      Output defaults to <data-basename>-visualizer.html next to the input.',
     '',
-    '  npx spec-tacle_skill serve [--port N] [--root DIR] [--open PATH] [--no-open] [--auto-agent | --on-consistency-pending CMD]',
+    '  npx spec-tacle_skill serve [--port N] [--root DIR] [--open PATH] [--no-open] [--auto-agent [--agent claude|codex] | --on-consistency-pending CMD]',
     '      Start the round-trip server and open the root in your browser.',
     '      Root defaults to the current directory. Pass --open PATH to open a',
     '      specific file instead of the root, or --no-open to skip opening.',
-    '      --auto-agent arms a hook that spawns headless claude-code (`claude',
-    '      -p …`) after every Update spec, so the consistency pass runs',
-    '      without the user having to ping their agent. Requires `claude` on',
-    '      PATH; a headless subprocess cannot answer permission prompts, so',
-    '      you either pre-approve the tools it needs or use',
-    '      --on-consistency-pending with your own command including',
-    '      `--dangerously-skip-permissions`. --on-consistency-pending CMD',
-    '      overrides the default and runs any shell string; placeholders',
-    '      {entryId}, {specPath}, {root}, {port} are shell-quoted before',
-    '      substitution, and the child also inherits $SPEC_TACLE_ENTRY_ID,',
-    '      $SPEC_TACLE_SPEC_PATH, $SPEC_TACLE_SERVED_ROOT, $SPEC_TACLE_PORT.',
-    '',
-    '  npx spec-tacle_skill skill',
-    '      Print the skill instructions (for use with Claude or other AI editors).',
-    '',
-    '  npx spec-tacle_skill install [--dir PATH] [--force] [--skip-user-perms]',
-    '      Install SKILL.md into ~/.claude/skills/spec-tacle/ and, when',
-    '      Codex is installed, ~/.codex/skills/spec-tacle/ (or --dir for a',
-    '      single custom path). Refuses to overwrite unless --force. Also merges',
-    '      a narrow set of pre-approvals into ~/.claude/settings.json — just',
-    '      `Skill(spec-tacle)` and `Bash(npx spec-tacle_skill:*)`/`Bash(npx',
-    '      spec-tacle:*)` — so future claude sessions can invoke the skill and',
-    '      run the CLI without a Bash-approval prompt. Read/Edit permissions',
-    '      still install per-project on first `serve --auto-agent`. Pass',
-    '      --skip-user-perms to install SKILL.md only.',
-    '',
-    '  npx spec-tacle_skill example [dir]',
-    '      Copy the bundled example spec + data JSON into <dir> (default: cwd).',
-    '',
-    '  npx spec-tacle_skill install-perms [--dir DIR]',
-    '      Write the auto-agent permissions template to',
-    '      <DIR>/.claude/settings.local.json so a headless `claude -p`',
-    '      spawned by `serve --auto-agent` in that dir can Read/Edit/Write',
-    '      and run the spec-tacle CLI without hitting permission dialogs.',
-    '      Idempotent — never overwrites an existing file. `serve',
-    '      --auto-agent` runs this automatically on startup, so you only',
-    '      need this subcommand if you want to install the perms without',
-    '      starting the server.',
+    '      --auto-agent arms a hook that spawns a headless agent after every',
+    '      Update spec, so the consistency pass runs without the user having to',
+    '      ping their agent. --agent picks the CLI (`claude -p` or `codex',
+    '      exec`); without it the server uses the agent it was started from,',
+    '      then whichever of claude / codex is on PATH. $SPEC_TACLE_AGENT and',
+    '      $SPEC_TACLE_AGENT_BIN do the same from the environment, and',
+    '      $SPEC_TACLE_AGENT_MODEL overrides the model. For any other agent CLI,',
+    '      --on-consistency-pending CMD runs your own shell string instead;',
+    '      placeholders {prompt}, {entryId}, {specPath}, {root}, {port} are',
+    '      shell-quoted before substitution ({prompt} is the full',
+    '      consistency-pass prompt), e.g. `gemini -p {prompt} --yolo`. The child',
+    '      also inherits $SPEC_TACLE_ENTRY_ID, $SPEC_TACLE_SPEC_PATH,',
+    '      $SPEC_TACLE_SERVED_ROOT, $SPEC_TACLE_PORT.',
     '',
     '  npx spec-tacle_skill consistency-check [--root DIR] [--spec PATH] [--json]',
     '      List pending consistency-pass entries the server queued after each',
@@ -113,14 +89,13 @@ function usage() {
     '      Drop a claim without applying any edits — the entry stays in the',
     '      queue for another agent to pick up.',
     '',
-    '  npx spec-tacle_skill demo',
-    '      Copy the bundled example spec into the current working directory as',
-    '      example-spec.md (a numbered suffix if that file already exists), then',
-    '      launch `claude` interactively pointed at your copy. Requires Claude',
-    '      Code on PATH (override with $CLAUDE_BIN). Claude runs the skill',
-    '      end-to-end: renders the visualizer, starts the round-trip server,',
-    '      and opens your browser. Your edits round-trip back into the local',
-    '      example-spec.md.',
+    '  npx spec-tacle_skill demo [--agent claude|codex] [--port N] [--no-open]',
+    '      Copy the bundled Tasky example (spec, data JSON, visualizer) into a',
+    '      new ./spec-tacle-demo folder (numbered if that name is taken), then',
+    '      start the round-trip server with --auto-agent and open the',
+    '      visualizer. Every Update spec writes into that folder\'s',
+    '      example-spec.md and spawns a headless agent for the consistency',
+    '      pass. Needs Claude Code or Codex on PATH for the agent half.',
     ''
   ].join('\n'));
 }
@@ -203,10 +178,12 @@ function cmdServe(args) {
   const rel = openArg && !openArg.startsWith('--') ? openArg.replace(/^\/+/, '') : '';
   const autoAgent = hasFlag(args, '--auto-agent');
   const onConsistencyPendingCmd = argFlag(args, '--on-consistency-pending');
+  const agent = argFlag(args, '--agent');
   startServer({
     root: path.resolve(root),
     port,
     autoAgent,
+    agent,
     onConsistencyPendingCmd,
     onListen: (actualPort) => {
       const url = `http://localhost:${actualPort}/${rel}`;
@@ -224,65 +201,48 @@ function cmdSkill() {
 
 function cmdInstallSkill(args) {
   const dirFlag = argFlag(args, '--dir');
-  const force = hasFlag(args, '--force');
   const skipUserPerms = hasFlag(args, '--skip-user-perms');
   // --dir points at one target and skips the multi-editor default.
-  // Otherwise install into every known editor skill directory that already
-  // exists on this machine, and always into ~/.claude (which we assume the
-  // user wants even if it hasn't been created yet).
-  const targets = [];
-  if (dirFlag) {
-    targets.push(path.resolve(dirFlag));
-  } else {
-    const claudeDir = path.join(os.homedir(), '.claude', 'skills', 'spec-tacle');
-    const codexDir  = path.join(os.homedir(), '.codex',  'skills', 'spec-tacle');
-    targets.push(claudeDir);
-    // Only touch ~/.codex if the user has codex installed (parent dir exists).
-    // Skips the noise of creating an empty ~/.codex tree on Claude-only machines.
-    if (fs.existsSync(path.join(os.homedir(), '.codex'))) targets.push(codexDir);
-  }
+  // Otherwise install into ~/.claude/skills (always) and the shared
+  // ~/.agents/skills when an agent that reads only that folder is installed.
+  const { skillInstallTargets, legacySkillFiles, ensureOtherAgentsUserPermissions } = require(AGENTS_MOD);
+  const targets = dirFlag
+    ? [{ dir: path.resolve(dirFlag), agents: [] }]
+    : skillInstallTargets();
 
-  // Older versions installed to `spec-tacle_skill/`; if that stale directory
-  // is still around, remove its SKILL.md so the skill doesn't show up twice
-  // (once under each name) in the editor's skill listing.
+  // Remove copies earlier versions wrote to folders current agents no longer
+  // read, so the skill doesn't show up twice in an editor's skill listing.
   if (!dirFlag) {
-    for (const root of ['.claude', '.codex']) {
-      const legacy = path.join(os.homedir(), root, 'skills', 'spec-tacle_skill', 'SKILL.md');
-      if (fs.existsSync(legacy)) {
-        try { fs.rmSync(legacy); } catch (_) { /* best-effort */ }
-        try { fs.rmdirSync(path.dirname(legacy)); } catch (_) { /* keep parent if not empty */ }
-        console.log(`Removed legacy skill install at ${legacy}`);
-      }
+    for (const legacy of legacySkillFiles()) {
+      if (!fs.existsSync(legacy)) continue;
+      try { fs.rmSync(legacy); } catch (_) { /* best-effort */ }
+      try { fs.rmdirSync(path.dirname(legacy)); } catch (_) { /* keep parent if not empty */ }
+      console.log(`Removed legacy skill install at ${legacy}`);
     }
   }
 
-  const conflicts = targets
-    .map(d => path.join(d, 'SKILL.md'))
-    .filter(p => fs.existsSync(p));
-  if (conflicts.length && !force) {
-    console.error(`spec-tacle_skill: ${conflicts.length === 1 ? 'file' : 'files'} already exist — re-run with --force to overwrite:`);
-    for (const p of conflicts) console.error(`  ${p}`);
-    process.exit(1);
-  }
-
-  for (const targetDir of targets) {
-    const targetFile = path.join(targetDir, 'SKILL.md');
-    fs.mkdirSync(targetDir, { recursive: true });
+  // Always overwrite: re-running install is how users pick up a newer
+  // SKILL.md. --force is still accepted (and ignored) for older instructions.
+  for (const { dir, agents } of targets) {
+    const targetFile = path.join(dir, 'SKILL.md');
+    const existed = fs.existsSync(targetFile);
+    fs.mkdirSync(dir, { recursive: true });
     fs.copyFileSync(SKILL_MD, targetFile);
-    console.log(`Installed skill to ${targetFile}`);
+    const forWhom = agents.length ? ` (${agents.join(', ')})` : '';
+    console.log(`${existed ? 'Updated' : 'Installed'} skill at ${targetFile}${forWhom}`);
   }
 
-  // Also merge a narrow set of pre-approvals into ~/.claude/settings.json so
-  // future claude sessions can invoke the skill and run `npx spec-tacle_skill
-  // ...` without a Bash-approval prompt for the CLI itself. Deliberately does
-  // NOT grant Read/Edit/Write globs — those stay per-project via the
-  // AUTO_AGENT_SETTINGS_TEMPLATE the server auto-installs on first `serve
-  // --auto-agent`. Idempotent; the merge is skipped only with --skip-user-perms.
+  // Also pre-approve the spec-tacle CLI for each installed agent: Claude via
+  // ~/.claude/settings.json, the rest via their own config formats (see
+  // lib/agents.js). Deliberately does NOT grant Read/Edit/Write globs —
+  // those stay per-project and install on first `serve --auto-agent`.
+  // Idempotent; skipped only with --skip-user-perms.
   if (!skipUserPerms) {
     const { ensureUserLevelPermissions } = require(SERVE_MOD);
     ensureUserLevelPermissions({ logPrefix: 'spec-tacle_skill:' });
+    ensureOtherAgentsUserPermissions({ logPrefix: 'spec-tacle_skill:' });
   } else {
-    console.log('spec-tacle_skill: skipped user-level permissions (--skip-user-perms). Future claude sessions will prompt on Bash for `npx spec-tacle_skill …`.');
+    console.log('spec-tacle_skill: skipped user-level permissions (--skip-user-perms). Your agent will prompt before running `npx spec-tacle_skill …`.');
   }
 
   console.log('Restart your editor session, then try: "spec-tacle <path-to-spec.md>"');
@@ -325,52 +285,49 @@ function cmdInstallPerms(args) {
 }
 
 function cmdDemo(args) {
-  // Copy the bundled spec into the user's working directory so their edits
-  // survive after the demo ends — they can keep hacking on the file, commit
-  // it, or delete it. Never overwrite: if the target already exists, pick a
-  // free `example-spec-N.md` suffix and tell the user which one we wrote.
+  // Copy the example into a fresh folder so the user's edits survive the
+  // demo: they can keep hacking on the spec, commit it, or delete it. Never
+  // overwrite; take the first free spec-tacle-demo[-N] name.
   const cwd = process.cwd();
-  const src = path.join(EXAMPLE_DIR, 'example-spec.md');
-  let destName = 'example-spec.md';
-  let dest = path.join(cwd, destName);
-  let n = 1;
-  while (fs.existsSync(dest)) {
-    destName = `example-spec-${n}.md`;
-    dest = path.join(cwd, destName);
-    n++;
+  let dirName = 'spec-tacle-demo';
+  for (let n = 1; fs.existsSync(path.join(cwd, dirName)); n++) dirName = `spec-tacle-demo-${n}`;
+  const demoDir = path.join(cwd, dirName);
+  fs.mkdirSync(demoDir, { recursive: true });
+
+  const specName = 'example-spec.md';
+  const dataName = 'example-data.json';
+  const htmlName = 'example-visualizer.html';
+  copyFile(path.join(EXAMPLE_DIR, specName), path.join(demoDir, specName));
+  // The bundled data JSON names the spec relative to the repo root
+  // (example/example-spec.md). Point it at the copy next to it, then
+  // re-render so the visualizer posts edits to the right file.
+  const data = JSON.parse(fs.readFileSync(path.join(EXAMPLE_DIR, dataName), 'utf-8'));
+  data.specPath = specName;
+  fs.writeFileSync(path.join(demoDir, dataName), JSON.stringify(data, null, 2) + '\n', 'utf-8');
+  try {
+    render(TEMPLATE, path.join(demoDir, dataName), path.join(demoDir, htmlName));
+  } catch (err) {
+    console.error(`spec-tacle: render error: ${err.message}`);
+    process.exit(2);
   }
-  copyFile(src, dest);
-  const relDest = path.relative(cwd, dest) || destName;
-  console.log(`spec-tacle: copied demo spec to ./${relDest}`);
-  console.log(`spec-tacle: your edits (Update spec, notes, drags) will round-trip into that file.`);
-
-  // Provision the auto-agent permissions template BEFORE launching claude so
-  // the child session can start the server and run the CLI without hitting a
-  // sandbox EPERM on listen or a permission dialog on the first Bash. The
-  // template is idempotent — an existing settings.local.json is kept as-is.
-  const { ensureAutoAgentPermissions } = require(SERVE_MOD);
-  ensureAutoAgentPermissions(cwd, { logPrefix: 'spec-tacle:' });
-
-  const claudeBin = process.env.CLAUDE_BIN || 'claude';
-  const prompt = `spec-tacle ${relDest}`;
-  console.log('');
-  console.log(`spec-tacle: launching \`${claudeBin}\` — Claude will run the spec-tacle skill on ./${relDest}.`);
-  console.log(`spec-tacle: prompt → ${prompt}`);
+  console.log(`spec-tacle: copied the Tasky example to ./${dirName}/`);
+  console.log(`spec-tacle: Update spec writes into ./${dirName}/${specName}. Stop the server with Ctrl-C; the folder stays.`);
   console.log('');
 
-  const child = spawn(claudeBin, [prompt], { stdio: 'inherit', cwd });
-  child.on('error', (err) => {
-    if (err.code === 'ENOENT') {
-      console.error(`spec-tacle: could not find \`${claudeBin}\` on PATH.`);
-      console.error(`spec-tacle: install Claude Code from https://claude.com/claude-code, then re-run \`npx spec-tacle_skill demo\`.`);
-      console.error(`spec-tacle: (already have it? point CLAUDE_BIN at your binary and try again.)`);
-      console.error(`spec-tacle: the demo spec is still at ./${relDest} — you can render it manually or delete it.`);
-    } else {
-      console.error(`spec-tacle: failed to launch claude: ${err.message}`);
-    }
-    process.exit(1);
+  const port = parsePortArg(args, 8765);
+  const noOpen = hasFlag(args, '--no-open');
+  startServer({
+    root: demoDir,
+    port,
+    autoAgent: true,
+    agent: argFlag(args, '--agent'),
+    onListen: (actualPort) => {
+      const url = `http://localhost:${actualPort}/${htmlName}`;
+      console.log('');
+      console.log(`spec-tacle: ${noOpen ? 'open' : 'opening'} ${url}`);
+      if (!noOpen) openInBrowser(url);
+    },
   });
-  child.on('exit', (code) => process.exit(code == null ? 0 : code));
 }
 
 function cmdConsistencyCheck(args) {

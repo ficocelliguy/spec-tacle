@@ -1,7 +1,7 @@
 {
   "name": "spec-tacle_skill",
-  "version": "0.1.9",
-  "description": "Turn a software spec into an editable HTML visualizer: technical summary, diagrams an charts, and round-trip back to the spec file.",
+  "version": "0.2.0",
+  "description": "Turn dense info into diagrams you can read at a glance, then edit the diagrams to rewrite the spec.",
   "engines": {
     "node": ">=18"
   },

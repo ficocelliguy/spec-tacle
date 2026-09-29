@@ -469,10 +469,10 @@
   .diagram-canvas g.edgeLabels .edgeLabel > div:has(> span.edgeLabel) {
     padding: 0; background: transparent; border: 0; box-shadow: none;
   }
-  .diagram-canvas .node.selected > rect,
-  .diagram-canvas .node.selected > circle,
-  .diagram-canvas .node.selected > polygon,
-  .diagram-canvas .node.selected > path { stroke: var(--warn) !important; stroke-width: 3 !important; }
+  #app .diagram-canvas .node.selected > rect,
+  #app .diagram-canvas .node.selected > circle,
+  #app .diagram-canvas .node.selected > polygon,
+  #app .diagram-canvas .node.selected > path { stroke: var(--warn) !important; stroke-width: 3 !important; }
   .diagram-canvas .edgePath.selected path { stroke: var(--warn) !important; stroke-width: 3 !important; }
   /* Handle wrap: hidden by default, visible on hover. The wrap holds both a
      fat transparent hit-circle and a small visible dot, so pointer targets are
@@ -577,14 +577,14 @@
   .element-tooltip {
     position: fixed;
     z-index: 25;
-    max-width: 320px;
-    padding: 8px 12px;
+    max-width: 240px;
+    padding: 5px 9px;
     background: var(--panel);
     color: var(--ink);
     border: 1px solid var(--line);
-    border-radius: 6px;
-    font-size: 12.5px;
-    line-height: 1.45;
+    border-radius: 5px;
+    font-size: 11.5px;
+    line-height: 1.4;
     box-shadow: 0 4px 14px rgba(0, 0, 0, 0.16);
     opacity: 0;
     pointer-events: none;
@@ -597,8 +597,8 @@
   .element-tooltip.empty { color: var(--ink-dim); font-style: italic; }
   .element-tooltip .tooltip-hint {
     display: block;
-    margin-top: 4px;
-    font-size: 10.5px;
+    margin-top: 2px;
+    font-size: 9.5px;
     color: var(--ink-dim);
     font-style: italic;
   }
@@ -621,10 +621,10 @@
     resize: vertical;
     font-family: inherit;
   }
-  .diagram-canvas .node.drop-target > rect,
-  .diagram-canvas .node.drop-target > circle,
-  .diagram-canvas .node.drop-target > polygon,
-  .diagram-canvas .node.drop-target > path {
+  #app .diagram-canvas .node.drop-target > rect,
+  #app .diagram-canvas .node.drop-target > circle,
+  #app .diagram-canvas .node.drop-target > polygon,
+  #app .diagram-canvas .node.drop-target > path {
     stroke: var(--warn) !important;
     stroke-width: 3.5 !important;
   }
@@ -684,6 +684,22 @@
   }
   #shape-menu .shape-preview svg { width: 100%; height: 100%; }
   #shape-menu .shape-label { font-size: 13px; }
+  #shape-menu .menu-header.color-header { border-top: 1px solid var(--line); margin-top: 4px; padding-top: 8px; }
+  #shape-menu .color-row { display: flex; flex-wrap: wrap; gap: 6px; padding: 4px 10px 6px; }
+  #shape-menu button.color-swatch {
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border-radius: 50%;
+    border: 2px solid;
+    cursor: pointer;
+  }
+  #shape-menu button.color-swatch:hover { transform: scale(1.12); }
+  #shape-menu button.color-swatch.current { outline: 2px solid var(--ink); outline-offset: 2px; }
+  #shape-menu button.color-swatch.none {
+    background: linear-gradient(135deg, transparent 45%, var(--ink-dim) 45%, var(--ink-dim) 55%, transparent 55%), var(--panel);
+    border-color: var(--line);
+  }
   .diagram-canvas [contenteditable="true"] {
     outline: 2px solid var(--accent);
     outline-offset: 2px;
@@ -952,6 +968,34 @@
   .jump-to-spec::before { content: "↗"; font-size: 13px; line-height: 1; }
   section.summary .summary-heading .jump-to-spec { margin-left: auto; }
   .diagram-header .jump-to-spec { margin-left: auto; }
+  .diagram-header .expand-diagram { margin-left: -4px; }
+  .diagram-header .expand-diagram::before { content: "⤢"; }
+  .diagram-card.expanded .diagram-header .expand-diagram::before { content: "✕"; font-size: 11px; }
+
+  /* --- Expanded (full-screen) diagram card ---
+     z-index sits above the sticky header (20) but below the element tooltip
+     (25), shape menu (30), and spec drawer (40/50), so those still work while
+     a diagram fills the screen. */
+  body.diagram-expanded { overflow: hidden; }
+  .diagram-card.expanded {
+    position: fixed;
+    inset: 0;
+    z-index: 24;
+    margin: 0;
+    border-radius: 0;
+    border: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .diagram-card.expanded .diagram-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    height: auto !important; /* ignore any height set by the resize handle */
+  }
+  .diagram-card.expanded details.diagram-detail,
+  .diagram-card.expanded .diagram-resize-handle,
+  .diagram-card.expanded .diff-view { display: none; }
+  .diagram-card.expanded .diagram-notes { max-height: 20vh; overflow-y: auto; }
 
   /* --- Spec drawer (slide-out, collapsed by default) --- */
   #spec-drawer-overlay {
@@ -1014,6 +1058,13 @@
     font-size: 12px;
     flex-shrink: 0;
   }
+  #spec-drawer .drawer-header button[aria-pressed="true"] {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  #spec-drawer .drawer-header button:disabled { opacity: 0.45; cursor: default; }
+  #spec-drawer .drawer-header button:disabled:hover { background: var(--panel); border-color: var(--line); }
   #spec-drawer .drawer-body {
     flex: 1 1 auto;
     overflow: auto;
@@ -1231,6 +1282,49 @@
     box-shadow: inset 3px 0 0 var(--accent);
     animation: spec-line-highlight-in-consistency 0.9s ease;
   }
+  /* "Show changes" toggle: every block that differs from the pre-spec-tacle
+     baseline (the oldest backup). Static, unlike .spec-line-changed, and it
+     stays until the toggle is switched off. Removed lines render as their raw
+     markdown, struck through, where they used to sit. */
+  #spec-drawer .drawer-changes-legend {
+    padding: 6px 16px;
+    font-size: 12px;
+    color: var(--ink-dim);
+    border-bottom: 1px solid var(--line);
+  }
+  #spec-drawer .drawer-changes-legend .swatch {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    vertical-align: -1px;
+    margin: 0 4px 0 8px;
+  }
+  #spec-drawer .drawer-changes-legend .swatch.add { background: var(--diff-add); box-shadow: inset 2px 0 0 var(--ok); }
+  #spec-drawer .drawer-changes-legend .swatch.del { background: var(--diff-del); box-shadow: inset 2px 0 0 var(--warn); }
+  #spec-drawer .drawer-spec .spec-diff-add {
+    background: var(--diff-add);
+    box-shadow: inset 3px 0 0 var(--ok);
+    padding: 2px 8px;
+    margin-left: -8px;
+    margin-right: -8px;
+    border-radius: 3px;
+  }
+  #spec-drawer .drawer-spec tr.spec-diff-add > td,
+  #spec-drawer .drawer-spec tr.spec-diff-add > th { background: var(--diff-add); }
+  #spec-drawer .drawer-spec .spec-diff-del {
+    background: var(--diff-del);
+    box-shadow: inset 3px 0 0 var(--warn);
+    padding: 2px 8px;
+    margin: 0.4em -8px;
+    border-radius: 3px;
+    font: 12px/1.5 "SF Mono", Menlo, Consolas, monospace;
+    white-space: pre-wrap;
+    text-decoration: line-through;
+    color: var(--ink-dim);
+    list-style: none;
+  }
+  #spec-drawer .drawer-spec tr.spec-diff-del > td { background: var(--diff-del); }
   @keyframes spec-line-highlight-in {
     0%   { background: var(--warn); color: #fff; }
     60%  { background: var(--warn); color: #fff; }
@@ -1487,11 +1581,13 @@
   <div class="drawer-header">
     <h2>Spec</h2>
     <span class="drawer-path" id="drawer-path"></span>
+    <button id="drawer-changes" aria-pressed="false" disabled title="Mark everything spec-tacle has changed in this spec since its first Update spec">Show changes</button>
     <button id="drawer-refresh" title="Reload the spec source and recent diffs from disk">Refresh</button>
     <button id="drawer-close" title="Close the spec drawer">Close</button>
   </div>
   <div class="drawer-body">
     <div class="drawer-status" id="drawer-status">Opening spec…</div>
+    <div class="drawer-changes-legend" id="drawer-changes-legend" hidden></div>
     <details class="drawer-diffs" id="drawer-diffs">
       <summary title="Recent updates that touched this spec. Collapsed by default so the spec text stays the focus.">Recent updates <span id="drawer-diffs-count" style="color: var(--ink-dim); font-weight: 400;"></span></summary>
       <div class="diffs-scroll" id="drawer-diffs-body"></div>
@@ -1694,7 +1790,7 @@
         const detEl = document.querySelector(`[data-detail-idx="${i}"]`);
         if (detEl) detEl.innerHTML = mdRich(d.currentDetail);
         renderNotes(i);
-        renderDiagram(i);
+        renderDiagram(i, { keepLayout: false });
       }
       markDirty(i);
     });
@@ -1724,16 +1820,66 @@
       if (deleteSelected()) e.preventDefault();
       return;
     }
-    // Escape → clear selection
+    // Escape → clear selection, and leave full-screen diagram mode unless a
+    // menu or the spec drawer is the thing Escape should close.
     if (e.key === 'Escape') {
       if (inField) return;
       deselectAll();
+      const menuOpen = document.querySelector('#shape-menu.open');
+      const drawerOpen = document.querySelector('#spec-drawer.open');
+      if (expandedIdx !== null && !menuOpen && !drawerOpen) collapseDiagram();
       return;
     }
   });
 
+  // --- Full-screen diagrams ---
+  // The card becomes a fixed overlay covering the viewport. When the browser
+  // allows it, the whole document also enters native fullscreen; the document
+  // (not the card) is the fullscreen element so body-level tooltips, the shape
+  // menu, and the spec drawer keep rendering on top.
+  let expandedIdx = null;
+  function expandDiagram(idx) {
+    if (expandedIdx === idx) return;
+    if (expandedIdx !== null) collapseDiagram({ keepNativeFullscreen: true });
+    const card = document.querySelector(`.diagram-card[data-idx="${idx}"]`);
+    if (!card) return;
+    expandedIdx = idx;
+    card.classList.add('expanded');
+    document.body.classList.add('diagram-expanded');
+    const btn = card.querySelector('.expand-diagram');
+    btn.textContent = 'Exit full screen';
+    btn.title = 'Return this diagram to the page (Esc)';
+    btn.setAttribute('aria-pressed', 'true');
+    const root = document.documentElement;
+    if (!document.fullscreenElement && root.requestFullscreen) {
+      root.requestFullscreen().catch(() => { /* overlay alone still fills the viewport */ });
+    }
+  }
+  function collapseDiagram(opts = {}) {
+    if (expandedIdx === null) return;
+    const card = document.querySelector(`.diagram-card[data-idx="${expandedIdx}"]`);
+    expandedIdx = null;
+    document.body.classList.remove('diagram-expanded');
+    if (card) {
+      card.classList.remove('expanded');
+      const btn = card.querySelector('.expand-diagram');
+      btn.textContent = 'Full screen';
+      btn.title = 'Expand this diagram to fill the screen (Esc to exit)';
+      btn.setAttribute('aria-pressed', 'false');
+      card.scrollIntoView({ block: 'start' });
+    }
+    if (!opts.keepNativeFullscreen && document.fullscreenElement && document.exitFullscreen) {
+      document.exitFullscreen().catch(() => {});
+    }
+  }
+  // The browser consumes Esc when leaving native fullscreen, so follow its
+  // state instead of relying on the keydown handler.
+  document.addEventListener('fullscreenchange', () => {
+    if (!document.fullscreenElement) collapseDiagram();
+  });
 
-  const HINT_MERMAID = 'Hover a node or arrow to see a description tooltip; click the tooltip to edit it. Click a node to select it, then Delete/Backspace to remove it (and its edges). Drag a node to reposition; arrows and labels follow. Hover a node for its four side dots and shape-picker (◇). Drag a side dot to another node to create a new arrow, or into empty space to spawn a new node in edit mode. Hover an arrow for its handles: drag the blue circle (or the label itself) to bend, drag the green/orange endpoints to reconnect. Double-click a node, edge label, caption, detail, or bullet to edit its text inline — the cursor lands where you clicked, so triple-click when you want to replace everything. Double-click an unlabeled arrow to add a new label. Click the "Add notes…" area below to jot general thoughts about this diagram. Wrap key terms in double asterisks to bold them. Ctrl/⌘+Z undoes the last edit.';
+
+  const HINT_MERMAID = 'Hover a node or arrow to see a description tooltip; click the tooltip to edit it. Click a node to select it, then Delete/Backspace to remove it (and its edges). Drag a node to reposition; arrows and labels follow. Hover a node for its four side dots and shape and color picker (◇); right-click a node opens the same picker. Drag a side dot to another node to create a new arrow, or into empty space to spawn a new node in edit mode. Hover an arrow for its handles: drag the blue circle (or the label itself) to bend, drag the green/orange endpoints to reconnect. Double-click a node, edge label, caption, detail, or bullet to edit its text inline — the cursor lands where you clicked, so triple-click when you want to replace everything. Double-click an unlabeled arrow to add a new label. Click the "Add notes…" area below to jot general thoughts about this diagram. Wrap key terms in double asterisks to bold them. Ctrl/⌘+Z undoes the last edit.';
   const HINT_TABLE = 'Double-click a header or cell to edit it in place; the cursor lands where you clicked, triple-click to select the whole cell. Enter commits, Esc cancels. Wrap key terms in double asterisks to bold them. To add or remove columns or rows, open the Source pane on the right and edit the markdown table directly — the visualizer re-renders when you re-render. Caption, detail, and notes all edit inline the same way. Ctrl/⌘+Z undoes the last edit.';
   const SOURCE_HINT_MERMAID = 'Show or hide the mermaid source for this diagram';
   const SOURCE_HINT_TABLE = 'Show or hide the raw markdown table source';
@@ -1814,6 +1960,7 @@
         <h3>${escapeHtml(diagram.title)}</h3>
         <span class="kind" title="Diagram type">${escapeHtml(kindLabel(diagram.kind))}</span>
         <button type="button" class="jump-to-spec" data-jump-marker="diagram:${escapeHtml(diagram.id)}" title="Open the spec drawer and jump to this diagram in the source file">View in spec</button>
+        <button type="button" class="jump-to-spec expand-diagram" data-expand-idx="${idx}" aria-pressed="false" title="Expand this diagram to fill the screen (Esc to exit)">Full screen</button>
       </div>
       <div class="diagram-caption" data-caption-idx="${idx}" title="Double-click to edit (wrap key terms in **double asterisks** to bold)">${mdBold(diagram.caption || '')}</div>
       <details class="diagram-detail" open>
@@ -1882,6 +2029,13 @@
         t.closest('.edge-hover-overlay')
       );
       if (!insideInteractive) deselectAll();
+    });
+  });
+
+  document.querySelectorAll('.expand-diagram').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const idx = +btn.dataset.expandIdx;
+      if (expandedIdx === idx) collapseDiagram(); else expandDiagram(idx);
     });
   });
 
@@ -2349,12 +2503,16 @@
       const detEl = document.querySelector(`[data-detail-idx="${i}"]`);
       if (detEl) detEl.innerHTML = mdRich(d.currentDetail);
       renderNotes(i);
-      renderDiagram(i);
+      renderDiagram(i, { keepLayout: false });
     });
     markGlobalDirty();
   });
 
-  async function renderDiagram(idx) {
+  // keepLayout: pin nodes that were already on screen to where they sit now, so
+  // a source edit doesn't let mermaid's fresh layout scatter a hand-arranged
+  // diagram. Undo, reset, and revert pass false because their stored offsets
+  // already describe the layout they want.
+  async function renderDiagram(idx, { keepLayout = true } = {}) {
     const diagram = state.diagrams[idx];
     const canvas = document.querySelector(`[data-canvas-idx="${idx}"]`);
     if (diagram.kind === 'table') {
@@ -2362,6 +2520,7 @@
       return;
     }
     try {
+      const prevLayout = keepLayout ? captureNodeLayout(canvas) : null;
       const id = `mermaid-${idx}-${Date.now()}`;
       const { svg } = await mermaid.render(id, diagram.currentSource);
       canvas.innerHTML = svg;
@@ -2369,6 +2528,7 @@
       // for tall/narrow (TD) diagrams where a small sideways drag would otherwise
       // trigger a viewBox expansion and shrink everything.
       ensureViewBoxRoom(canvas);
+      if (prevLayout) reconcileLayout(canvas, idx, prevLayout);
       wireInteractions(canvas, idx);
       applyStoredPositions(canvas, idx);
       renderAnnotations(idx);
@@ -2664,6 +2824,8 @@
   // line that references it as an edge participant. Chained edges through the
   // deleted node collapse (the whole line is removed) — users can rewire.
   function deleteNodeFromSource(source, id) {
+    // Pull the id out of `class a,b name` lines first so deleting `a` keeps `b`'s class.
+    source = pruneUnusedColorDefs(removeFromClassLines(source, id, false));
     const wordRe = new RegExp(`(?:^|[\\s|>])${id}(?:$|[\\s\\[\\{\\(|<>\\-])`);
     const kept = source.split('\n').filter(line => !wordRe.test(line));
     return kept.join('\n').replace(/\n{3,}/g, '\n\n');
@@ -2727,6 +2889,140 @@
       const h = Math.abs(br.y - tl.y);
       return { x, y, width: w, height: h, cx: x + w / 2, cy: y + h / 2 };
     } catch (e) { return null; }
+  }
+
+  // Snapshot where each node currently sits (svg user space, offsets included).
+  function captureNodeLayout(canvas) {
+    const svg = canvas && canvas.querySelector('svg');
+    if (!svg) return null;
+    const layout = new Map();
+    svg.querySelectorAll('.node').forEach(node => {
+      const bb = getNodeSvgBBox(node);
+      if (bb && bb.width > 0 && bb.height > 0) layout.set(extractNodeId(node), bb);
+    });
+    if (!layout.size) return null;
+    layout.viewBox = svg.getAttribute('viewBox');
+    layout.floor = _viewBoxMin.get(canvas);
+    return layout;
+  }
+
+  // Rewrite nodePositions so nodes that existed before the re-render land where
+  // they were. New nodes follow the nodes they connect to, then get nudged off
+  // anything they overlap. Runs before offsets are applied, so each node's
+  // bbox here is mermaid's base position.
+  function reconcileLayout(canvas, idx, prevLayout) {
+    const svg = canvas.querySelector('svg');
+    if (!svg) return;
+    const d = state.diagrams[idx];
+    const base = new Map();
+    svg.querySelectorAll('.node').forEach(node => {
+      const bb = getNodeSvgBBox(node);
+      if (bb && bb.width > 0 && bb.height > 0) base.set(extractNodeId(node), bb);
+    });
+    if (!base.size) return;
+
+    const positions = {};
+    const fresh = [];
+    base.forEach((bb, id) => {
+      const prev = prevLayout.get(id);
+      if (!prev) { fresh.push(id); return; }
+      const dx = prev.cx - bb.cx, dy = prev.cy - bb.cy;
+      if (Math.abs(dx) > 0.5 || Math.abs(dy) > 0.5) positions[id] = { x: dx, y: dy };
+    });
+    // Nothing on screen carried over (e.g. the whole source was replaced):
+    // keep the old offsets rather than inventing a layout.
+    if (fresh.length === base.size) return;
+    // Same user space as before, so the old framing shows the pinned nodes
+    // exactly where they were instead of zooming to mermaid's new bounds.
+    if (prevLayout.viewBox) {
+      svg.setAttribute('viewBox', prevLayout.viewBox);
+      const [, , w, h] = prevLayout.viewBox.split(/[\s,]+/).map(parseFloat);
+      if (Number.isFinite(w) && Number.isFinite(h)) { svg.setAttribute('width', w); svg.setAttribute('height', h); }
+    }
+    if (prevLayout.floor) _viewBoxMin.set(canvas, prevLayout.floor);
+
+    const deltaOf = (id) => positions[id] || { x: 0, y: 0 };
+    const pinned = [...base.keys()].filter(id => prevLayout.has(id));
+    const avg = (ids) => {
+      const sum = ids.reduce((a, id) => ({ x: a.x + deltaOf(id).x, y: a.y + deltaOf(id).y }), { x: 0, y: 0 });
+      return { x: sum.x / ids.length, y: sum.y / ids.length };
+    };
+    const globalShift = avg(pinned);
+    const edges = parseEdges(d.currentSource);
+    const placed = pinned.map(id => {
+      const bb = base.get(id), off = deltaOf(id);
+      return { x: bb.x + off.x, y: bb.y + off.y, w: bb.width, h: bb.height };
+    });
+    const GAP = 16;
+    fresh.forEach(id => {
+      if (d.pendingRelocations && d.pendingRelocations[id]) return; // dropped at a chosen spot
+      const neighbors = [...new Set(edges
+        .filter(e => e.source === id || e.target === id)
+        .map(e => e.source === id ? e.target : e.source)
+        .filter(n => prevLayout.has(n) && base.has(n)))];
+      let off = neighbors.length ? avg(neighbors) : { ...globalShift };
+      const bb = base.get(id);
+      // Push out of any overlap along the shallower axis; a few passes settle it.
+      for (let pass = 0; pass < 12; pass++) {
+        const box = { x: bb.x + off.x, y: bb.y + off.y, w: bb.width, h: bb.height };
+        const hit = placed.find(p =>
+          box.x < p.x + p.w + GAP && p.x < box.x + box.w + GAP &&
+          box.y < p.y + p.h + GAP && p.y < box.y + box.h + GAP);
+        if (!hit) break;
+        const pushRight = (hit.x + hit.w + GAP) - box.x;
+        const pushLeft  = (box.x + box.w + GAP) - hit.x;
+        const pushDown  = (hit.y + hit.h + GAP) - box.y;
+        const pushUp    = (box.y + box.h + GAP) - hit.y;
+        const m = Math.min(pushRight, pushLeft, pushDown, pushUp);
+        if (m === pushRight) off.x += pushRight;
+        else if (m === pushLeft) off.x -= pushLeft;
+        else if (m === pushDown) off.y += pushDown;
+        else off.y -= pushUp;
+      }
+      if (Math.abs(off.x) > 0.5 || Math.abs(off.y) > 0.5) positions[id] = off;
+      placed.push({ x: bb.x + off.x, y: bb.y + off.y, w: bb.width, h: bb.height });
+    });
+    d.nodePositions = positions;
+  }
+
+  // Point where the ray from a node's center toward `aim` leaves its outline.
+  // Circles/ellipses and diamonds get their true outline; every other shape
+  // is treated as its bounding box, which is close enough for rounded rects,
+  // cylinders, and stadiums.
+  function nodeOutlinePoint(nodeEl, box, aim) {
+    const dx = aim.x - box.cx, dy = aim.y - box.cy;
+    if (Math.hypot(dx, dy) < 1) return null;
+    const hw = box.width / 2, hh = box.height / 2;
+    if (hw <= 0 || hh <= 0) return null;
+    const shape = nodeEl.querySelector(':scope > circle, :scope > ellipse, :scope > polygon, :scope > rect, :scope > path');
+    let t;
+    if (shape && (shape.tagName === 'circle' || shape.tagName === 'ellipse')) {
+      t = 1 / Math.hypot(dx / hw, dy / hh);
+    } else if (shape && shape.tagName === 'polygon' && isDiamond(shape)) {
+      t = 1 / (Math.abs(dx) / hw + Math.abs(dy) / hh);
+    } else {
+      t = Math.min(dx ? hw / Math.abs(dx) : Infinity, dy ? hh / Math.abs(dy) : Infinity);
+    }
+    if (!Number.isFinite(t) || t >= 1) return null; // aim point sits inside the node
+    return { x: box.cx + dx * t, y: box.cy + dy * t };
+  }
+
+  // A four-point polygon whose corners sit on the midpoints of its own bbox.
+  function isDiamond(poly) {
+    const pts = (poly.getAttribute('points') || '').trim().split(/[\s,]+/).map(parseFloat);
+    if (pts.length !== 8 || !pts.every(Number.isFinite)) return false;
+    const xs = pts.filter((_, i) => i % 2 === 0), ys = pts.filter((_, i) => i % 2 === 1);
+    const minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys);
+    const midX = (minX + maxX) / 2, midY = (minY + maxY) / 2;
+    const tol = Math.max(maxX - minX, maxY - minY) * 0.05 + 0.5;
+    const near = (a, b) => Math.abs(a - b) <= tol;
+    for (let i = 0; i < 4; i++) {
+      const x = xs[i], y = ys[i];
+      const onMidX = near(x, midX) && (near(y, minY) || near(y, maxY));
+      const onMidY = near(y, midY) && (near(x, minX) || near(x, maxX));
+      if (!onMidX && !onMidY) return false;
+    }
+    return true;
   }
 
   function insertLineAfterHeader(source, line) {
@@ -2800,12 +3096,14 @@
     return shape;
   }
 
+  // Matches any mermaid flowchart shape wrapper (with its label) as group 1.
+  const SHAPE_SEARCH = '(\\[\\([^)]*\\)\\]|\\[\\[[^\\]]*\\]\\]|\\[/[^/]*/\\]|\\[/[^\\\\]*\\\\\\]|\\[\\\\[^/]*/\\]|\\[\\\\[^\\\\]*\\\\\\]|\\[[^\\]]*\\]|\\{\\{[^}]*\\}\\}|\\{[^}]*\\}|\\(\\(\\([^)]*\\)\\)\\)|\\(\\(\\[[^\\]]*\\]\\)\\)|\\(\\([^)]*\\)\\)|\\(\\[[^\\]]*\\]\\)|\\([^)]*\\))';
+
   function changeNodeShape(source, id, shapeKey, fallbackLabel) {
     const wrap = SHAPE_WRAPPERS[shapeKey];
     if (!wrap) return null;
 
-    const shapeSearch = '(\\[\\([^)]*\\)\\]|\\[\\[[^\\]]*\\]\\]|\\[/[^/]*/\\]|\\[/[^\\\\]*\\\\\\]|\\[\\\\[^/]*/\\]|\\[\\\\[^\\\\]*\\\\\\]|\\[[^\\]]*\\]|\\{\\{[^}]*\\}\\}|\\{[^}]*\\}|\\(\\(\\([^)]*\\)\\)\\)|\\(\\(\\[[^\\]]*\\]\\)\\)|\\(\\([^)]*\\)\\)|\\(\\[[^\\]]*\\]\\)|\\([^)]*\\))';
-    const re = new RegExp(`\\b${id}\\s*${shapeSearch}`);
+    const re = new RegExp(`\\b${id}\\s*${SHAPE_SEARCH}`);
     const m = re.exec(source);
     if (m) {
       const label = extractLabelFromShape(m[1]) || fallbackLabel || id;
@@ -2815,6 +3113,114 @@
     // No existing shape decl anywhere — add a standalone one.
     const label = (fallbackLabel || id).replace(/"/g, '\\"');
     return insertLineAfterHeader(source, `  ${id}${wrap(label)}`);
+  }
+
+
+  // --- Node colors ---
+  // Colors live in the mermaid source as `classDef <name> …` plus
+  // `class <ids> <name>` lines, so they round-trip into the spec and render
+  // anywhere mermaid does. The classDef carries the light-theme colors; the
+  // injected stylesheet below re-tints the same class names in dark mode.
+  const NODE_COLORS = [
+    { key: 'blue',   label: 'Blue',   fill: '#dbeafe', stroke: '#2563eb', text: '#1e3a8a', darkFill: '#1e3a5f', darkStroke: '#60a5fa', darkText: '#dbeafe' },
+    { key: 'purple', label: 'Purple', fill: '#ede9fe', stroke: '#7c3aed', text: '#4c1d95', darkFill: '#2e2350', darkStroke: '#a78bfa', darkText: '#ede9fe' },
+    { key: 'teal',   label: 'Teal',   fill: '#ccfbf1', stroke: '#0d9488', text: '#134e4a', darkFill: '#133d3a', darkStroke: '#2dd4bf', darkText: '#ccfbf1' },
+    { key: 'green',  label: 'Green',  fill: '#dcfce7', stroke: '#16a34a', text: '#14532d', darkFill: '#173d2a', darkStroke: '#4ade80', darkText: '#dcfce7' },
+    { key: 'amber',  label: 'Amber',  fill: '#fef3c7', stroke: '#d97706', text: '#78350f', darkFill: '#3f2e0c', darkStroke: '#fbbf24', darkText: '#fef3c7' },
+    { key: 'red',    label: 'Red',    fill: '#fee2e2', stroke: '#dc2626', text: '#7f1d1d', darkFill: '#451a1a', darkStroke: '#f87171', darkText: '#fee2e2' },
+    { key: 'gray',   label: 'Gray',   fill: '#f1f5f9', stroke: '#64748b', text: '#1e293b', darkFill: '#262b33', darkStroke: '#94a3b8', darkText: '#e2e8f0' },
+  ];
+  const NODE_COLOR_KEYS = NODE_COLORS.map(c => c.key);
+  const COLOR_ALT = NODE_COLOR_KEYS.join('|');
+  const CLASS_LINE_RE = /^\s*class\s+([A-Za-z0-9_,\s]+?)\s+([A-Za-z0-9_]+)\s*;?\s*$/;
+  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+  (function injectDarkNodeColors() {
+    // `#app` outranks mermaid's `#mermaid-<id> .blue>*` rules; both are !important.
+    const css = NODE_COLORS.map(c => `
+      #app .diagram-canvas .node.${c.key} > * { fill: ${c.darkFill} !important; stroke: ${c.darkStroke} !important; }
+      #app .diagram-canvas .node.${c.key} span,
+      #app .diagram-canvas .node.${c.key} p { color: ${c.darkText} !important; }
+      #app .diagram-canvas .node.${c.key} tspan,
+      #app .diagram-canvas .node.${c.key} text { fill: ${c.darkText} !important; }`).join('');
+    const style = document.createElement('style');
+    style.textContent = `@media (prefers-color-scheme: dark) {${css}\n}`;
+    document.head.appendChild(style);
+  })();
+
+  function supportsNodeColor(source) {
+    return /^\s*(flowchart|graph|stateDiagram)/.test(source);
+  }
+
+  function classDefLine(c) {
+    return `  classDef ${c.key} fill:${c.fill},stroke:${c.stroke},color:${c.text}`;
+  }
+
+  function getNodeColor(source, id) {
+    let found = null;
+    for (const line of source.split('\n')) {
+      const m = CLASS_LINE_RE.exec(line);
+      if (m && NODE_COLOR_KEYS.includes(m[2]) && m[1].split(',').map(s => s.trim()).includes(id)) found = m[2];
+    }
+    const inline = new RegExp(`(?:^|[^A-Za-z0-9_])${id}(?:\\s*${SHAPE_SEARCH})?:::(${COLOR_ALT})\\b`).exec(source);
+    return inline ? inline[inline.length - 1] : found;
+  }
+
+  // Remove `id` from palette `class` lines (dropping lines that end up empty).
+  // With `onlyPalette` false it strips the id from every class line — used
+  // when the node itself is deleted.
+  function removeFromClassLines(source, id, onlyPalette = true) {
+    const out = [];
+    for (const line of source.split('\n')) {
+      const m = CLASS_LINE_RE.exec(line);
+      if (!m || (onlyPalette && !NODE_COLOR_KEYS.includes(m[2]))) { out.push(line); continue; }
+      const ids = m[1].split(',').map(s => s.trim()).filter(Boolean);
+      if (!ids.includes(id)) { out.push(line); continue; }
+      const rest = ids.filter(x => x !== id);
+      if (rest.length) out.push(`${line.match(/^\s*/)[0]}class ${rest.join(',')} ${m[2]}`);
+    }
+    return out.join('\n');
+  }
+
+  // Drop palette classDefs that no node uses any more.
+  function pruneUnusedColorDefs(source) {
+    const lines = source.split('\n');
+    const used = new Set();
+    for (const line of lines) {
+      const m = CLASS_LINE_RE.exec(line);
+      if (m) used.add(m[2]);
+    }
+    for (const m of source.matchAll(new RegExp(`:::(${COLOR_ALT})\\b`, 'g'))) used.add(m[1]);
+    const defRe = new RegExp(`^\\s*classDef\\s+(${COLOR_ALT})\\s`);
+    return lines.filter(line => {
+      const m = defRe.exec(line);
+      return !m || used.has(m[1]);
+    }).join('\n');
+  }
+
+  function setNodeColor(source, id, colorKey) {
+    let next = removeFromClassLines(source, id);
+    next = next.replace(new RegExp(`((?:^|[^A-Za-z0-9_])${id}(?:\\s*${SHAPE_SEARCH})?):::(?:${COLOR_ALT})\\b`, 'g'), '$1');
+    // An explicit `style id …` line would override the class, so a picked
+    // color replaces it.
+    next = next.split('\n').filter(line => !new RegExp(`^\\s*style\\s+${id}\\s`).test(line)).join('\n');
+    const color = NODE_COLORS.find(c => c.key === colorKey);
+    if (color) {
+      next = next.replace(/\s+$/, '');
+      if (!new RegExp(`^\\s*classDef\\s+${color.key}\\s`, 'm').test(next)) next += '\n' + classDefLine(color);
+      next += `\n  class ${id} ${color.key}`;
+    }
+    return pruneUnusedColorDefs(next);
+  }
+
+  function applyColorChange(idx, nodeId, colorKey) {
+    const nextSrc = setNodeColor(state.diagrams[idx].currentSource, nodeId, colorKey);
+    if (nextSrc === state.diagrams[idx].currentSource) return;
+    pushUndo();
+    state.diagrams[idx].currentSource = nextSrc;
+    syncSourceTextarea(idx);
+    markDirty(idx);
+    renderDiagram(idx);
   }
 
   // --- Shape picker menu ---
@@ -2835,6 +3241,17 @@
   let shapeMenuCloser = null;
   function openShapeMenu(clientX, clientY, diagramIdx, nodeId, currentLabel) {
     const menu = document.getElementById('shape-menu');
+    const source = state.diagrams[diagramIdx].currentSource;
+    const currentColor = getNodeColor(source, nodeId);
+    const colorSection = !supportsNodeColor(source) ? '' :
+      `<div class="menu-header color-header">Color</div>
+      <div class="color-row">
+        <button type="button" class="color-swatch none${currentColor ? '' : ' current'}" data-color="" title="No color (theme default)" aria-label="No color"></button>` +
+      NODE_COLORS.map(c => `
+        <button type="button" class="color-swatch${c.key === currentColor ? ' current' : ''}" data-color="${c.key}"
+          style="background:${prefersDark ? c.darkFill : c.fill};border-color:${prefersDark ? c.darkStroke : c.stroke}"
+          title="${c.label}" aria-label="${c.label}"></button>`).join('') +
+      `</div>`;
     menu.innerHTML =
       `<div class="menu-header">Shape for “${nodeId}”</div>` +
       SHAPES.map(s => `
@@ -2842,7 +3259,7 @@
           <span class="shape-preview">${s.svg}</span>
           <span class="shape-label">${s.label}</span>
         </button>
-      `).join('');
+      `).join('') + colorSection;
     menu.classList.add('open');
     // Clamp within viewport.
     const rect = menu.getBoundingClientRect();
@@ -2853,6 +3270,12 @@
     menu.style.top = Math.max(4, top) + 'px';
 
     menu.onclick = (e) => {
+      const swatch = e.target.closest('.color-swatch');
+      if (swatch) {
+        closeShapeMenu();
+        applyColorChange(diagramIdx, nodeId, swatch.dataset.color || null);
+        return;
+      }
       const btn = e.target.closest('.shape-btn');
       if (!btn) return;
       const shape = btn.dataset.shape;
@@ -3109,15 +3532,40 @@
     // Side-dot registry keyed by node id. Declared here so attachConnectDots
     // (called during the node loop) can populate it without a TDZ error.
     const nodeConnectDots = new Map();
-    function redrawEdgeEntry(entry) {
-      if (!entry.sourceEdge) return; // can't compute — no id mapping
+    const nodeElById = new Map();
+    svg.querySelectorAll('.node').forEach(n => nodeElById.set(extractNodeId(n), n));
+    // Where an edge should start and end given the current node offsets and
+    // bend. Mermaid pins each end to a side chosen for its own layout; once a
+    // node moves or the arrow bends, that side can end up facing away, so each
+    // end is re-clipped to the node outline on the side facing the other end
+    // (or the bend point).
+    function currentEndpoints(entry) {
       const positions = state.diagrams[idx].nodePositions;
       const srcOff = positions[entry.sourceEdge.source] || { x: 0, y: 0 };
       const tgtOff = positions[entry.sourceEdge.target] || { x: 0, y: 0 };
-      const startAdj = { x: entry.endpoints.start.x + srcOff.x, y: entry.endpoints.start.y + srcOff.y };
-      const endAdj   = { x: entry.endpoints.end.x   + tgtOff.x, y: entry.endpoints.end.y   + tgtOff.y };
+      const start = { x: entry.endpoints.start.x + srcOff.x, y: entry.endpoints.start.y + srcOff.y };
+      const end   = { x: entry.endpoints.end.x   + tgtOff.x, y: entry.endpoints.end.y   + tgtOff.y };
       const waypoint = state.diagrams[idx].edgeWaypoints[entry.edgeId];
       const nothingMoved = srcOff.x === 0 && srcOff.y === 0 && tgtOff.x === 0 && tgtOff.y === 0 && !waypoint;
+      if (nothingMoved || entry.sourceEdge.source === entry.sourceEdge.target) {
+        return { start, end, waypoint, nothingMoved };
+      }
+      const srcEl = nodeElById.get(entry.sourceEdge.source);
+      const tgtEl = nodeElById.get(entry.sourceEdge.target);
+      const srcBox = srcEl && getNodeSvgBBox(srcEl);
+      const tgtBox = tgtEl && getNodeSvgBBox(tgtEl);
+      if (!srcBox || !tgtBox) return { start, end, waypoint, nothingMoved };
+      const srcAim = waypoint || { x: tgtBox.cx, y: tgtBox.cy };
+      const tgtAim = waypoint || { x: srcBox.cx, y: srcBox.cy };
+      return {
+        start: nodeOutlinePoint(srcEl, srcBox, srcAim) || start,
+        end: nodeOutlinePoint(tgtEl, tgtBox, tgtAim) || end,
+        waypoint, nothingMoved
+      };
+    }
+    function redrawEdgeEntry(entry) {
+      if (!entry.sourceEdge) return; // can't compute — no id mapping
+      const { start: startAdj, end: endAdj, waypoint, nothingMoved } = currentEndpoints(entry);
 
       let d;
       if (waypoint) {
@@ -3721,7 +4169,7 @@
       wrap.setAttribute('data-node-id', nodeId);
       wrap.setAttribute('transform', `translate(${bx}, ${by})`);
       const btnTitle = document.createElementNS('http://www.w3.org/2000/svg', 'title');
-      btnTitle.textContent = `Change the shape of "${nodeId}"`;
+      btnTitle.textContent = `Change the shape or color of "${nodeId}"`;
       wrap.appendChild(btnTitle);
 
       const hit = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
@@ -3980,11 +4428,7 @@
             if (stored) {
               baseWaypoint = { x: stored.x, y: stored.y };
             } else {
-              const positions = state.diagrams[idx].nodePositions;
-              const srcOff = positions[entry.sourceEdge.source] || { x: 0, y: 0 };
-              const tgtOff = positions[entry.sourceEdge.target] || { x: 0, y: 0 };
-              const startAdj = { x: entry.endpoints.start.x + srcOff.x, y: entry.endpoints.start.y + srcOff.y };
-              const endAdj   = { x: entry.endpoints.end.x   + tgtOff.x, y: entry.endpoints.end.y   + tgtOff.y };
+              const { start: startAdj, end: endAdj } = currentEndpoints(entry);
               baseWaypoint = midpoint(startAdj, endAdj);
             }
           }
@@ -4211,7 +4655,18 @@
   // Shared hover tooltip for node/arrow descriptions. Content shows a stored
   // description (or the auto-summary as a placeholder) and becomes contenteditable
   // when clicked. Blur/Enter commits, Escape cancels.
-  const _tooltipState = { el: null, current: null, hideTimer: null };
+  const TOOLTIP_SHOW_DELAY = 500;
+  const _tooltipState = { el: null, current: null, hideTimer: null, showTimer: null };
+
+  // True while the node or arrow label the tooltip describes is being edited
+  // inline (label contenteditable, or the rename fallback input in its canvas).
+  function tooltipRefBeingEdited() {
+    const ref = _tooltipState.current && _tooltipState.current.refEl;
+    if (!ref || !ref.isConnected) return false;
+    if (ref.querySelector && ref.querySelector('[contenteditable="true"]')) return true;
+    const canvas = ref.closest && ref.closest('.diagram-canvas');
+    return !!(canvas && canvas.querySelector('.inline-overlay-input'));
+  }
   function getTooltip() {
     if (_tooltipState.el) return _tooltipState.el;
     const t = document.createElement('div');
@@ -4231,7 +4686,22 @@
   }
   function showTooltip(refEl, description, defaultText, onCommit) {
     const t = getTooltip();
+    // Don't swap content out from under an edit of the tooltip or its element.
+    if (t.classList.contains('editing') || (t.classList.contains('visible') && tooltipRefBeingEdited())) return;
     if (_tooltipState.hideTimer) { clearTimeout(_tooltipState.hideTimer); _tooltipState.hideTimer = null; }
+    if (_tooltipState.showTimer) { clearTimeout(_tooltipState.showTimer); _tooltipState.showTimer = null; }
+    // Wait before the first tooltip appears; once one is up, moving to a
+    // neighboring element swaps it in right away.
+    if (t.classList.contains('visible')) {
+      renderTooltip(t, refEl, description, defaultText, onCommit);
+    } else {
+      _tooltipState.showTimer = setTimeout(() => {
+        _tooltipState.showTimer = null;
+        if (refEl.isConnected) renderTooltip(t, refEl, description, defaultText, onCommit);
+      }, TOOLTIP_SHOW_DELAY);
+    }
+  }
+  function renderTooltip(t, refEl, description, defaultText, onCommit) {
     _tooltipState.current = { refEl, description, defaultText, onCommit };
     const text = description || defaultText;
     t.classList.toggle('empty', !description);
@@ -4254,13 +4724,26 @@
     });
   }
   function queueHideTooltip() {
+    if (_tooltipState.showTimer) { clearTimeout(_tooltipState.showTimer); _tooltipState.showTimer = null; }
     if (_tooltipState.hideTimer) clearTimeout(_tooltipState.hideTimer);
     _tooltipState.hideTimer = setTimeout(() => {
       _tooltipState.hideTimer = null;
       const t = _tooltipState.el;
-      if (t && !t.classList.contains('editing')) t.classList.remove('visible');
+      if (!t || t.classList.contains('editing') || tooltipRefBeingEdited() || t.matches(':hover')) return;
+      t.classList.remove('visible');
     }, 180);
   }
+  // A tooltip kept up during an inline edit hides once the edit ends, unless
+  // the pointer is still over its element.
+  document.addEventListener('focusout', () => {
+    setTimeout(() => {
+      const t = _tooltipState.el;
+      const ref = _tooltipState.current && _tooltipState.current.refEl;
+      if (!t || !t.classList.contains('visible') || t.classList.contains('editing')) return;
+      if (ref && ref.isConnected && ref.matches(':hover')) return;
+      queueHideTooltip();
+    }, 0);
+  });
   function beginTooltipEdit() {
     const t = _tooltipState.el;
     const cur = _tooltipState.current;
@@ -4404,7 +4887,7 @@
     d.edgeWaypoints = {};
     d.annotations = [];
     document.querySelector(`textarea[data-source-idx="${idx}"]`).value = d.originalSource;
-    renderDiagram(idx);
+    renderDiagram(idx, { keepLayout: false });
     markDirty(idx);
   }
 
@@ -4587,12 +5070,20 @@
   const drawerDiffs    = document.getElementById('drawer-diffs');
   const drawerDiffsCt  = document.getElementById('drawer-diffs-count');
   const drawerDiffsBd  = document.getElementById('drawer-diffs-body');
+  const drawerChanges  = document.getElementById('drawer-changes');
+  const drawerLegendEl = document.getElementById('drawer-changes-legend');
 
   // Cache of the last-loaded spec text so jumps don't have to refetch.
   let specText = '';
   let specLoaded = false;
   let specLoadingPromise = null;
   let pendingJumpMarker = null;
+  // Oldest backup ({ backup, text }) from /spec-history — the spec as it stood
+  // before spec-tacle's first write. Null until a backup exists.
+  let specBaseline = null;
+  const SHOW_CHANGES_KEY = 'spec-tacle:show-changes';
+  let showChanges = false;
+  try { showChanges = localStorage.getItem(SHOW_CHANGES_KEY) === '1'; } catch (_) {}
 
   function setDrawerStatus(msg, cls) {
     drawerStatusEl.textContent = msg || '';
@@ -4625,7 +5116,8 @@
     // renderSpecMd/jumpToMarkerInDrawer can map DOM back to spec lines.
     md.core.ruler.push('spec-tacle:source-line', function (state) {
       state.tokens.forEach(function (token) {
-        if (token.map && token.type.endsWith('_open')) {
+        // Fenced and indented code are single tokens, not _open/_close pairs.
+        if (token.map && (token.type.endsWith('_open') || token.type === 'fence' || token.type === 'code_block')) {
           token.attrSet('data-source-line', String(token.map[0]));
           token.attrSet('data-source-end',  String(token.map[1]));
         }
@@ -4669,9 +5161,22 @@
     drawerSpecEl.style.fontFamily = '';
     drawerSpecEl.classList.add('drawer-spec-md');
     drawerSpecEl.innerHTML = md.render(swapFrontmatterFences(text));
+    // markdown-it renders a code token's attrs on the inner <code>; lift the
+    // line range to the <pre> so highlights and jumps cover the whole box.
+    drawerSpecEl.querySelectorAll('pre > code[data-source-line]').forEach((code) => {
+      const pre = code.parentElement;
+      ['data-source-line', 'data-source-end'].forEach((attr) => {
+        pre.setAttribute(attr, code.getAttribute(attr));
+        code.removeAttribute(attr);
+      });
+    });
 
     const changed = (changedLines instanceof Set) ? changedLines : null;
-    if (!changed || !changed.size) return;
+    if (changed && changed.size) highlightLatestUpdate(changed, highlightKind);
+    renderChangesSinceBaseline(text);
+  }
+
+  function highlightLatestUpdate(changed, highlightKind) {
     // 'consistency' → auto-applied by the follow-up pass (blue). Anything
     // else (including undefined) → user-driven Update spec (green).
     const isConsistency = highlightKind === 'consistency';
@@ -4694,32 +5199,138 @@
     });
   }
 
-  // Line-based LCS diff — returns a Set of 0-based line indices in `newText`
-  // that were added or changed relative to `oldText`. Skipped for very large
-  // files (dp table would balloon) so the drawer never freezes on a huge spec.
-  function diffChangedLineSet(oldText, newText) {
-    const oldLines = oldText.split('\n');
-    const newLines = newText.split('\n');
-    const m = oldLines.length, n = newLines.length;
+  // Line-based LCS diff. Returns ops in newText order: ' ' kept, '+' added,
+  // '-' removed (removed lines sit just before the newText line they
+  // preceded). Null for very large files — the dp table would balloon, and
+  // the drawer should never freeze on a huge spec.
+  function lineDiffOps(oldText, newText) {
+    const a = oldText.split('\n');
+    const b = newText.split('\n');
+    const m = a.length, n = b.length;
     if (m * n > 1000000) return null;
     const dp = new Array(m + 1);
     for (let i = 0; i <= m; i++) dp[i] = new Uint32Array(n + 1);
-    for (let i = 0; i < m; i++) {
-      const oi = oldLines[i];
-      for (let j = 0; j < n; j++) {
-        dp[i + 1][j + 1] = (oi === newLines[j])
-          ? dp[i][j] + 1
-          : Math.max(dp[i + 1][j], dp[i][j + 1]);
+    for (let i = m - 1; i >= 0; i--) {
+      for (let j = n - 1; j >= 0; j--) {
+        dp[i][j] = (a[i] === b[j]) ? dp[i + 1][j + 1] + 1 : Math.max(dp[i + 1][j], dp[i][j + 1]);
       }
     }
+    const ops = [];
+    let i = 0, j = 0;
+    while (i < m && j < n) {
+      if (a[i] === b[j]) { ops.push({ op: ' ', line: b[j] }); i++; j++; }
+      else if (dp[i + 1][j] >= dp[i][j + 1]) { ops.push({ op: '-', line: a[i] }); i++; }
+      else { ops.push({ op: '+', line: b[j] }); j++; }
+    }
+    while (i < m) ops.push({ op: '-', line: a[i++] });
+    while (j < n) ops.push({ op: '+', line: b[j++] });
+    return ops;
+  }
+
+  // Set of 0-based line indices in `newText` that were added or changed
+  // relative to `oldText`, or null when the diff was skipped for size.
+  function diffChangedLineSet(oldText, newText) {
+    const ops = lineDiffOps(oldText, newText);
+    if (!ops) return null;
     const added = new Set();
-    let i = m, j = n;
-    while (j > 0) {
-      if (i > 0 && oldLines[i - 1] === newLines[j - 1]) { i--; j--; }
-      else if (i === 0 || dp[i][j - 1] >= dp[i - 1][j]) { added.add(j - 1); j--; }
-      else i--;
+    let j = 0;
+    for (const o of ops) {
+      if (o.op === '+') added.add(j);
+      if (o.op !== '-') j++;
     }
     return added;
+  }
+
+  const MARKER_LINE_RE = /^\s*<!--\s*\/?spec-tacle:[^>]*-->\s*$/;
+
+  // "Show changes": diff the rendered spec against the baseline and mark
+  // blocks in place. Added/changed lines light up the smallest rendered block
+  // that holds them; removed lines are re-inserted as struck-through raw
+  // markdown just before the block that now follows them. Anchor comments are
+  // invisible in the drawer, so removed marker lines are dropped too.
+  function renderChangesSinceBaseline(text) {
+    drawerLegendEl.hidden = true;
+    if (!showChanges || !specBaseline || !drawerSpecEl.classList.contains('drawer-spec-md')) return;
+    const ops = lineDiffOps(specBaseline.text, text);
+    drawerLegendEl.hidden = false;
+    if (!ops) {
+      drawerLegendEl.textContent = 'Spec is too large to diff in the browser.';
+      return;
+    }
+    const added = new Set();
+    const removedRuns = []; // { at: newText line index, lines: [] }
+    let j = 0;
+    let adds = 0, dels = 0;
+    for (const o of ops) {
+      if (o.op === ' ') { j++; continue; }
+      if (MARKER_LINE_RE.test(o.line)) { if (o.op === '+') j++; continue; }
+      if (o.op === '+') {
+        added.add(j);
+        j++;
+        if (o.line.trim()) adds++;
+        continue;
+      }
+      const last = removedRuns[removedRuns.length - 1];
+      if (last && last.at === j) last.lines.push(o.line);
+      else removedRuns.push({ at: j, lines: [o.line] });
+      if (o.line.trim()) dels++;
+    }
+
+    const blocks = Array.from(drawerSpecEl.querySelectorAll('[data-source-line]'));
+    const range = (el) => [
+      parseInt(el.getAttribute('data-source-line'), 10),
+      parseInt(el.getAttribute('data-source-end'), 10),
+    ];
+
+    // Added: flag each hit block that has no hit block inside it, so a changed
+    // list item lights up alone instead of the whole list.
+    const hits = new Set(blocks.filter((el) => {
+      const [start, end] = range(el);
+      for (let i = start; i < end; i++) if (added.has(i)) return true;
+      return false;
+    }));
+    hits.forEach((el) => {
+      for (const other of hits) if (other !== el && el.contains(other)) return;
+      el.classList.add('spec-diff-add');
+    });
+
+    // Removed: document order tracks source order, so the first block starting
+    // at or after the run's position is where the lines used to be.
+    removedRuns.forEach((run) => {
+      if (!run.lines.some((l) => l.trim())) return;
+      const body = run.lines.join('\n').replace(/^\n+|\n+$/g, '');
+      const next = blocks.find((el) => range(el)[0] >= run.at);
+      let node;
+      if (next && next.tagName === 'TR') {
+        node = document.createElement('tr');
+        const td = document.createElement('td');
+        td.colSpan = next.children.length || 1;
+        td.textContent = body;
+        node.appendChild(td);
+      } else {
+        node = document.createElement(next && next.tagName === 'LI' ? 'li' : 'div');
+        node.textContent = body;
+      }
+      node.className = 'spec-diff-del';
+      if (next) next.parentNode.insertBefore(node, next);
+      else drawerSpecEl.appendChild(node);
+    });
+
+    const since = specBaseline.backup ? ` since ${escapeHtmlLite(specBaseline.backup)}` : '';
+    drawerLegendEl.innerHTML = (adds || dels)
+      ? `${adds} line${adds === 1 ? '' : 's'} added, ${dels} removed${since}` +
+        '<span class="swatch add"></span>new or changed<span class="swatch del"></span>removed'
+      : `No changes${since}.`;
+  }
+
+  function syncChangesToggle() {
+    const available = !!specBaseline;
+    drawerChanges.disabled = !available;
+    drawerChanges.setAttribute('aria-pressed', available && showChanges ? 'true' : 'false');
+    drawerChanges.textContent = available && showChanges ? 'Hide changes' : 'Show changes';
+    drawerChanges.title = available
+      ? `Mark everything spec-tacle has changed in this spec, compared with ${specBaseline.backup} (the spec before the first Update spec)`
+      : 'Nothing to compare yet — changes show up here after the first Update spec';
   }
 
   function markerLocationInText(text, marker) {
@@ -4816,6 +5427,12 @@
   drawerToggle.addEventListener('click', () => (isDrawerOpen() ? closeDrawer() : openDrawer()));
   drawerCloseBtn.addEventListener('click', closeDrawer);
   drawerOverlay.addEventListener('click', closeDrawer);
+  drawerChanges.addEventListener('click', () => {
+    showChanges = !showChanges;
+    try { localStorage.setItem(SHOW_CHANGES_KEY, showChanges ? '1' : '0'); } catch (_) {}
+    syncChangesToggle();
+    if (specLoaded) renderSpecPre(specText, null, null);
+  });
   drawerRefresh.addEventListener('click', () => {
     specLoaded = false;
     loadSpecAndDiffs();
@@ -4884,13 +5501,17 @@
       const histBody = await histRes.json().catch(() => ({}));
       if (!srcRes.ok || !srcBody.ok) throw new Error(srcBody.error || `spec-source ${srcRes.status}`);
       const newText = srcBody.text || '';
+      const prevBaselineText = specBaseline ? specBaseline.text : null;
+      specBaseline = (histBody && histBody.ok && histBody.baseline) ? histBody.baseline : null;
+      syncChangesToggle();
+      const baselineMoved = (specBaseline ? specBaseline.text : null) !== prevBaselineText;
       // If a redundant reload (e.g. SSE echo of our own Update spec) brings
       // the same bytes back and we're not asked to highlight, keep the current
       // DOM so any existing highlight spans stick around.
       const contentUnchanged = specLoaded && newText === specText;
       specText = newText;
       specLoaded = true;
-      if (!(contentUnchanged && !wantHighlight)) {
+      if (!(contentUnchanged && !wantHighlight && !(showChanges && baselineMoved))) {
         let changed = null;
         if (wantHighlight && previousText && previousText !== newText) {
           try { changed = diffChangedLineSet(previousText, newText); } catch (_) { changed = null; }
@@ -5108,7 +5729,7 @@
         // No hook armed — user is the pickup path. Quiet nudge, not a warning.
         consistencyBanner.classList.add('queued');
         if (consistencyBannerTitle) consistencyBannerTitle.textContent = 'Consistency pass queued';
-        if (consistencyBannerSub) consistencyBannerSub.textContent = 'no auto-agent hook is armed — ping your agent to run the pass.';
+        if (consistencyBannerSub) consistencyBannerSub.textContent = 'no auto-agent is running. In an agent session in this folder, invoke the spec-tacle skill and ask it to run the pending consistency pass.';
         addBannerButton('Copy prompt', () => copyAgentPrompt(e));
       }
     }

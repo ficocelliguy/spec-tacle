@@ -35,6 +35,7 @@
     }
   }
   * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
   body {
     margin: 0;
     background: var(--bg);
@@ -65,14 +66,13 @@
     top: 0;
     z-index: 20;
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
     padding: 8px 24px;
     background: var(--panel);
     border-bottom: 1px solid var(--line);
     box-shadow: 0 1px 8px rgba(0, 0, 0, 0.06);
-    flex-wrap: wrap;
   }
   header.sticky-header .header-title { display: flex; align-items: baseline; gap: 10px; min-width: 0; flex: 1 1 auto; }
   header.sticky-header h1 {
@@ -113,6 +113,42 @@
   button:hover { background: var(--accent-soft); border-color: var(--accent); }
   button.primary { background: var(--accent); color: white; border-color: var(--accent); }
   button.primary:hover { opacity: 0.9; }
+  /* One-way action — softer red border + ink so a stray click reads as
+     "this looks destructive" before the confirm dialog. */
+  button.danger { color: var(--warn); border-color: var(--warn); }
+  button.danger:hover { background: color-mix(in oklab, var(--warn) 12%, transparent); }
+
+  header.sticky-header .header-actions [data-tip] { position: relative; }
+  header.sticky-header .header-actions [data-tip]::after {
+    content: attr(data-tip);
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--ink);
+    color: var(--panel);
+    padding: 7px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 1.4;
+    text-align: left;
+    white-space: normal;
+    width: max-content;
+    max-width: 280px;
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.12s ease 0.35s, visibility 0s linear 0.47s;
+    z-index: 30;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+  }
+  header.sticky-header .header-actions [data-tip]:hover::after,
+  header.sticky-header .header-actions [data-tip]:focus-visible::after {
+    opacity: 1;
+    visibility: visible;
+    transition: opacity 0.12s ease 0.35s, visibility 0s linear 0.35s;
+  }
 
   main { padding: 20px 24px; max-width: 1200px; margin: 0 auto; }
 
@@ -176,6 +212,79 @@
   }
   section.summary .add-bullet:hover { color: var(--accent); border-color: var(--accent); background: transparent; }
   section.summary .edit-hint { font-size: 11px; color: var(--ink-dim); margin-top: 8px; font-style: italic; }
+  section.summary.open-questions {
+    margin-top: 8px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 16px;
+  }
+  section.summary.open-questions .summary-heading h2 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    line-height: 1.2;
+    color: var(--ink);
+    text-transform: none;
+    letter-spacing: 0;
+  }
+  section.summary.open-questions .summary-heading .jump-to-spec { margin-left: auto; }
+
+  nav.toc {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  nav.toc .toc-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ink-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    flex-shrink: 0;
+  }
+  nav.toc .toc-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 8px;
+    flex: 1 1 auto;
+  }
+  nav.toc a.toc-link {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 6px;
+    padding: 4px 10px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    text-decoration: none;
+    color: var(--ink);
+    font-size: 12.5px;
+    background: var(--bg);
+    transition: border-color 0.12s, background 0.12s, color 0.12s;
+    white-space: nowrap;
+  }
+  nav.toc a.toc-link:hover,
+  nav.toc a.toc-link:focus-visible {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: var(--accent-soft);
+    outline: none;
+  }
+  nav.toc a.toc-link .toc-kind {
+    font-size: 10.5px;
+    font-weight: 600;
+    color: var(--ink-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  nav.toc a.toc-link:hover .toc-kind,
+  nav.toc a.toc-link:focus-visible .toc-kind { color: var(--accent); }
 
   .diagram-card {
     background: var(--panel);
@@ -183,7 +292,9 @@
     border-radius: 8px;
     margin-bottom: 20px;
     overflow: hidden;
+    scroll-margin-top: 80px;
   }
+  section.summary.open-questions { scroll-margin-top: 80px; }
   .diagram-header {
     padding: 12px 16px;
     border-bottom: 1px solid var(--line);
@@ -195,13 +306,16 @@
   }
   .diagram-header h3 { margin: 0; font-size: 16px; font-weight: 600; }
   .diagram-header .kind {
-    font-size: 11px;
+    font-size: 12px;
+    font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.6px;
     color: var(--accent);
     background: var(--accent-soft);
-    padding: 2px 8px;
+    padding: 3px 10px;
     border-radius: 10px;
+    border: 1px solid var(--accent-soft);
+    white-space: nowrap;
   }
   .diagram-caption {
     padding: 8px 16px;
@@ -355,10 +469,10 @@
   .diagram-canvas g.edgeLabels .edgeLabel > div:has(> span.edgeLabel) {
     padding: 0; background: transparent; border: 0; box-shadow: none;
   }
-  .diagram-canvas .node.selected > rect,
-  .diagram-canvas .node.selected > circle,
-  .diagram-canvas .node.selected > polygon,
-  .diagram-canvas .node.selected > path { stroke: var(--warn) !important; stroke-width: 3 !important; }
+  #app .diagram-canvas .node.selected > rect,
+  #app .diagram-canvas .node.selected > circle,
+  #app .diagram-canvas .node.selected > polygon,
+  #app .diagram-canvas .node.selected > path { stroke: var(--warn) !important; stroke-width: 3 !important; }
   .diagram-canvas .edgePath.selected path { stroke: var(--warn) !important; stroke-width: 3 !important; }
   /* Handle wrap: hidden by default, visible on hover. The wrap holds both a
      fat transparent hit-circle and a small visible dot, so pointer targets are
@@ -463,14 +577,14 @@
   .element-tooltip {
     position: fixed;
     z-index: 25;
-    max-width: 320px;
-    padding: 8px 12px;
+    max-width: 240px;
+    padding: 5px 9px;
     background: var(--panel);
     color: var(--ink);
     border: 1px solid var(--line);
-    border-radius: 6px;
-    font-size: 12.5px;
-    line-height: 1.45;
+    border-radius: 5px;
+    font-size: 11.5px;
+    line-height: 1.4;
     box-shadow: 0 4px 14px rgba(0, 0, 0, 0.16);
     opacity: 0;
     pointer-events: none;
@@ -483,8 +597,8 @@
   .element-tooltip.empty { color: var(--ink-dim); font-style: italic; }
   .element-tooltip .tooltip-hint {
     display: block;
-    margin-top: 4px;
-    font-size: 10.5px;
+    margin-top: 2px;
+    font-size: 9.5px;
     color: var(--ink-dim);
     font-style: italic;
   }
@@ -507,10 +621,10 @@
     resize: vertical;
     font-family: inherit;
   }
-  .diagram-canvas .node.drop-target > rect,
-  .diagram-canvas .node.drop-target > circle,
-  .diagram-canvas .node.drop-target > polygon,
-  .diagram-canvas .node.drop-target > path {
+  #app .diagram-canvas .node.drop-target > rect,
+  #app .diagram-canvas .node.drop-target > circle,
+  #app .diagram-canvas .node.drop-target > polygon,
+  #app .diagram-canvas .node.drop-target > path {
     stroke: var(--warn) !important;
     stroke-width: 3.5 !important;
   }
@@ -570,6 +684,22 @@
   }
   #shape-menu .shape-preview svg { width: 100%; height: 100%; }
   #shape-menu .shape-label { font-size: 13px; }
+  #shape-menu .menu-header.color-header { border-top: 1px solid var(--line); margin-top: 4px; padding-top: 8px; }
+  #shape-menu .color-row { display: flex; flex-wrap: wrap; gap: 6px; padding: 4px 10px 6px; }
+  #shape-menu button.color-swatch {
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border-radius: 50%;
+    border: 2px solid;
+    cursor: pointer;
+  }
+  #shape-menu button.color-swatch:hover { transform: scale(1.12); }
+  #shape-menu button.color-swatch.current { outline: 2px solid var(--ink); outline-offset: 2px; }
+  #shape-menu button.color-swatch.none {
+    background: linear-gradient(135deg, transparent 45%, var(--ink-dim) 45%, var(--ink-dim) 55%, transparent 55%), var(--panel);
+    border-color: var(--line);
+  }
   .diagram-canvas [contenteditable="true"] {
     outline: 2px solid var(--accent);
     outline-offset: 2px;
@@ -579,6 +709,66 @@
     padding: 0 4px;
     min-width: 20px;
     cursor: text;
+  }
+
+  /* Table-kind diagrams: no mermaid, no drag, no shape picker — a plain HTML
+     table whose cells edit inline and round-trip as a markdown table. */
+  .spec-tacle-table-wrap {
+    width: 100%;
+    overflow-x: auto;
+  }
+  table.spec-tacle-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 13px;
+    line-height: 1.45;
+    color: var(--ink);
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  table.spec-tacle-table th,
+  table.spec-tacle-table td {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--line);
+    border-right: 1px solid var(--line);
+    vertical-align: top;
+    text-align: left;
+  }
+  table.spec-tacle-table th:last-child,
+  table.spec-tacle-table td:last-child { border-right: 0; }
+  table.spec-tacle-table tr:last-child td { border-bottom: 0; }
+  table.spec-tacle-table thead th {
+    background: var(--bg);
+    color: var(--ink);
+    font-weight: 600;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    border-bottom: 2px solid var(--line);
+  }
+  table.spec-tacle-table tbody tr:nth-child(even) td { background: var(--bg); }
+  table.spec-tacle-table tbody tr:hover td { background: var(--accent-soft); }
+  table.spec-tacle-table td[data-cell], table.spec-tacle-table th[data-cell] { cursor: text; }
+  table.spec-tacle-table td[contenteditable="true"],
+  table.spec-tacle-table th[contenteditable="true"] {
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
+    background: var(--panel);
+  }
+  table.spec-tacle-table caption {
+    caption-side: bottom;
+    padding: 6px 4px 0;
+    color: var(--ink-dim);
+    font-size: 11px;
+    text-align: left;
+  }
+  .spec-tacle-table .parse-error {
+    color: var(--warn);
+    white-space: pre-wrap;
+    font: 12px/1.5 "SF Mono", Menlo, Consolas, monospace;
   }
 
   details.source-pane {
@@ -758,6 +948,601 @@
     background: var(--bg); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 12px;
   }
   #export-modal .row { display: flex; gap: 8px; margin-top: 12px; justify-content: flex-end; }
+
+  /* --- Jump-to-spec buttons (on summary + each diagram card) --- */
+  .jump-to-spec {
+    font-size: 11px;
+    padding: 3px 10px;
+    border: 1px dashed var(--line);
+    background: transparent;
+    color: var(--ink-dim);
+    border-radius: 12px;
+    cursor: pointer;
+    letter-spacing: 0.2px;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    flex-shrink: 0;
+  }
+  .jump-to-spec:hover { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
+  .jump-to-spec::before { content: "↗"; font-size: 13px; line-height: 1; }
+  section.summary .summary-heading .jump-to-spec { margin-left: auto; }
+  .diagram-header .jump-to-spec { margin-left: auto; }
+  .diagram-header .expand-diagram { margin-left: -4px; }
+  .diagram-header .expand-diagram::before { content: "⤢"; }
+  .diagram-card.expanded .diagram-header .expand-diagram::before { content: "✕"; font-size: 11px; }
+
+  /* --- Expanded (full-screen) diagram card ---
+     z-index sits above the sticky header (20) but below the element tooltip
+     (25), shape menu (30), and spec drawer (40/50), so those still work while
+     a diagram fills the screen. */
+  body.diagram-expanded { overflow: hidden; }
+  .diagram-card.expanded {
+    position: fixed;
+    inset: 0;
+    z-index: 24;
+    margin: 0;
+    border-radius: 0;
+    border: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .diagram-card.expanded .diagram-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    height: auto !important; /* ignore any height set by the resize handle */
+  }
+  .diagram-card.expanded details.diagram-detail,
+  .diagram-card.expanded .diagram-resize-handle,
+  .diagram-card.expanded .diff-view { display: none; }
+  .diagram-card.expanded .diagram-notes { max-height: 20vh; overflow-y: auto; }
+
+  /* --- Spec drawer (slide-out, collapsed by default) --- */
+  #spec-drawer-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.25);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.18s ease;
+    z-index: 40;
+  }
+  #spec-drawer-overlay.open { opacity: 1; pointer-events: auto; }
+  #spec-drawer {
+    position: fixed;
+    top: 0;
+    right: 0;
+    height: 100vh;
+    width: min(720px, 92vw);
+    background: var(--panel);
+    border-left: 1px solid var(--line);
+    box-shadow: -6px 0 18px rgba(0, 0, 0, 0.12);
+    transform: translateX(100%);
+    transition: transform 0.22s ease;
+    z-index: 50;
+    display: flex;
+    flex-direction: column;
+    color: var(--ink);
+  }
+  #spec-drawer.open { transform: translateX(0); }
+  #spec-drawer .drawer-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--line);
+    background: var(--panel);
+    flex-shrink: 0;
+  }
+  #spec-drawer .drawer-header h2 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--ink);
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  #spec-drawer .drawer-header .drawer-path {
+    font: 11px/1.4 "SF Mono", Menlo, Consolas, monospace;
+    color: var(--ink-dim);
+    flex-shrink: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  #spec-drawer .drawer-header button {
+    padding: 4px 10px;
+    font-size: 12px;
+    flex-shrink: 0;
+  }
+  #spec-drawer .drawer-header button[aria-pressed="true"] {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  #spec-drawer .drawer-header button:disabled { opacity: 0.45; cursor: default; }
+  #spec-drawer .drawer-header button:disabled:hover { background: var(--panel); border-color: var(--line); }
+  #spec-drawer .drawer-body {
+    flex: 1 1 auto;
+    overflow: auto;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  #spec-drawer .drawer-status {
+    padding: 8px 16px;
+    font-size: 12px;
+    color: var(--ink-dim);
+    background: var(--bg);
+    border-bottom: 1px solid var(--line);
+  }
+  #spec-drawer .drawer-status.err { color: var(--warn); }
+  #spec-drawer .drawer-status.ok { color: var(--ok); }
+
+  /* Recent-diffs panel — collapsible so it doesn't hinder reading the spec. */
+  #spec-drawer .drawer-diffs {
+    border-bottom: 1px solid var(--line);
+    background: var(--bg);
+    font-size: 12px;
+    flex-shrink: 0;
+  }
+  #spec-drawer .drawer-diffs > summary {
+    padding: 8px 16px;
+    cursor: pointer;
+    color: var(--accent);
+    font-weight: 500;
+    user-select: none;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  #spec-drawer .drawer-diffs > summary::-webkit-details-marker { display: none; }
+  #spec-drawer .drawer-diffs > summary::before {
+    content: "▸";
+    display: inline-flex;
+    width: 18px;
+    height: 18px;
+    align-items: center;
+    justify-content: center;
+    background: var(--accent-soft);
+    color: var(--accent);
+    border-radius: 4px;
+    font-size: 14px;
+    transition: transform 0.15s;
+    flex-shrink: 0;
+  }
+  #spec-drawer .drawer-diffs[open] > summary::before { transform: rotate(90deg); }
+  #spec-drawer .drawer-diffs .diffs-scroll {
+    max-height: 240px;
+    overflow: auto;
+    padding: 0 16px 12px;
+  }
+  #spec-drawer .drawer-diffs .diff-entry {
+    border-top: 1px solid var(--line);
+    padding-top: 8px;
+    margin-top: 8px;
+  }
+  #spec-drawer .drawer-diffs .diff-entry:first-child { border-top: none; padding-top: 4px; margin-top: 0; }
+  #spec-drawer .drawer-diffs .diff-label {
+    color: var(--ink-dim);
+    font: 11px/1.4 "SF Mono", Menlo, Consolas, monospace;
+    margin-bottom: 4px;
+  }
+  #spec-drawer .drawer-diffs pre.diff-body {
+    margin: 0;
+    padding: 8px 10px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    font: 12px/1.45 "SF Mono", Menlo, Consolas, monospace;
+    white-space: pre-wrap;
+    word-break: break-word;
+    overflow-x: auto;
+  }
+  #spec-drawer .drawer-diffs .diff-line-add {
+    background: var(--diff-add);
+    display: block;
+    padding: 0 4px;
+    margin: 0 -4px;
+  }
+  #spec-drawer .drawer-diffs .diff-line-del {
+    background: var(--diff-del);
+    display: block;
+    padding: 0 4px;
+    margin: 0 -4px;
+  }
+  #spec-drawer .drawer-diffs .diff-empty {
+    color: var(--ink-dim);
+    font-style: italic;
+    padding: 6px 2px;
+  }
+
+  /* Spec content, rendered from markdown into proportional typography.
+     `.drawer-spec-md` marks the rendered-markdown tree so element rules only
+     apply inside the drawer, not to the whole page. */
+  #spec-drawer .drawer-spec {
+    flex: 1 1 auto;
+    padding: 14px 22px 32px;
+    overflow: auto;
+    font: 14px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    color: var(--ink);
+    word-wrap: break-word;
+  }
+  #spec-drawer .drawer-spec.drawer-spec-md > *:first-child { margin-top: 0; }
+  #spec-drawer .drawer-spec.drawer-spec-md > *:last-child { margin-bottom: 0; }
+  #spec-drawer .drawer-spec-md h1,
+  #spec-drawer .drawer-spec-md h2,
+  #spec-drawer .drawer-spec-md h3,
+  #spec-drawer .drawer-spec-md h4,
+  #spec-drawer .drawer-spec-md h5,
+  #spec-drawer .drawer-spec-md h6 {
+    color: var(--accent);
+    font-weight: 600;
+    line-height: 1.25;
+    margin: 1.4em 0 0.5em;
+  }
+  #spec-drawer .drawer-spec-md h1 { font-size: 1.55em; border-bottom: 1px solid var(--line); padding-bottom: 0.25em; }
+  #spec-drawer .drawer-spec-md h2 { font-size: 1.3em;  border-bottom: 1px solid var(--line); padding-bottom: 0.2em; }
+  #spec-drawer .drawer-spec-md h3 { font-size: 1.12em; }
+  #spec-drawer .drawer-spec-md h4 { font-size: 1em; }
+  #spec-drawer .drawer-spec-md h5,
+  #spec-drawer .drawer-spec-md h6 { font-size: 0.95em; color: var(--ink-dim); }
+  #spec-drawer .drawer-spec-md p { margin: 0.6em 0; }
+  #spec-drawer .drawer-spec-md ul,
+  #spec-drawer .drawer-spec-md ol { margin: 0.5em 0; padding-left: 1.6em; }
+  #spec-drawer .drawer-spec-md li { margin: 0.2em 0; }
+  #spec-drawer .drawer-spec-md li > p { margin: 0.2em 0; }
+  #spec-drawer .drawer-spec-md a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+  #spec-drawer .drawer-spec-md a:hover { text-decoration-thickness: 2px; }
+  #spec-drawer .drawer-spec-md strong { font-weight: 600; }
+  #spec-drawer .drawer-spec-md em { font-style: italic; }
+  #spec-drawer .drawer-spec-md blockquote {
+    margin: 0.8em 0;
+    padding: 0.2em 0.9em;
+    color: var(--ink-dim);
+    border-left: 3px solid var(--line);
+    background: rgba(127, 127, 127, 0.05);
+  }
+  #spec-drawer .drawer-spec-md code {
+    font: 0.88em/1.4 "SF Mono", Menlo, Consolas, monospace;
+    background: rgba(127, 127, 127, 0.12);
+    padding: 0.1em 0.35em;
+    border-radius: 3px;
+  }
+  #spec-drawer .drawer-spec-md pre {
+    font: 12.5px/1.5 "SF Mono", Menlo, Consolas, monospace;
+    background: rgba(127, 127, 127, 0.08);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 10px 12px;
+    margin: 0.8em 0;
+    overflow: auto;
+  }
+  #spec-drawer .drawer-spec-md pre code {
+    background: transparent;
+    padding: 0;
+    border-radius: 0;
+    font-size: inherit;
+  }
+  #spec-drawer .drawer-spec-md hr {
+    border: 0;
+    border-top: 1px solid var(--line);
+    margin: 1.4em 0;
+  }
+  #spec-drawer .drawer-spec-md table {
+    border-collapse: collapse;
+    margin: 0.8em 0;
+    font-size: 0.95em;
+    display: block;
+    overflow-x: auto;
+    max-width: 100%;
+  }
+  #spec-drawer .drawer-spec-md th,
+  #spec-drawer .drawer-spec-md td {
+    border: 1px solid var(--line);
+    padding: 5px 10px;
+    text-align: left;
+    vertical-align: top;
+  }
+  #spec-drawer .drawer-spec-md th { background: rgba(127, 127, 127, 0.08); font-weight: 600; }
+  #spec-drawer .drawer-spec-md img { max-width: 100%; height: auto; }
+  /* Flash the block a jump-to-marker landed on. Attached to a block-level
+     element (heading, paragraph, list, table) rather than a span, so the
+     highlight covers the whole target region. */
+  #spec-drawer .drawer-spec .anchor-flash {
+    background: var(--warn);
+    color: #fff;
+    border-radius: 3px;
+    animation: anchor-flash-fade 1.4s ease forwards;
+  }
+  @keyframes anchor-flash-fade {
+    0%   { background: var(--warn); color: #fff; }
+    100% { background: transparent; color: inherit; }
+  }
+  /* Blocks changed by the most recent Update spec. Cleared on the next
+     Update, a manual Refresh, or an external file-change event — so the
+     highlight always reflects only the freshest diff. The .consistency variant
+     colors auto-applied blocks from a follow-up consistency pass in blue so a
+     reader can tell them apart from blocks they hand-edited themselves. */
+  #spec-drawer .drawer-spec .spec-line-changed {
+    background: var(--diff-add);
+    box-shadow: inset 3px 0 0 var(--ok);
+    padding: 2px 8px;
+    margin-left: -8px;
+    margin-right: -8px;
+    border-radius: 3px;
+    animation: spec-line-highlight-in 0.9s ease;
+  }
+  #spec-drawer .drawer-spec .spec-line-changed.consistency {
+    background: var(--accent-soft);
+    box-shadow: inset 3px 0 0 var(--accent);
+    animation: spec-line-highlight-in-consistency 0.9s ease;
+  }
+  /* "Show changes" toggle: every block that differs from the pre-spec-tacle
+     baseline (the oldest backup). Static, unlike .spec-line-changed, and it
+     stays until the toggle is switched off. Removed lines render as their raw
+     markdown, struck through, where they used to sit. */
+  #spec-drawer .drawer-changes-legend {
+    padding: 6px 16px;
+    font-size: 12px;
+    color: var(--ink-dim);
+    border-bottom: 1px solid var(--line);
+  }
+  #spec-drawer .drawer-changes-legend .swatch {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    vertical-align: -1px;
+    margin: 0 4px 0 8px;
+  }
+  #spec-drawer .drawer-changes-legend .swatch.add { background: var(--diff-add); box-shadow: inset 2px 0 0 var(--ok); }
+  #spec-drawer .drawer-changes-legend .swatch.del { background: var(--diff-del); box-shadow: inset 2px 0 0 var(--warn); }
+  #spec-drawer .drawer-spec .spec-diff-add {
+    background: var(--diff-add);
+    box-shadow: inset 3px 0 0 var(--ok);
+    padding: 2px 8px;
+    margin-left: -8px;
+    margin-right: -8px;
+    border-radius: 3px;
+  }
+  #spec-drawer .drawer-spec tr.spec-diff-add > td,
+  #spec-drawer .drawer-spec tr.spec-diff-add > th { background: var(--diff-add); }
+  #spec-drawer .drawer-spec .spec-diff-del {
+    background: var(--diff-del);
+    box-shadow: inset 3px 0 0 var(--warn);
+    padding: 2px 8px;
+    margin: 0.4em -8px;
+    border-radius: 3px;
+    font: 12px/1.5 "SF Mono", Menlo, Consolas, monospace;
+    white-space: pre-wrap;
+    text-decoration: line-through;
+    color: var(--ink-dim);
+    list-style: none;
+  }
+  #spec-drawer .drawer-spec tr.spec-diff-del > td { background: var(--diff-del); }
+  @keyframes spec-line-highlight-in {
+    0%   { background: var(--warn); color: #fff; }
+    60%  { background: var(--warn); color: #fff; }
+    100% { background: var(--diff-add); color: inherit; }
+  }
+  @keyframes spec-line-highlight-in-consistency {
+    0%   { background: var(--accent); color: #fff; }
+    60%  { background: var(--accent); color: #fff; }
+    100% { background: var(--accent-soft); color: inherit; }
+  }
+  /* Same distinct-highlight rules apply to visualizer fields (summary bullet
+     items, diagram caption/detail/notes containers) that the consistency pass
+     just rewrote. Fades out after a few seconds so it doesn't stick forever. */
+  .consistency-flash {
+    background: var(--accent-soft);
+    box-shadow: inset 3px 0 0 var(--accent);
+    border-radius: 3px;
+    animation: consistency-flash-fade 4s ease forwards;
+  }
+  @keyframes consistency-flash-fade {
+    0%   { background: var(--accent); color: #fff; }
+    30%  { background: var(--accent-soft); color: inherit; }
+    100% { background: transparent; box-shadow: none; color: inherit; }
+  }
+  /* Header banner shown for the current consistency-pass state:
+       queued  — a pending queue entry exists, no agent has claimed it
+       active  — an agent claimed and is reporting progress (percent bar)
+       stale   — a claim exists but its TTL elapsed (agent crashed / disconnected)
+       applied — brief green confirmation right after consistency-applied
+     The banner shows title + sub-line + optional progress bar + action buttons. */
+  .consistency-banner {
+    display: none;
+    align-items: center;
+    gap: 8px;
+    padding: 3px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    line-height: 1.3;
+    background: var(--accent-soft);
+    color: var(--accent);
+    border: 1px solid var(--accent);
+  }
+  .consistency-banner.visible { display: flex; }
+  .consistency-banner .banner-title { font-weight: 600; flex-shrink: 0; }
+  .consistency-banner .banner-sub {
+    font-size: 11px;
+    opacity: 0.85;
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .consistency-banner .banner-actions { display: flex; gap: 6px; flex-shrink: 0; }
+  .consistency-banner .banner-btn {
+    background: transparent;
+    border: 1px solid currentColor;
+    color: inherit;
+    border-radius: 3px;
+    padding: 1px 7px;
+    font: inherit;
+    font-size: 11px;
+    cursor: pointer;
+  }
+  .consistency-banner .banner-btn:hover { background: rgba(127, 127, 127, 0.12); }
+  .consistency-banner .banner-spinner {
+    width: 10px; height: 10px;
+    border: 2px solid var(--line);
+    border-top-color: currentColor;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    flex-shrink: 0;
+  }
+  .consistency-banner .banner-progress {
+    flex: 0 0 120px;
+    height: 4px;
+    background: rgba(127, 127, 127, 0.18);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .consistency-banner .banner-progress .fill {
+    display: block;
+    height: 100%;
+    width: 0%;
+    background: currentColor;
+    transition: width 0.25s ease;
+  }
+  /* Queued: no agent has grabbed it — the user needs to ping one. */
+  .consistency-banner.queued { background: rgba(180, 83, 9, 0.10); border-color: var(--warn); color: var(--warn); }
+  .consistency-banner.queued .banner-spinner,
+  .consistency-banner.queued .banner-progress,
+  .consistency-banner.stale  .banner-spinner,
+  .consistency-banner.stale  .banner-progress,
+  .consistency-banner.applied .banner-spinner,
+  .consistency-banner.applied .banner-progress { display: none; }
+  /* Stale: claim TTL expired, agent likely dropped. */
+  .consistency-banner.stale  { background: rgba(180, 83, 9, 0.10); border-color: var(--warn); color: var(--warn); }
+  /* Active: an agent is on it and reporting progress. */
+  .consistency-banner.active { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+  /* Applied: brief green confirmation. */
+  .consistency-banner.applied { background: transparent; border-color: var(--ok); color: var(--ok); }
+  /* Drawer loading state — dims the spec while a fetch is in flight and spins
+     the status bar so the reader sees the flyout catching up. */
+  #spec-drawer .drawer-spec.loading {
+    opacity: 0.4;
+    transition: opacity 0.15s;
+  }
+  #spec-drawer .drawer-status.loading {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--accent);
+  }
+  #spec-drawer .drawer-status.loading::before {
+    content: "";
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border: 2px solid var(--line);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    flex-shrink: 0;
+  }
+  #spec-drawer .drawer-spec .marker-line { color: var(--ink-dim); font-style: italic; }
+  #spec-drawer-toggle {
+    position: fixed;
+    top: 50%;
+    right: 0;
+    transform: translateY(-50%);
+    z-index: 30;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 6px 0 0 6px;
+    padding: 12px 6px;
+    font-size: 12px;
+    font-weight: 600;
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    cursor: pointer;
+    letter-spacing: 0.8px;
+    box-shadow: -2px 0 6px rgba(0, 0, 0, 0.12);
+  }
+  #spec-drawer-toggle:hover { opacity: 0.9; }
+  #spec-drawer-toggle.open { display: none; }
+
+  /* --- Global loading overlay used by Update spec --- */
+  #loading-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.3);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+  }
+  #loading-overlay.visible { display: flex; }
+  #loading-overlay .box {
+    background: var(--panel);
+    color: var(--ink);
+    border-radius: 8px;
+    padding: 22px 28px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    font-size: 14px;
+    min-width: 220px;
+  }
+  #loading-overlay .spinner {
+    width: 22px;
+    height: 22px;
+    border: 3px solid var(--line);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    flex-shrink: 0;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* --- Non-blocking toast messages (replaces alert() for soft failures) --- */
+  #toast-stack {
+    position: fixed;
+    right: 16px;
+    bottom: 16px;
+    z-index: 200;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-end;
+    pointer-events: none;
+  }
+  .toast {
+    pointer-events: auto;
+    background: var(--panel);
+    color: var(--ink);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--accent);
+    border-radius: 6px;
+    padding: 10px 14px;
+    font-size: 13px;
+    line-height: 1.35;
+    max-width: 360px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
+    opacity: 0;
+    transform: translateX(20px);
+    transition: opacity 0.18s ease, transform 0.18s ease;
+    cursor: pointer;
+  }
+  .toast.visible { opacity: 1; transform: translateX(0); }
+  .toast.warn { border-left-color: var(--warn); }
+  .toast code {
+    background: rgba(127, 127, 127, 0.15);
+    padding: 0 4px;
+    border-radius: 3px;
+    font-size: 12px;
+  }
 </style>
 </head>
 <body>
@@ -771,15 +1556,51 @@
 
 <header class="sticky-header">
   <div class="header-actions">
-    <button id="btn-update-spec" class="primary" title="Save all edits back into the spec file (creates a timestamped backup first)">Update spec</button>
-    <button id="btn-undo-spec" title="Restore the spec file from the most recent backup">Undo</button>
-    <button id="btn-export" title="Copy or download a JSON payload of every in-browser edit">Export JSON</button>
-    <button id="btn-reset" title="Discard all in-browser edits (does not touch the spec file)">Reset</button>
+    <button id="btn-update-spec" class="primary" aria-label="Update spec — save all edits back into the spec file, creating a timestamped backup first" data-tip="Save every in-browser edit back into the spec file on disk. Snapshots the current file to a timestamped backup first, so Undo can restore it.">Update spec</button>
+    <button id="btn-undo-spec" aria-label="Undo — restore the spec file from the most recent backup" data-tip="Restore the spec file from the most recent backup created by Update spec. In-browser edits stay put.">Undo</button>
+    <button id="btn-export" aria-label="Export JSON — copy or download a JSON payload of every in-browser edit" data-tip="Copy or download a JSON payload of every in-browser edit — the raw diff between what's on disk and what you're looking at. Handy for review or debugging.">Export JSON</button>
+    <button id="btn-reset" aria-label="Reset — discard all in-browser edits without touching the spec file" data-tip="Discard every in-browser edit and re-render from the spec on disk. Does not touch the spec file.">Reset</button>
+    <button id="btn-finalize" class="danger" aria-label="Finalize — strip spec-tacle markers and generated inventories, delete backups and the consistency queue, leaving a clean markdown spec" data-tip="One-way cleanup: strips spec-tacle markers and auto-generated inventories, deletes backups and the consistency queue. Leaves a clean markdown spec. Undo will no longer work.">Finalize</button>
     <span id="server-status" class="server-note"></span>
+  </div>
+  <div id="consistency-banner" class="consistency-banner" role="status" aria-live="polite">
+    <span class="banner-spinner" aria-hidden="true"></span>
+    <span class="banner-title">Consistency pass</span>
+    <span class="banner-sub"></span>
+    <div class="banner-progress" aria-hidden="true"><span class="fill"></span></div>
+    <span class="banner-actions"></span>
   </div>
 </header>
 
 <main id="app"></main>
+
+<button id="spec-drawer-toggle" title="Open the spec drawer to read the source markdown and recent updates">View spec</button>
+
+<div id="spec-drawer-overlay" hidden></div>
+<aside id="spec-drawer" aria-hidden="true" hidden>
+  <div class="drawer-header">
+    <h2>Spec</h2>
+    <span class="drawer-path" id="drawer-path"></span>
+    <button id="drawer-changes" aria-pressed="false" disabled title="Mark everything spec-tacle has changed in this spec since its first Update spec">Show changes</button>
+    <button id="drawer-refresh" title="Reload the spec source and recent diffs from disk">Refresh</button>
+    <button id="drawer-close" title="Close the spec drawer">Close</button>
+  </div>
+  <div class="drawer-body">
+    <div class="drawer-status" id="drawer-status">Opening spec…</div>
+    <div class="drawer-changes-legend" id="drawer-changes-legend" hidden></div>
+    <details class="drawer-diffs" id="drawer-diffs">
+      <summary title="Recent updates that touched this spec. Collapsed by default so the spec text stays the focus.">Recent updates <span id="drawer-diffs-count" style="color: var(--ink-dim); font-weight: 400;"></span></summary>
+      <div class="diffs-scroll" id="drawer-diffs-body"></div>
+    </details>
+    <div class="drawer-spec" id="drawer-spec" tabindex="0"></div>
+  </div>
+</aside>
+
+<div id="loading-overlay" role="status" aria-live="polite" aria-hidden="true">
+  <div class="box"><div class="spinner"></div><span id="loading-message">Saving spec…</span></div>
+</div>
+
+<div id="toast-stack" role="status" aria-live="polite"></div>
 
 <div id="shape-menu" role="menu"></div>
 
@@ -796,9 +1617,10 @@
   </div>
 </div>
 
-<script id="specdata" type="application/json">{"title":"Snip — a lean URL shortener","subtitle":"GitHub Pages demo — everything editable in-browser, nothing saved","specPath":"snip-spec.md","serverUrl":null,"sectionMap":{"summaryWhat":"summary:what","summaryWhy":"summary:why"},"summary":{"what":["One HTTP service with two surfaces: a create-link API and a redirect endpoint at the short host","**Postgres** stores the short code, target URL, owner, and expiration; a click log table backs the analytics rollup","A worker rolls per-click rows into hourly and daily aggregates so dashboards read one row per link per day","Two roles: authenticated creators (via API token) and anonymous viewers who follow the short link"],"why":["Existing shorteners are either bloated dashboards or bare hosted forms with no owner history","Snip picks a **narrow shape** (one code → one target, plus a click log) so the storage and the analytics stay boring","Analytics separated from the redirect path so the redirect stays fast under load","Custom domains are v2 — v1 assumes one shared short host so the storage schema doesn't need a tenant column"]},"diagrams":[{"id":"architecture","kind":"architecture","title":"Service shape and data flow","caption":"Two entry paths (**create** and **redirect**) share Postgres; a background worker builds the analytics rollup from the click log so the redirect never blocks on aggregation.","detail":"- **Create path**: authenticated client → API `POST /links` → Postgres `links`\n- **Redirect path**: anonymous browser → short host `GET /:code` → Postgres `links` lookup → 301 → append a row to `click_log`\n- **Analytics**: rollup worker reads `click_log` on a schedule, upserts hourly/daily aggregates into `link_stats`\n- **How to read**: the create/redirect paths sit on top of Postgres; the worker branches off `click_log` and writes back to a separate table so the analytics load never touches the redirect path","source":"flowchart LR\n  Client[\"API client\\n(with token)\"]\n  Browser([Anonymous browser])\n  API[\"Snip API\"]\n  PG[(Postgres)]\n  Log[(click_log table)]\n  Worker[\"Rollup worker\"]\n  Stats[(link_stats table)]\n  Dash[\"Owner dashboard\"]\n\n  Client -->|\"POST /links\"| API\n  API -->|\"insert link\"| PG\n  Browser -->|\"GET /:code\"| API\n  API -->|\"lookup code\"| PG\n  API -->|\"append click\"| Log\n  API -->|\"301 redirect\"| Browser\n  Worker -->|\"scan\"| Log\n  Worker -->|\"upsert\"| Stats\n  Dash -->|\"read\"| Stats"},{"id":"create-flow","kind":"user flow","title":"User flow — create a short link","caption":"How an authenticated client turns a target URL into a short code, from token check through duplicate handling to the returned URL.","detail":"- Client sends `POST /links` with the target URL and its API token\n- API validates the token and the target URL is a real absolute URL\n- API checks whether this owner already shortened the same target:\n  - Yes: return the existing code (idempotent for the same owner + target)\n  - No: generate a new 7-character code, insert into `links`, return the new short URL\n- Collisions on the generated code retry up to 5 times before failing with 503","source":"flowchart LR\n  Start([Client wants to shorten a URL])\n  Post[\"POST /links\\n(target, token)\"]\n  AuthOK{\"Token valid?\"}\n  ValidURL{\"Target is a real URL?\"}\n  Existing{\"Owner already\\nshortened this?\"}\n  Return[\"Return existing code\"]\n  Gen[\"Generate 7-char code\"]\n  Insert[\"INSERT into links\"]\n  Retry{\"Insert succeeded?\"}\n  Fail[\"503 with retry-after\"]\n  Done[\"Return new short URL\"]\n\n  Start --> Post --> AuthOK\n  AuthOK -- no --> Reject[\"401\"]\n  AuthOK -- yes --> ValidURL\n  ValidURL -- no --> Reject422[\"422\"]\n  ValidURL -- yes --> Existing\n  Existing -- yes --> Return\n  Existing -- no --> Gen --> Insert --> Retry\n  Retry -- yes --> Done\n  Retry -- no --> Gen"},{"id":"redirect-flow","kind":"user flow","title":"User flow — anonymous redirect","caption":"The hot path: a click on a short link hits the API, gets a target back from Postgres, appends a click row, and 301s the browser. Total latency budget is 50ms.","detail":"- Browser hits `GET /:code` on the short host\n- API looks up the code in the `links` table\n- Not found → 404\n- Found + expired → 410 (gone)\n- Found + live:\n  - Append a row to `click_log` with the code, timestamp, and coarse geo bucket from IP\n  - Return a 301 with the target URL\n- Rollup happens asynchronously; the redirect never waits on it","source":"flowchart LR\n  Hit([Browser hits /:code])\n  Lookup[\"Look up code in links\"]\n  Found{\"Code found?\"}\n  NotFound[\"404\"]\n  Live{\"Not expired?\"}\n  Gone[\"410\"]\n  Log[\"Append row to click_log\"]\n  Redirect[\"301 to target URL\"]\n\n  Hit --> Lookup --> Found\n  Found -- no --> NotFound\n  Found -- yes --> Live\n  Live -- no --> Gone\n  Live -- yes --> Log --> Redirect"},{"id":"decisions","kind":"dependency map","title":"v1 decisions and what they shape","caption":"Every early decision has one or two downstream constraints. Read left-to-right for consequences, right-to-left for what to revisit.","detail":"- Five load-bearing v1 decisions on the left\n- Three shapes of consequence on the right:\n  - **Required implementation** we're committed to\n  - **Out-of-scope** for v1\n  - **Open question** we still owe an answer on","source":"flowchart LR\n  D1[\"7-character random code\"]\n  D2[\"Idempotent per owner+target\"]\n  D3[\"Async analytics rollup\"]\n  D4[\"One shared short host\"]\n  D5[\"Rate-limit per token\"]\n\n  D1 --> R1[\"Handle insert collisions with retries\"]\n  D2 --> R2[\"Unique index on (owner_id, target_url)\"]\n  D3 --> R3[\"Redirect never waits on aggregation\"]\n  D3 --> OQ1[\"Open question:\\nrollup lag SLA\"]\n  D4 --> OOS1[\"Out of scope v1:\\ncustom domains, tenant column\"]\n  D5 --> R4[\"Sliding-window counter in Redis\"]\n  D5 --> OQ2[\"Open question:\\nlimit per token or per owner\"]"},{"id":"latency-budget","kind":"data summary","title":"50ms redirect: where the budget goes","caption":"The 50ms SLO from the **why** section, broken into named contributions. **Postgres lookup** is the largest fixed cost; the click-log append is deliberately fire-and-forget so it doesn't push the total over the cap.","detail":"- These are **design targets**, not measured p50s — the numbers to protect at launch.\n- **Postgres lookup** is the single item most at risk of drifting up; if it slips past 25ms, revisit the code index or move the click-log append fully off-thread.\n- **Custom domains** (v2) would add a DNS-lookup line item, which is why they're deferred: v1 has no headroom for one.\n- Read this against the redirect user flow: the boxes there run in this order, and this chart says how many milliseconds each is allowed.","source":"pie showData\n  title Redirect latency budget (50ms cap, in ms)\n  \"Client-to-edge network\" : 12\n  \"Postgres code lookup\" : 18\n  \"App logic + serialize\" : 8\n  \"Append click_log row\" : 7\n  \"301 response back to client\" : 5"}],"demoMode":true}</script>
+<script id="specdata" type="application/json">{"title":"Snip — a lean URL shortener","subtitle":"GitHub Pages demo — everything editable in-browser, nothing saved","specPath":"snip-spec.md","serverUrl":null,"sectionMap":{"summaryWhat":"summary:what","summaryWhy":"summary:why"},"summary":{"what":["One HTTP service with two surfaces: a create-link API and a redirect endpoint at the short host","**Postgres** stores the short code, target URL, owner, and expiration; a click log table backs the analytics rollup","A worker rolls per-click rows into hourly and daily aggregates so dashboards read one row per link per day","Two roles: authenticated creators (via API token) and anonymous viewers who follow the short link"],"why":["Existing shorteners are either bloated dashboards or bare hosted forms with no owner history","Snip picks a **narrow shape** (one code → one target, plus a click log) so the storage and the analytics stay boring","Analytics separated from the redirect path so the redirect stays fast under load","Custom domains are v2 — v1 assumes one shared short host so the storage schema doesn't need a tenant column"]},"diagrams":[{"id":"architecture","kind":"architecture","title":"Service shape and data flow","caption":"Two entry paths (**create** and **redirect**) share Postgres; a background worker builds the analytics rollup from the click log so the redirect never blocks on aggregation. Blue nodes are callers, purple our services, and amber the tables.","detail":"- **Create path**: authenticated client → API `POST /links` → Postgres `links`\n- **Redirect path**: anonymous browser → short host `GET /:code` → Postgres `links` lookup → 301 → append a row to `click_log`\n- **Analytics**: rollup worker reads `click_log` on a schedule, upserts hourly/daily aggregates into `link_stats`\n- **How to read**: the create/redirect paths sit on top of Postgres; the worker branches off `click_log` and writes back to a separate table so the analytics load never touches the redirect path","source":"flowchart LR\n  Client[\"API client\\n(with token)\"]\n  Browser([Anonymous browser])\n  API[\"Snip API\"]\n  PG[(Postgres)]\n  Log[(click_log table)]\n  Worker[\"Rollup worker\"]\n  Stats[(link_stats table)]\n  Dash[\"Owner dashboard\"]\n\n  Client -->|\"POST /links\"| API\n  API -->|\"insert link\"| PG\n  Browser -->|\"GET /:code\"| API\n  API -->|\"lookup code\"| PG\n  API -->|\"append click\"| Log\n  API -->|\"301 redirect\"| Browser\n  Worker -->|\"scan\"| Log\n  Worker -->|\"upsert\"| Stats\n  Dash -->|\"read\"| Stats\n\n  classDef blue fill:#dbeafe,stroke:#2563eb,color:#1e3a8a\n  classDef purple fill:#ede9fe,stroke:#7c3aed,color:#4c1d95\n  classDef amber fill:#fef3c7,stroke:#d97706,color:#78350f\n  class Client,Browser,Dash blue\n  class API,Worker purple\n  class PG,Log,Stats amber"},{"id":"create-flow","kind":"user flow","title":"User flow — create a short link","caption":"How an authenticated client turns a target URL into a short code, from token check through duplicate handling to the returned URL. Green ends return a short URL; red ends reject the request.","detail":"- Client sends `POST /links` with the target URL and its API token\n- API validates the token and the target URL is a real absolute URL\n- API checks whether this owner already shortened the same target:\n  - Yes: return the existing code (idempotent for the same owner + target)\n  - No: generate a new 7-character code, insert into `links`, return the new short URL\n- Collisions on the generated code retry up to 5 times before failing with 503","source":"flowchart LR\n  Start([Client wants to shorten a URL])\n  Post[\"POST /links\\n(target, token)\"]\n  AuthOK{\"Token valid?\"}\n  ValidURL{\"Target is a real URL?\"}\n  Existing{\"Owner already\\nshortened this?\"}\n  Return[\"Return existing code\"]\n  Gen[\"Generate 7-char code\"]\n  Insert[\"INSERT into links\"]\n  Retry{\"Insert succeeded?\"}\n  Fail[\"503 with retry-after\"]\n  Done[\"Return new short URL\"]\n\n  Start --> Post --> AuthOK\n  AuthOK -- no --> Reject[\"401\"]\n  AuthOK -- yes --> ValidURL\n  ValidURL -- no --> Reject422[\"422\"]\n  ValidURL -- yes --> Existing\n  Existing -- yes --> Return\n  Existing -- no --> Gen --> Insert --> Retry\n  Retry -- yes --> Done\n  Retry -- no --> Gen\n\n  classDef blue fill:#dbeafe,stroke:#2563eb,color:#1e3a8a\n  classDef purple fill:#ede9fe,stroke:#7c3aed,color:#4c1d95\n  classDef green fill:#dcfce7,stroke:#16a34a,color:#14532d\n  classDef red fill:#fee2e2,stroke:#dc2626,color:#7f1d1d\n  class Start,Post blue\n  class Gen,Insert purple\n  class Return,Done green\n  class Reject,Reject422,Fail red"},{"id":"redirect-flow","kind":"user flow","title":"User flow — anonymous redirect","caption":"The hot path: a click on a short link hits the API, gets a target back from Postgres, appends a click row, and 301s the browser. Total latency budget is 50ms. Green is the one successful exit; red nodes are the error responses.","detail":"- Browser hits `GET /:code` on the short host\n- API looks up the code in the `links` table\n- Not found → 404\n- Found + expired → 410 (gone)\n- Found + live:\n  - Append a row to `click_log` with the code, timestamp, and coarse geo bucket from IP\n  - Return a 301 with the target URL\n- Rollup happens asynchronously; the redirect never waits on it","source":"flowchart LR\n  Hit([Browser hits /:code])\n  Lookup[\"Look up code in links\"]\n  Found{\"Code found?\"}\n  NotFound[\"404\"]\n  Live{\"Not expired?\"}\n  Gone[\"410\"]\n  Log[\"Append row to click_log\"]\n  Redirect[\"301 to target URL\"]\n\n  Hit --> Lookup --> Found\n  Found -- no --> NotFound\n  Found -- yes --> Live\n  Live -- no --> Gone\n  Live -- yes --> Log --> Redirect\n\n  classDef blue fill:#dbeafe,stroke:#2563eb,color:#1e3a8a\n  classDef purple fill:#ede9fe,stroke:#7c3aed,color:#4c1d95\n  classDef green fill:#dcfce7,stroke:#16a34a,color:#14532d\n  classDef amber fill:#fef3c7,stroke:#d97706,color:#78350f\n  classDef red fill:#fee2e2,stroke:#dc2626,color:#7f1d1d\n  class Hit blue\n  class Lookup purple\n  class Redirect green\n  class Log amber\n  class NotFound,Gone red"},{"id":"decisions","kind":"dependency map","title":"v1 decisions and what they shape","caption":"Every early decision has one or two downstream constraints. Read left-to-right for consequences, right-to-left for what to revisit. Green nodes are consequences, gray is out of scope, and red is still open.","detail":"- Five load-bearing v1 decisions on the left\n- Three shapes of consequence on the right:\n  - **Required implementation** we're committed to\n  - **Out-of-scope** for v1\n  - **Open question** we still owe an answer on","source":"flowchart LR\n  D1[\"7-character random code\"]\n  D2[\"Idempotent per owner+target\"]\n  D3[\"Async analytics rollup\"]\n  D4[\"One shared short host\"]\n  D5[\"Rate-limit per token\"]\n\n  D1 --> R1[\"Handle insert collisions with retries\"]\n  D2 --> R2[\"Unique index on (owner_id, target_url)\"]\n  D3 --> R3[\"Redirect never waits on aggregation\"]\n  D3 --> OQ1[\"Open question:\\nrollup lag SLA\"]\n  D4 --> OOS1[\"Out of scope v1:\\ncustom domains, tenant column\"]\n  D5 --> R4[\"Sliding-window counter in Redis\"]\n  D5 --> OQ2[\"Open question:\\nlimit per token or per owner\"]\n\n  classDef green fill:#dcfce7,stroke:#16a34a,color:#14532d\n  classDef red fill:#fee2e2,stroke:#dc2626,color:#7f1d1d\n  classDef gray fill:#f1f5f9,stroke:#64748b,color:#1e293b\n  class R1,R2,R3,R4 green\n  class OQ1,OQ2 red\n  class OOS1 gray"},{"id":"latency-budget","kind":"data summary","title":"50ms redirect: where the budget goes","caption":"The 50ms SLO from the **why** section, broken into named contributions. **Postgres lookup** is the largest fixed cost; the click-log append is deliberately fire-and-forget so it doesn't push the total over the cap.","detail":"- These are **design targets**, not measured p50s — the numbers to protect at launch.\n- **Postgres lookup** is the single item most at risk of drifting up; if it slips past 25ms, revisit the code index or move the click-log append fully off-thread.\n- **Custom domains** (v2) would add a DNS-lookup line item, which is why they're deferred: v1 has no headroom for one.\n- Read this against the redirect user flow: the boxes there run in this order, and this chart says how many milliseconds each is allowed.","source":"pie showData\n  title Redirect latency budget (50ms cap, in ms)\n  \"Client-to-edge network\" : 12\n  \"Postgres code lookup\" : 18\n  \"App logic + serialize\" : 8\n  \"Append click_log row\" : 7\n  \"301 response back to client\" : 5"}],"demoMode":true}</script>
 
 <script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/markdown-it@14.1.0/dist/markdown-it.min.js"></script>
 <script>
 (function () {
   const data = JSON.parse(document.getElementById('specdata').textContent);
@@ -807,8 +1629,16 @@
 
   // Summary is bullets. Accept a string for back-compat by splitting on newlines.
   const asBullets = (v) => Array.isArray(v) ? v.slice() : (v ? String(v).split(/\r?\n/).map(s => s.replace(/^[-*]\s+/, '').trim()).filter(Boolean) : []);
-  const initialWhat = asBullets(data.summary?.what);
-  const initialWhy  = asBullets(data.summary?.why);
+  const initialWhat  = asBullets(data.summary?.what);
+  const initialWhy   = asBullets(data.summary?.why);
+  const initialRules = asBullets(data.summary?.rules);
+  // Open questions appear as a section below the diagrams. Present only when
+  // the spec has any — either declared in data.summary.openQuestions, or opted
+  // in via sectionMap.summaryOpenQuestions so the section stays available for
+  // adding new ones in-browser even after the last one is cleared.
+  const initialOpenQuestions = asBullets(data.summary?.openQuestions);
+  const openQuestionsOptedIn = Array.isArray(data.summary?.openQuestions) ||
+    (data.sectionMap && typeof data.sectionMap.summaryOpenQuestions === 'string');
 
   const summarySection = document.createElement('section');
   summarySection.className = 'summary';
@@ -817,6 +1647,7 @@
       <h1 id="doc-title"></h1>
       <span class="section-label">Technical summary</span>
       <span class="subtitle" id="doc-subtitle"></span>
+      <button type="button" class="jump-to-spec" data-jump-marker="summary:what" title="Open the spec drawer and jump to the summary in the source file">View in spec</button>
     </div>
     <div class="block">
       <div class="block-label">What</div>
@@ -828,13 +1659,19 @@
       <ul id="summary-why-list" class="summary-list" data-summary="why"></ul>
       <button type="button" class="add-bullet" data-target="why" title="Add a new bullet to the Why list">+ Add bullet</button>
     </div>
+    <div class="block">
+      <div class="block-label">Rules</div>
+      <ul id="summary-rules-list" class="summary-list" data-summary="rules"></ul>
+      <button type="button" class="add-bullet" data-target="rules" title="Add a new bullet to the Rules list">+ Add bullet</button>
+    </div>
     <div class="edit-hint">Double-click a bullet to edit. Wrap key terms in **double asterisks** to bold them. Enter commits, Esc cancels, empty commit removes the bullet.</div>
   `;
   document.getElementById('app').appendChild(summarySection);
   document.getElementById('doc-title').textContent = data.title || 'Spec-tacle';
   document.getElementById('doc-subtitle').textContent = data.subtitle || '';
-  const whatUl = document.getElementById('summary-what-list');
-  const whyUl  = document.getElementById('summary-why-list');
+  const whatUl  = document.getElementById('summary-what-list');
+  const whyUl   = document.getElementById('summary-why-list');
+  const rulesUl = document.getElementById('summary-rules-list');
 
   mermaid.initialize({
     startOnLoad: false,
@@ -848,7 +1685,11 @@
       originalWhat: initialWhat.slice(),
       currentWhat: initialWhat.slice(),
       originalWhy: initialWhy.slice(),
-      currentWhy: initialWhy.slice()
+      currentWhy: initialWhy.slice(),
+      originalRules: initialRules.slice(),
+      currentRules: initialRules.slice(),
+      originalOpenQuestions: initialOpenQuestions.slice(),
+      currentOpenQuestions: initialOpenQuestions.slice()
     },
     diagrams: data.diagrams.map(d => ({
       ...d,
@@ -871,7 +1712,7 @@
     }))
   };
 
-  const sectionMap = Object.assign({ summaryWhat: 'summary:what', summaryWhy: 'summary:why' }, data.sectionMap || {});
+  const sectionMap = Object.assign({ summaryWhat: 'summary:what', summaryWhy: 'summary:why', summaryRules: 'summary:rules', summaryOpenQuestions: 'summary:open-questions' }, data.sectionMap || {});
   const serverBase = data.demoMode
     ? null // static demo: no round-trip regardless of origin
     : (data.serverUrl || (location.protocol === 'file:' ? null : location.origin));
@@ -888,7 +1729,9 @@
     return JSON.stringify({
       summary: {
         currentWhat: state.summary.currentWhat,
-        currentWhy: state.summary.currentWhy
+        currentWhy: state.summary.currentWhy,
+        currentRules: state.summary.currentRules,
+        currentOpenQuestions: state.summary.currentOpenQuestions
       },
       diagrams: state.diagrams.map(d => ({
         currentSource: d.currentSource,
@@ -914,8 +1757,12 @@
     const s = JSON.parse(snap);
     state.summary.currentWhat = s.summary.currentWhat.slice();
     state.summary.currentWhy = s.summary.currentWhy.slice();
+    state.summary.currentRules = (s.summary.currentRules || []).slice();
+    state.summary.currentOpenQuestions = (s.summary.currentOpenQuestions || []).slice();
     renderBullets('what');
     renderBullets('why');
+    renderBullets('rules');
+    renderBullets('openQuestions');
     s.diagrams.forEach((d, i) => {
       const cur = state.diagrams[i];
       const changed =
@@ -943,7 +1790,7 @@
         const detEl = document.querySelector(`[data-detail-idx="${i}"]`);
         if (detEl) detEl.innerHTML = mdRich(d.currentDetail);
         renderNotes(i);
-        renderDiagram(i);
+        renderDiagram(i, { keepLayout: false });
       }
       markDirty(i);
     });
@@ -973,35 +1820,159 @@
       if (deleteSelected()) e.preventDefault();
       return;
     }
-    // Escape → clear selection
+    // Escape → clear selection, and leave full-screen diagram mode unless a
+    // menu or the spec drawer is the thing Escape should close.
     if (e.key === 'Escape') {
       if (inField) return;
       deselectAll();
+      const menuOpen = document.querySelector('#shape-menu.open');
+      const drawerOpen = document.querySelector('#spec-drawer.open');
+      if (expandedIdx !== null && !menuOpen && !drawerOpen) collapseDiagram();
       return;
     }
   });
 
+  // --- Full-screen diagrams ---
+  // The card becomes a fixed overlay covering the viewport. When the browser
+  // allows it, the whole document also enters native fullscreen; the document
+  // (not the card) is the fullscreen element so body-level tooltips, the shape
+  // menu, and the spec drawer keep rendering on top.
+  let expandedIdx = null;
+  function expandDiagram(idx) {
+    if (expandedIdx === idx) return;
+    if (expandedIdx !== null) collapseDiagram({ keepNativeFullscreen: true });
+    const card = document.querySelector(`.diagram-card[data-idx="${idx}"]`);
+    if (!card) return;
+    expandedIdx = idx;
+    card.classList.add('expanded');
+    document.body.classList.add('diagram-expanded');
+    const btn = card.querySelector('.expand-diagram');
+    btn.textContent = 'Exit full screen';
+    btn.title = 'Return this diagram to the page (Esc)';
+    btn.setAttribute('aria-pressed', 'true');
+    const root = document.documentElement;
+    if (!document.fullscreenElement && root.requestFullscreen) {
+      root.requestFullscreen().catch(() => { /* overlay alone still fills the viewport */ });
+    }
+  }
+  function collapseDiagram(opts = {}) {
+    if (expandedIdx === null) return;
+    const card = document.querySelector(`.diagram-card[data-idx="${expandedIdx}"]`);
+    expandedIdx = null;
+    document.body.classList.remove('diagram-expanded');
+    if (card) {
+      card.classList.remove('expanded');
+      const btn = card.querySelector('.expand-diagram');
+      btn.textContent = 'Full screen';
+      btn.title = 'Expand this diagram to fill the screen (Esc to exit)';
+      btn.setAttribute('aria-pressed', 'false');
+      card.scrollIntoView({ block: 'start' });
+    }
+    if (!opts.keepNativeFullscreen && document.fullscreenElement && document.exitFullscreen) {
+      document.exitFullscreen().catch(() => {});
+    }
+  }
+  // The browser consumes Esc when leaving native fullscreen, so follow its
+  // state instead of relying on the keydown handler.
+  document.addEventListener('fullscreenchange', () => {
+    if (!document.fullscreenElement) collapseDiagram();
+  });
+
+
+  const HINT_MERMAID = 'Hover a node or arrow to see a description tooltip; click the tooltip to edit it. Click a node to select it, then Delete/Backspace to remove it (and its edges). Drag a node to reposition; arrows and labels follow. Hover a node for its four side dots and shape and color picker (◇); right-click a node opens the same picker. Drag a side dot to another node to create a new arrow, or into empty space to spawn a new node in edit mode. Hover an arrow for its handles: drag the blue circle (or the label itself) to bend, drag the green/orange endpoints to reconnect. Double-click a node, edge label, caption, detail, or bullet to edit its text inline — the cursor lands where you clicked, so triple-click when you want to replace everything. Double-click an unlabeled arrow to add a new label. Click the "Add notes…" area below to jot general thoughts about this diagram. Wrap key terms in double asterisks to bold them. Ctrl/⌘+Z undoes the last edit.';
+  const HINT_TABLE = 'Double-click a header or cell to edit it in place; the cursor lands where you clicked, triple-click to select the whole cell. Enter commits, Esc cancels. Wrap key terms in double asterisks to bold them. To add or remove columns or rows, open the Source pane on the right and edit the markdown table directly — the visualizer re-renders when you re-render. Caption, detail, and notes all edit inline the same way. Ctrl/⌘+Z undoes the last edit.';
+  const SOURCE_HINT_MERMAID = 'Show or hide the mermaid source for this diagram';
+  const SOURCE_HINT_TABLE = 'Show or hide the raw markdown table source';
+  const SOURCE_EDIT_HINT_MERMAID = 'Edit the mermaid source directly';
+  const SOURCE_EDIT_HINT_TABLE = 'Edit the markdown table source directly';
+
+  // Human-friendly labels for the type badge in each diagram header. Falls back
+  // to a title-cased version of whatever `kind` string the data JSON carries,
+  // so a novel kind still reads as a real label rather than a lowercase token.
+  const KIND_LABELS = {
+    'architecture': 'Architecture Diagram',
+    'user flow': 'User Flow',
+    'information flow': 'Information Flow',
+    'dependency map': 'Dependency Map',
+    'decision chart': 'Decision Chart',
+    'state': 'State Diagram',
+    'sequence': 'Sequence Diagram',
+    'data summary': 'Data Summary',
+    'histogram': 'Histogram',
+    'table': 'Table',
+  };
+  function kindLabel(kind) {
+    const k = String(kind || '').trim().toLowerCase();
+    if (!k) return 'Diagram';
+    if (KIND_LABELS[k]) return KIND_LABELS[k];
+    return k.replace(/\b\w/g, c => c.toUpperCase());
+  }
+
+  // Table of contents: jump links to each diagram (and Open questions when
+  // present). Sits below the summary, above the diagram cards. Native anchor
+  // scroll — `scroll-behavior: smooth` on <html> and `scroll-margin-top` on
+  // the targets handle the sticky header offset.
+  if (data.diagrams.length || openQuestionsOptedIn) {
+    const tocLinks = data.diagrams.map(d => `
+      <a href="#diagram-card-${escapeHtml(d.id)}" class="toc-link" data-toc-target="diagram-card-${escapeHtml(d.id)}">
+        <span class="toc-kind">${escapeHtml(kindLabel(d.kind))}</span>
+        <span class="toc-title">${escapeHtml(d.title)}</span>
+      </a>`).join('');
+    const tocOpen = openQuestionsOptedIn ? `
+      <a href="#section-open-questions" class="toc-link" data-toc-target="section-open-questions">
+        <span class="toc-kind">Section</span>
+        <span class="toc-title">Open questions</span>
+      </a>` : '';
+    const tocNav = document.createElement('nav');
+    tocNav.className = 'toc';
+    tocNav.setAttribute('aria-label', 'Jump to section');
+    tocNav.innerHTML = `
+      <div class="toc-label">Jump to</div>
+      <div class="toc-list">${tocLinks}${tocOpen}</div>
+    `;
+    document.getElementById('app').appendChild(tocNav);
+    // Explicit scroll so the jump is consistently smooth and respects
+    // `scroll-margin-top` even in embedded/debug contexts where native
+    // anchor scrolling gets suppressed. Falls back to native if the target
+    // is missing (shouldn't happen — targets are rendered from the same
+    // data.diagrams array — but a rogue custom kind or id typo shouldn't
+    // silently break navigation).
+    tocNav.addEventListener('click', (e) => {
+      const link = e.target.closest('a.toc-link');
+      if (!link) return;
+      const targetId = link.dataset.tocTarget;
+      const target = targetId && document.getElementById(targetId);
+      if (!target) return;
+      e.preventDefault();
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      history.pushState(null, '', '#' + targetId);
+    });
+  }
 
   data.diagrams.forEach((diagram, idx) => {
+    const isTable = diagram.kind === 'table';
     const card = document.createElement('div');
     card.className = 'diagram-card';
     card.dataset.idx = idx;
+    card.id = 'diagram-card-' + diagram.id;
     card.innerHTML = `
       <div class="diagram-header">
         <h3>${escapeHtml(diagram.title)}</h3>
-        <span class="kind">${escapeHtml(diagram.kind || 'diagram')}</span>
+        <span class="kind" title="Diagram type">${escapeHtml(kindLabel(diagram.kind))}</span>
+        <button type="button" class="jump-to-spec" data-jump-marker="diagram:${escapeHtml(diagram.id)}" title="Open the spec drawer and jump to this diagram in the source file">View in spec</button>
+        <button type="button" class="jump-to-spec expand-diagram" data-expand-idx="${idx}" aria-pressed="false" title="Expand this diagram to fill the screen (Esc to exit)">Full screen</button>
       </div>
       <div class="diagram-caption" data-caption-idx="${idx}" title="Double-click to edit (wrap key terms in **double asterisks** to bold)">${mdBold(diagram.caption || '')}</div>
       <details class="diagram-detail" open>
         <summary title="Show or hide the longer description of this diagram">About the ${escapeHtml(diagram.title)}</summary>
         <div class="detail-content" data-detail-idx="${idx}" title="Double-click to edit the detail text. Use dash-space for bullets and two-space indent for nested bullets. Wrap key terms in **double asterisks** to bold.">${mdRich(diagram.detail || '')}</div>
-        <div class="hint">Hover a node or arrow to see a description tooltip; click the tooltip to edit it. Click a node to select it, then Delete/Backspace to remove it (and its edges). Drag a node to reposition; arrows and labels follow. Hover a node for its four side dots and shape-picker (◇). Drag a side dot to another node to create a new arrow, or into empty space to spawn a new node in edit mode. Hover an arrow for its handles: drag the blue circle (or the label itself) to bend, drag the green/orange endpoints to reconnect. Double-click a node, edge label, caption, detail, or bullet to edit its text inline. Click the "Add notes…" area below to jot general thoughts about this diagram. Wrap key terms in double asterisks to bold them. Ctrl/⌘+Z undoes the last edit.</div>
+        <div class="hint">${isTable ? HINT_TABLE : HINT_MERMAID}</div>
       </details>
       <div class="diagram-body" data-body-idx="${idx}">
         <div class="diagram-canvas" data-canvas-idx="${idx}"></div>
         <details class="source-pane">
-          <summary title="Show or hide the mermaid source for this diagram"><span class="arrow">◂</span><span class="label">Source</span></summary>
-          <textarea data-source-idx="${idx}" spellcheck="false" title="Edit the mermaid source directly">${escapeHtml(diagram.source)}</textarea>
+          <summary title="${isTable ? SOURCE_HINT_TABLE : SOURCE_HINT_MERMAID}"><span class="arrow">◂</span><span class="label">Source</span></summary>
+          <textarea data-source-idx="${idx}" spellcheck="false" title="${isTable ? SOURCE_EDIT_HINT_TABLE : SOURCE_EDIT_HINT_MERMAID}">${escapeHtml(diagram.source)}</textarea>
         </details>
       </div>
       <div class="diagram-resize-handle" data-resize-idx="${idx}" title="Drag up or down to resize this diagram"></div>
@@ -1010,15 +1981,40 @@
       <div class="diagram-footer">
         <span class="status" data-status-idx="${idx}"></span>
         <div class="actions">
-          <button data-action="rerender" data-idx="${idx}" title="Re-parse the mermaid source and redraw this diagram">Re-render</button>
+          <button data-action="rerender" data-idx="${idx}" title="Re-parse the source and redraw this diagram">Re-render</button>
           <button data-action="revert" data-idx="${idx}" title="Discard this diagram's in-browser edits">Revert</button>
-          <button data-action="diff" data-idx="${idx}" title="Show a line-diff of the current mermaid source vs the original">Show diff</button>
+          <button data-action="diff" data-idx="${idx}" title="Show a line-diff of the current source vs the original">Show diff</button>
         </div>
       </div>
       <div class="diff-view" data-diff-idx="${idx}" hidden></div>
     `;
     document.getElementById('app').appendChild(card);
   });
+
+  // Open questions section: rendered at the bottom, after the diagrams. Only
+  // built when the spec has any open questions declared (or the sectionMap
+  // opts the section in), so specs without open items don't grow an empty
+  // pane. Same edit / round-trip gestures as the top summary lists.
+  let openQuestionsUl = null;
+  if (openQuestionsOptedIn) {
+    const openQuestionsSection = document.createElement('section');
+    openQuestionsSection.className = 'summary open-questions';
+    openQuestionsSection.id = 'section-open-questions';
+    openQuestionsSection.innerHTML = `
+      <div class="summary-heading">
+        <h2>Open questions</h2>
+        <span class="section-label">Unresolved</span>
+        <button type="button" class="jump-to-spec" data-jump-marker="${escapeHtml(sectionMap.summaryOpenQuestions)}" title="Open the spec drawer and jump to Open questions in the source file">View in spec</button>
+      </div>
+      <div class="block">
+        <ul id="summary-open-questions-list" class="summary-list" data-summary="openQuestions"></ul>
+        <button type="button" class="add-bullet" data-target="openQuestions" title="Add a new open question">+ Add question</button>
+      </div>
+      <div class="edit-hint">Double-click a question to edit. Wrap key terms in **double asterisks** to bold them. Enter commits, Esc cancels, empty commit removes the bullet.</div>
+    `;
+    document.getElementById('app').appendChild(openQuestionsSection);
+    openQuestionsUl = document.getElementById('summary-open-questions-list');
+  }
 
   state.diagrams.forEach((_, idx) => renderDiagram(idx));
 
@@ -1033,6 +2029,13 @@
         t.closest('.edge-hover-overlay')
       );
       if (!insideInteractive) deselectAll();
+    });
+  });
+
+  document.querySelectorAll('.expand-diagram').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const idx = +btn.dataset.expandIdx;
+      if (expandedIdx === idx) collapseDiagram(); else expandDiagram(idx);
     });
   });
 
@@ -1096,20 +2099,29 @@
 
   // --- Editable summary bullets ---
   function bulletsFor(key) {
-    return key === 'what' ? state.summary.currentWhat : state.summary.currentWhy;
+    if (key === 'what') return state.summary.currentWhat;
+    if (key === 'why') return state.summary.currentWhy;
+    if (key === 'openQuestions') return state.summary.currentOpenQuestions;
+    return state.summary.currentRules;
   }
-  function ulFor(key) { return key === 'what' ? whatUl : whyUl; }
+  function ulFor(key) {
+    if (key === 'what') return whatUl;
+    if (key === 'why') return whyUl;
+    if (key === 'openQuestions') return openQuestionsUl;
+    return rulesUl;
+  }
 
   function renderBullets(key) {
-    const list = bulletsFor(key);
     const ul = ulFor(key);
+    if (!ul) return;
+    const list = bulletsFor(key);
     ul.innerHTML = list.map((b, i) =>
       `<li data-i="${i}" title="Double-click to edit. Shift+Enter for a new line. Add sub-bullets with two-space indented lines. Wrap key terms in **double asterisks** to bold.">${bulletInnerHTML(b)}</li>`
     ).join('');
     markGlobalDirty();
   }
 
-  function editBulletAt(key, i) {
+  function editBulletAt(key, i, event) {
     const li = ulFor(key).querySelector(`li[data-i="${i}"]`);
     if (!li) return;
     const original = bulletsFor(key)[i] || '';
@@ -1117,16 +2129,20 @@
       const arr = bulletsFor(key);
       if (!next) arr.splice(i, 1); else arr[i] = next;
       renderBullets(key);
-    }, { allowEmpty: true, multiline: true });
+    }, { allowEmpty: true, multiline: true, event });
   }
 
-  ['what', 'why'].forEach(key => {
+  ['what', 'why', 'rules', 'openQuestions'].forEach(key => {
     const ul = ulFor(key);
+    if (!ul) return;
     ul.addEventListener('dblclick', (e) => {
+      // If the user is already editing (contenteditable is on), let the browser
+      // handle the double-click natively — that selects the word under the cursor.
+      if (e.target.closest('[contenteditable="true"]')) return;
       const li = e.target.closest('li[data-i]');
       if (!li) return;
       e.stopPropagation();
-      editBulletAt(key, +li.dataset.i);
+      editBulletAt(key, +li.dataset.i, e);
     });
     renderBullets(key);
   });
@@ -1145,17 +2161,21 @@
   // --- Editable diagram caption + detail ---
   document.querySelectorAll('.diagram-caption').forEach(el => {
     el.addEventListener('dblclick', (e) => {
+      // Already editing → let the browser select the word natively.
+      if (el.getAttribute('contenteditable') === 'true') return;
       e.stopPropagation();
       const idx = +el.dataset.captionIdx;
       inlineEdit(el, state.diagrams[idx].currentCaption, (next) => {
         state.diagrams[idx].currentCaption = next;
         el.innerHTML = mdBold(next);
         markDirty(idx);
-      }, { allowEmpty: true });
+      }, { allowEmpty: true, event: e });
     });
   });
   document.querySelectorAll('.detail-content').forEach(el => {
     el.addEventListener('dblclick', (e) => {
+      // Already editing → let the browser select the word natively.
+      if (el.getAttribute('contenteditable') === 'true') return;
       e.stopPropagation();
       const idx = +el.dataset.detailIdx;
       const wrapper = el.closest('details');
@@ -1164,7 +2184,7 @@
         state.diagrams[idx].currentDetail = next;
         el.innerHTML = mdRich(next);
         markDirty(idx);
-      }, { multiline: true, allowEmpty: true });
+      }, { multiline: true, allowEmpty: true, event: e });
     });
   });
 
@@ -1184,7 +2204,7 @@
   document.querySelectorAll('.diagram-notes').forEach(el => {
     const idx = +el.dataset.notesIdx;
     renderNotes(idx);
-    el.addEventListener('click', () => {
+    el.addEventListener('click', (e) => {
       if (el.getAttribute('contenteditable') === 'true') return;
       el.classList.remove('empty');
       // inlineEdit sets textContent to raw text (with any ** and - lines visible)
@@ -1192,7 +2212,7 @@
         state.diagrams[idx].currentNotes = next;
         renderNotes(idx);
         markDirty(idx);
-      }, { multiline: true, allowEmpty: true });
+      }, { multiline: true, allowEmpty: true, event: e });
     });
   });
 
@@ -1206,16 +2226,19 @@
   if (data.demoMode) {
     document.getElementById('btn-update-spec').disabled = true;
     document.getElementById('btn-undo-spec').disabled = true;
+    document.getElementById('btn-finalize').disabled = true;
   } else if (!serverBase) {
     setServerStatus('Opened via file:// — run `npx spec-tacle_skill serve` and load through that server to enable Update spec.', 'err');
     document.getElementById('btn-update-spec').disabled = true;
     document.getElementById('btn-undo-spec').disabled = true;
+    document.getElementById('btn-finalize').disabled = true;
   } else {
     setServerStatus(`server ${serverBase}`, 'ok');
   }
 
   document.getElementById('btn-update-spec').addEventListener('click', updateSpec);
   document.getElementById('btn-undo-spec').addEventListener('click', undoSpec);
+  document.getElementById('btn-finalize').addEventListener('click', finalizeSpec);
 
   async function updateSpec() {
     if (!serverBase) return;
@@ -1231,8 +2254,30 @@
     if (bulletsChanged(state.summary.currentWhy, state.summary.originalWhy)) {
       payload.sections[sectionMap.summaryWhy] = toMarkdownBullets(state.summary.currentWhy);
     }
+    if (bulletsChanged(state.summary.currentRules, state.summary.originalRules)) {
+      payload.sections[sectionMap.summaryRules] = toMarkdownBullets(state.summary.currentRules);
+    }
+    if (bulletsChanged(state.summary.currentOpenQuestions, state.summary.originalOpenQuestions)) {
+      payload.sections[sectionMap.summaryOpenQuestions] = toMarkdownBullets(state.summary.currentOpenQuestions);
+    }
     state.diagrams.forEach(d => {
-      if (d.currentSource !== d.originalSource) payload.diagrams[d.id] = d.currentSource;
+      // Descriptions decorate the per-diagram Nodes/Edges inventory the server
+      // writes back into the spec, so a change to a tooltip is a spec-level
+      // edit too. Trigger a diagram write when EITHER the mermaid source or
+      // the descriptions map changed.
+      const sourceChanged = d.currentSource !== d.originalSource;
+      const descriptionsChanged = !deepEqual(d.descriptions, d.originalDescriptions);
+      if (sourceChanged || descriptionsChanged) {
+        // 'table' writes raw markdown; every other kind gets an agent-readable
+        // inventory (Nodes + Edges, States + Transitions, or Actors + Messages
+        // depending on the mermaid) followed by the mermaid fence. The old
+        // "string only" shape still works for legacy callers.
+        payload.diagrams[d.id] = {
+          source: d.currentSource,
+          kind: d.kind || '',
+          descriptions: d.descriptions,
+        };
+      }
       if (d.currentCaption !== d.originalCaption) {
         payload.sections[`diagram:${d.id}:caption`] = d.currentCaption;
       }
@@ -1246,6 +2291,12 @@
     const nChanges = Object.keys(payload.sections).length + Object.keys(payload.diagrams).length;
     if (!nChanges) { setServerStatus('nothing to update', 'ok'); return; }
     setServerStatus('saving…');
+    if (window.__specTacleShowLoading) window.__specTacleShowLoading('Saving spec…');
+    // Snapshot the currently-cached spec text so the drawer can diff it against
+    // the freshly-written file for line-level highlights. Empty when the drawer
+    // has never opened — in that case highlight is skipped.
+    const previousSpecText = (typeof specText === 'string' && specLoaded) ? specText : '';
+    if (window.__specTacleMarkLocalWrite) window.__specTacleMarkLocalWrite();
     try {
       const res = await fetch(`${serverBase}/update-spec`, {
         method: 'POST',
@@ -1255,21 +2306,24 @@
       const body = await res.json().catch(() => ({}));
       if (!res.ok || !body.ok) {
         setServerStatus(`update failed: ${body.error || res.statusText || res.status}`, 'err');
+        if (window.__specTacleHideLoading) window.__specTacleHideLoading();
         return;
       }
       // Adopt the new baseline for the fields the server actually wrote, so
-      // further edits diff against the freshly-saved spec. Descriptions are
-      // NOT round-tripped by /update-spec (they only leave the browser via
-      // Export JSON), so we deliberately leave originalDescriptions alone —
-      // otherwise the "edited" indicator would go off and the user would
-      // think their tooltip edits were saved when a refresh would drop them.
+      // further edits diff against the freshly-saved spec. Descriptions ARE
+      // round-tripped now — the server bakes them into the diagram inventory
+      // block — so we sync originalDescriptions to the freshly-saved state
+      // alongside the other fields.
       state.summary.originalWhat = state.summary.currentWhat.slice();
       state.summary.originalWhy = state.summary.currentWhy.slice();
+      state.summary.originalRules = state.summary.currentRules.slice();
+      state.summary.originalOpenQuestions = state.summary.currentOpenQuestions.slice();
       state.diagrams.forEach(d => {
         d.originalSource = d.currentSource;
         d.originalCaption = d.currentCaption;
         d.originalDetail = d.currentDetail;
         d.originalNotes = d.currentNotes;
+        d.originalDescriptions = JSON.parse(JSON.stringify(d.descriptions || {}));
       });
       state.diagrams.forEach((_, i) => markDirty(i));
       markGlobalDirty();
@@ -1282,8 +2336,82 @@
       } else {
         setServerStatus(body.changed ? `saved · backup ${body.backup}` : 'saved (no changes)', 'ok');
       }
+      // Hot-reload the drawer contents so a reader sees the freshly-written
+      // spec + a new entry in the recent-diffs panel, without touching the
+      // in-browser diagram state (positions, annotations, undo stack). The
+      // highlightChanges flag tells the drawer to diff previousSpecText
+      // against the newly-loaded file and color the added/changed lines.
+      if (body.changed && window.__specTacleHotReload) {
+        try {
+          await window.__specTacleHotReload({
+            highlightChanges: true,
+            previousText: previousSpecText,
+          });
+        } catch (_) { /* drawer error is surfaced inside the drawer itself */ }
+      }
     } catch (err) {
       setServerStatus(`update failed: ${err.message}. Is \`npx spec-tacle_skill serve\` running?`, 'err');
+    } finally {
+      if (window.__specTacleHideLoading) window.__specTacleHideLoading();
+    }
+  }
+
+  // One-way clean pass: ask the server to strip spec-tacle markers + auto-
+  // inventories from the spec file, then delete backups, the consistency
+  // queue, and agent logs. Update/Undo become meaningless afterward (nothing
+  // for them to write into), so they're disabled once the server confirms.
+  // The spec's actual content stays intact — a re-run of spec-tacle on the
+  // file will re-insert markers on the next Update.
+  async function finalizeSpec() {
+    if (!serverBase) return;
+    const msg = [
+      'Finalize this spec?',
+      '',
+      'This will:',
+      '  • strip every <!-- spec-tacle:… --> marker comment from the spec file',
+      '  • drop the auto-generated Nodes/Edges inventory before each mermaid fence',
+      '  • delete the backups/ directory next to the spec',
+      '  • clear the consistency queue and delete agent logs',
+      '',
+      'Your prose, mermaid sources, and tables stay intact — this only removes',
+      'spec-tacle scaffolding. Update spec and Undo will be disabled afterward.',
+      '',
+      'Continue?',
+    ].join('\n');
+    if (!confirm(msg)) return;
+    setServerStatus('finalizing…');
+    if (window.__specTacleShowLoading) window.__specTacleShowLoading('Finalizing spec…');
+    if (window.__specTacleMarkLocalWrite) window.__specTacleMarkLocalWrite();
+    try {
+      const res = await fetch(`${serverBase}/finalize`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ specPath: data.specPath })
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok || !body.ok) {
+        setServerStatus(`finalize failed: ${body.error || res.statusText || res.status}`, 'err');
+        return;
+      }
+      const removed = Array.isArray(body.removed) ? body.removed : [];
+      const summary = removed.length
+        ? `finalized — removed ${removed.join('; ')}`
+        : 'finalized — nothing to remove';
+      setServerStatus(summary, 'ok');
+      // Update/Undo would just re-inject markers or restore backups we
+      // just deleted. Both are meaningless post-finalize, so lock them.
+      for (const id of ['btn-update-spec', 'btn-undo-spec', 'btn-finalize']) {
+        const b = document.getElementById(id);
+        if (b) b.disabled = true;
+      }
+      if (window.__specTacleHotReload) {
+        try { await window.__specTacleHotReload(); }
+        catch (_) { /* surfaced inside drawer */ }
+      }
+    } catch (err) {
+      setServerStatus(`finalize failed: ${err.message}. Is \`npx spec-tacle_skill serve\` running?`, 'err');
+    } finally {
+      if (window.__specTacleHideLoading) window.__specTacleHideLoading();
     }
   }
 
@@ -1291,6 +2419,8 @@
     if (!serverBase) return;
     if (!confirm('Undo the most recent Update — restore the last backup? The visualizer will still show your current in-browser edits until you refresh.')) return;
     setServerStatus('undoing…');
+    if (window.__specTacleShowLoading) window.__specTacleShowLoading('Restoring backup…');
+    if (window.__specTacleMarkLocalWrite) window.__specTacleMarkLocalWrite();
     try {
       const res = await fetch(`${serverBase}/undo`, {
         method: 'POST',
@@ -1303,8 +2433,14 @@
         return;
       }
       setServerStatus(`restored from ${body.restored_from} · ${body.remaining_backups} backup(s) remain · refresh to reload diagrams`, 'ok');
+      if (window.__specTacleHotReload) {
+        try { await window.__specTacleHotReload(); }
+        catch (_) { /* surfaced inside drawer */ }
+      }
     } catch (err) {
       setServerStatus(`undo failed: ${err.message}. Is \`npx spec-tacle_skill serve\` running?`, 'err');
+    } finally {
+      if (window.__specTacleHideLoading) window.__specTacleHideLoading();
     }
   }
 
@@ -1313,7 +2449,7 @@
   }
   function markGlobalDirty() {
     const s = state.summary;
-    const summaryDirty = bulletsChanged(s.currentWhat, s.originalWhat) || bulletsChanged(s.currentWhy, s.originalWhy);
+    const summaryDirty = bulletsChanged(s.currentWhat, s.originalWhat) || bulletsChanged(s.currentWhy, s.originalWhy) || bulletsChanged(s.currentRules, s.originalRules) || bulletsChanged(s.currentOpenQuestions, s.originalOpenQuestions);
     const diagramsDirty = state.diagrams.some(d =>
       d.currentSource !== d.originalSource ||
       d.currentCaption !== d.originalCaption ||
@@ -1346,8 +2482,12 @@
     pushUndo();
     state.summary.currentWhat = state.summary.originalWhat.slice();
     state.summary.currentWhy = state.summary.originalWhy.slice();
+    state.summary.currentRules = state.summary.originalRules.slice();
+    state.summary.currentOpenQuestions = state.summary.originalOpenQuestions.slice();
     renderBullets('what');
     renderBullets('why');
+    renderBullets('rules');
+    renderBullets('openQuestions');
     state.diagrams.forEach((d, i) => {
       d.currentSource = d.originalSource;
       d.currentCaption = d.originalCaption;
@@ -1363,15 +2503,24 @@
       const detEl = document.querySelector(`[data-detail-idx="${i}"]`);
       if (detEl) detEl.innerHTML = mdRich(d.currentDetail);
       renderNotes(i);
-      renderDiagram(i);
+      renderDiagram(i, { keepLayout: false });
     });
     markGlobalDirty();
   });
 
-  async function renderDiagram(idx) {
+  // keepLayout: pin nodes that were already on screen to where they sit now, so
+  // a source edit doesn't let mermaid's fresh layout scatter a hand-arranged
+  // diagram. Undo, reset, and revert pass false because their stored offsets
+  // already describe the layout they want.
+  async function renderDiagram(idx, { keepLayout = true } = {}) {
     const diagram = state.diagrams[idx];
     const canvas = document.querySelector(`[data-canvas-idx="${idx}"]`);
+    if (diagram.kind === 'table') {
+      renderTableDiagram(canvas, idx);
+      return;
+    }
     try {
+      const prevLayout = keepLayout ? captureNodeLayout(canvas) : null;
       const id = `mermaid-${idx}-${Date.now()}`;
       const { svg } = await mermaid.render(id, diagram.currentSource);
       canvas.innerHTML = svg;
@@ -1379,12 +2528,137 @@
       // for tall/narrow (TD) diagrams where a small sideways drag would otherwise
       // trigger a viewBox expansion and shrink everything.
       ensureViewBoxRoom(canvas);
+      if (prevLayout) reconcileLayout(canvas, idx, prevLayout);
       wireInteractions(canvas, idx);
       applyStoredPositions(canvas, idx);
       renderAnnotations(idx);
     } catch (err) {
       canvas.innerHTML = `<pre style="color: var(--warn); white-space: pre-wrap;">Mermaid parse error:\n\n${escapeHtml(err.message || String(err))}</pre>`;
     }
+  }
+
+  // --- Table-kind rendering ---
+  //
+  // Parse a markdown pipe-table into { headers, rows }. Both are arrays of
+  // strings. The alignment row (|---|:--:|...|) is recognized and skipped.
+  // Leading/trailing pipes on each row are optional. Anything before the
+  // header line (blank lines, a leading "Table:" or a stray comment) is
+  // tolerated — we look for the first line whose next non-blank sibling is
+  // an alignment row.
+  function parseMarkdownTable(src) {
+    const lines = String(src || '').split(/\r?\n/);
+    const rows = [];
+    let headers = null;
+    let headerFound = false;
+    const isAlign = (s) => /^\s*\|?\s*:?-{2,}:?(?:\s*\|\s*:?-{2,}:?)*\s*\|?\s*$/.test(s);
+    const splitRow = (s) => {
+      let t = s.trim();
+      if (t.startsWith('|')) t = t.slice(1);
+      if (t.endsWith('|')) t = t.slice(0, -1);
+      // Preserve empty cells so column count stays stable.
+      return t.split('|').map(c => c.trim());
+    };
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      if (!line.trim()) continue;
+      if (!headerFound) {
+        // Look ahead: is the next non-blank line an alignment row?
+        let j = i + 1;
+        while (j < lines.length && !lines[j].trim()) j++;
+        if (j < lines.length && isAlign(lines[j])) {
+          headers = splitRow(line);
+          headerFound = true;
+          i = j; // skip alignment row
+          continue;
+        }
+        // No alignment row after this line — treat as commentary and skip.
+        continue;
+      }
+      rows.push(splitRow(line));
+    }
+    if (!headers) throw new Error('Table needs a header row followed by an alignment row (`|---|---|`).');
+    const width = headers.length;
+    // Normalize row widths so the HTML render lines up even if a row is short/long.
+    for (const r of rows) {
+      while (r.length < width) r.push('');
+      if (r.length > width) r.length = width;
+    }
+    return { headers, rows };
+  }
+
+  // Serialize back to a markdown pipe-table. Column widths pad to the max so
+  // the raw markdown source stays scannable when saved into the spec.
+  function stringifyMarkdownTable(headers, rows) {
+    const width = headers.length;
+    const cols = Array.from({ length: width }, (_, c) => {
+      let m = String(headers[c] || '').length;
+      for (const r of rows) m = Math.max(m, String(r[c] || '').length);
+      return Math.max(3, m);
+    });
+    const line = (cells) => '| ' + cells.map((v, c) => String(v || '').padEnd(cols[c], ' ')).join(' | ') + ' |';
+    const sep = '|' + cols.map(w => '-'.repeat(w + 2)).join('|') + '|';
+    return [line(headers), sep, ...rows.map(line)].join('\n');
+  }
+
+  function renderTableDiagram(canvas, idx) {
+    const diagram = state.diagrams[idx];
+    let parsed;
+    try {
+      parsed = parseMarkdownTable(diagram.currentSource);
+    } catch (err) {
+      canvas.innerHTML = `<div class="spec-tacle-table"><div class="parse-error">Table parse error:\n\n${escapeHtml(err.message || String(err))}</div></div>`;
+      return;
+    }
+    const { headers, rows } = parsed;
+    const thHtml = headers.map((h, c) =>
+      `<th data-cell="h:${c}" title="Double-click to edit this column header. Wrap key terms in **double asterisks** to bold.">${mdBold(h)}</th>`
+    ).join('');
+    const bodyHtml = rows.map((r, ri) =>
+      '<tr>' + r.map((v, ci) =>
+        `<td data-cell="${ri}:${ci}" title="Double-click to edit. Wrap key terms in **double asterisks** to bold.">${mdBold(v)}</td>`
+      ).join('') + '</tr>'
+    ).join('');
+    canvas.innerHTML =
+      `<div class="spec-tacle-table-wrap">` +
+        `<table class="spec-tacle-table">` +
+          `<thead><tr>${thHtml}</tr></thead>` +
+          `<tbody>${bodyHtml}</tbody>` +
+        `</table>` +
+      `</div>`;
+    wireTableCellEditing(canvas, idx);
+  }
+
+  function wireTableCellEditing(canvas, idx) {
+    canvas.querySelectorAll('th[data-cell], td[data-cell]').forEach(cell => {
+      cell.addEventListener('dblclick', (e) => {
+        // Already editing → let the browser select the word natively.
+        if (cell.getAttribute('contenteditable') === 'true') return;
+        e.stopPropagation();
+        const parsed = safeParseTable(state.diagrams[idx].currentSource);
+        if (!parsed) return;
+        const [scope, a, b] = parseCellRef(cell.dataset.cell);
+        const original = scope === 'h' ? parsed.headers[a] : parsed.rows[a][b];
+        inlineEdit(cell, original || '', (next) => {
+          const p2 = safeParseTable(state.diagrams[idx].currentSource);
+          if (!p2) return;
+          if (scope === 'h') p2.headers[a] = next; else p2.rows[a][b] = next;
+          state.diagrams[idx].currentSource = stringifyMarkdownTable(p2.headers, p2.rows);
+          syncSourceTextarea(idx);
+          markDirty(idx);
+          renderTableDiagram(canvas, idx);
+        }, { allowEmpty: true, multiline: false, event: e });
+      });
+    });
+  }
+
+  function safeParseTable(src) {
+    try { return parseMarkdownTable(src); } catch (_) { return null; }
+  }
+
+  function parseCellRef(ref) {
+    const parts = String(ref || '').split(':');
+    if (parts[0] === 'h') return ['h', +parts[1], -1];
+    return ['b', +parts[0], +parts[1]];
   }
 
   function ensureViewBoxRoom(canvas) {
@@ -1543,13 +2817,15 @@
 
   function appendEdgeLine(source, fromId, toId) {
     const trailing = source.endsWith('\n') ? '' : '\n';
-    return `${source}${trailing}  ${fromId} --> ${toId}`;
+    return `${source}${trailing}  ${fromId} -->|"label"| ${toId}`;
   }
 
   // Drop a node from mermaid source: its standalone shape declaration and any
   // line that references it as an edge participant. Chained edges through the
   // deleted node collapse (the whole line is removed) — users can rewire.
   function deleteNodeFromSource(source, id) {
+    // Pull the id out of `class a,b name` lines first so deleting `a` keeps `b`'s class.
+    source = pruneUnusedColorDefs(removeFromClassLines(source, id, false));
     const wordRe = new RegExp(`(?:^|[\\s|>])${id}(?:$|[\\s\\[\\{\\(|<>\\-])`);
     const kept = source.split('\n').filter(line => !wordRe.test(line));
     return kept.join('\n').replace(/\n{3,}/g, '\n\n');
@@ -1613,6 +2889,140 @@
       const h = Math.abs(br.y - tl.y);
       return { x, y, width: w, height: h, cx: x + w / 2, cy: y + h / 2 };
     } catch (e) { return null; }
+  }
+
+  // Snapshot where each node currently sits (svg user space, offsets included).
+  function captureNodeLayout(canvas) {
+    const svg = canvas && canvas.querySelector('svg');
+    if (!svg) return null;
+    const layout = new Map();
+    svg.querySelectorAll('.node').forEach(node => {
+      const bb = getNodeSvgBBox(node);
+      if (bb && bb.width > 0 && bb.height > 0) layout.set(extractNodeId(node), bb);
+    });
+    if (!layout.size) return null;
+    layout.viewBox = svg.getAttribute('viewBox');
+    layout.floor = _viewBoxMin.get(canvas);
+    return layout;
+  }
+
+  // Rewrite nodePositions so nodes that existed before the re-render land where
+  // they were. New nodes follow the nodes they connect to, then get nudged off
+  // anything they overlap. Runs before offsets are applied, so each node's
+  // bbox here is mermaid's base position.
+  function reconcileLayout(canvas, idx, prevLayout) {
+    const svg = canvas.querySelector('svg');
+    if (!svg) return;
+    const d = state.diagrams[idx];
+    const base = new Map();
+    svg.querySelectorAll('.node').forEach(node => {
+      const bb = getNodeSvgBBox(node);
+      if (bb && bb.width > 0 && bb.height > 0) base.set(extractNodeId(node), bb);
+    });
+    if (!base.size) return;
+
+    const positions = {};
+    const fresh = [];
+    base.forEach((bb, id) => {
+      const prev = prevLayout.get(id);
+      if (!prev) { fresh.push(id); return; }
+      const dx = prev.cx - bb.cx, dy = prev.cy - bb.cy;
+      if (Math.abs(dx) > 0.5 || Math.abs(dy) > 0.5) positions[id] = { x: dx, y: dy };
+    });
+    // Nothing on screen carried over (e.g. the whole source was replaced):
+    // keep the old offsets rather than inventing a layout.
+    if (fresh.length === base.size) return;
+    // Same user space as before, so the old framing shows the pinned nodes
+    // exactly where they were instead of zooming to mermaid's new bounds.
+    if (prevLayout.viewBox) {
+      svg.setAttribute('viewBox', prevLayout.viewBox);
+      const [, , w, h] = prevLayout.viewBox.split(/[\s,]+/).map(parseFloat);
+      if (Number.isFinite(w) && Number.isFinite(h)) { svg.setAttribute('width', w); svg.setAttribute('height', h); }
+    }
+    if (prevLayout.floor) _viewBoxMin.set(canvas, prevLayout.floor);
+
+    const deltaOf = (id) => positions[id] || { x: 0, y: 0 };
+    const pinned = [...base.keys()].filter(id => prevLayout.has(id));
+    const avg = (ids) => {
+      const sum = ids.reduce((a, id) => ({ x: a.x + deltaOf(id).x, y: a.y + deltaOf(id).y }), { x: 0, y: 0 });
+      return { x: sum.x / ids.length, y: sum.y / ids.length };
+    };
+    const globalShift = avg(pinned);
+    const edges = parseEdges(d.currentSource);
+    const placed = pinned.map(id => {
+      const bb = base.get(id), off = deltaOf(id);
+      return { x: bb.x + off.x, y: bb.y + off.y, w: bb.width, h: bb.height };
+    });
+    const GAP = 16;
+    fresh.forEach(id => {
+      if (d.pendingRelocations && d.pendingRelocations[id]) return; // dropped at a chosen spot
+      const neighbors = [...new Set(edges
+        .filter(e => e.source === id || e.target === id)
+        .map(e => e.source === id ? e.target : e.source)
+        .filter(n => prevLayout.has(n) && base.has(n)))];
+      let off = neighbors.length ? avg(neighbors) : { ...globalShift };
+      const bb = base.get(id);
+      // Push out of any overlap along the shallower axis; a few passes settle it.
+      for (let pass = 0; pass < 12; pass++) {
+        const box = { x: bb.x + off.x, y: bb.y + off.y, w: bb.width, h: bb.height };
+        const hit = placed.find(p =>
+          box.x < p.x + p.w + GAP && p.x < box.x + box.w + GAP &&
+          box.y < p.y + p.h + GAP && p.y < box.y + box.h + GAP);
+        if (!hit) break;
+        const pushRight = (hit.x + hit.w + GAP) - box.x;
+        const pushLeft  = (box.x + box.w + GAP) - hit.x;
+        const pushDown  = (hit.y + hit.h + GAP) - box.y;
+        const pushUp    = (box.y + box.h + GAP) - hit.y;
+        const m = Math.min(pushRight, pushLeft, pushDown, pushUp);
+        if (m === pushRight) off.x += pushRight;
+        else if (m === pushLeft) off.x -= pushLeft;
+        else if (m === pushDown) off.y += pushDown;
+        else off.y -= pushUp;
+      }
+      if (Math.abs(off.x) > 0.5 || Math.abs(off.y) > 0.5) positions[id] = off;
+      placed.push({ x: bb.x + off.x, y: bb.y + off.y, w: bb.width, h: bb.height });
+    });
+    d.nodePositions = positions;
+  }
+
+  // Point where the ray from a node's center toward `aim` leaves its outline.
+  // Circles/ellipses and diamonds get their true outline; every other shape
+  // is treated as its bounding box, which is close enough for rounded rects,
+  // cylinders, and stadiums.
+  function nodeOutlinePoint(nodeEl, box, aim) {
+    const dx = aim.x - box.cx, dy = aim.y - box.cy;
+    if (Math.hypot(dx, dy) < 1) return null;
+    const hw = box.width / 2, hh = box.height / 2;
+    if (hw <= 0 || hh <= 0) return null;
+    const shape = nodeEl.querySelector(':scope > circle, :scope > ellipse, :scope > polygon, :scope > rect, :scope > path');
+    let t;
+    if (shape && (shape.tagName === 'circle' || shape.tagName === 'ellipse')) {
+      t = 1 / Math.hypot(dx / hw, dy / hh);
+    } else if (shape && shape.tagName === 'polygon' && isDiamond(shape)) {
+      t = 1 / (Math.abs(dx) / hw + Math.abs(dy) / hh);
+    } else {
+      t = Math.min(dx ? hw / Math.abs(dx) : Infinity, dy ? hh / Math.abs(dy) : Infinity);
+    }
+    if (!Number.isFinite(t) || t >= 1) return null; // aim point sits inside the node
+    return { x: box.cx + dx * t, y: box.cy + dy * t };
+  }
+
+  // A four-point polygon whose corners sit on the midpoints of its own bbox.
+  function isDiamond(poly) {
+    const pts = (poly.getAttribute('points') || '').trim().split(/[\s,]+/).map(parseFloat);
+    if (pts.length !== 8 || !pts.every(Number.isFinite)) return false;
+    const xs = pts.filter((_, i) => i % 2 === 0), ys = pts.filter((_, i) => i % 2 === 1);
+    const minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys);
+    const midX = (minX + maxX) / 2, midY = (minY + maxY) / 2;
+    const tol = Math.max(maxX - minX, maxY - minY) * 0.05 + 0.5;
+    const near = (a, b) => Math.abs(a - b) <= tol;
+    for (let i = 0; i < 4; i++) {
+      const x = xs[i], y = ys[i];
+      const onMidX = near(x, midX) && (near(y, minY) || near(y, maxY));
+      const onMidY = near(y, midY) && (near(x, minX) || near(x, maxX));
+      if (!onMidX && !onMidY) return false;
+    }
+    return true;
   }
 
   function insertLineAfterHeader(source, line) {
@@ -1686,12 +3096,14 @@
     return shape;
   }
 
+  // Matches any mermaid flowchart shape wrapper (with its label) as group 1.
+  const SHAPE_SEARCH = '(\\[\\([^)]*\\)\\]|\\[\\[[^\\]]*\\]\\]|\\[/[^/]*/\\]|\\[/[^\\\\]*\\\\\\]|\\[\\\\[^/]*/\\]|\\[\\\\[^\\\\]*\\\\\\]|\\[[^\\]]*\\]|\\{\\{[^}]*\\}\\}|\\{[^}]*\\}|\\(\\(\\([^)]*\\)\\)\\)|\\(\\(\\[[^\\]]*\\]\\)\\)|\\(\\([^)]*\\)\\)|\\(\\[[^\\]]*\\]\\)|\\([^)]*\\))';
+
   function changeNodeShape(source, id, shapeKey, fallbackLabel) {
     const wrap = SHAPE_WRAPPERS[shapeKey];
     if (!wrap) return null;
 
-    const shapeSearch = '(\\[\\([^)]*\\)\\]|\\[\\[[^\\]]*\\]\\]|\\[/[^/]*/\\]|\\[/[^\\\\]*\\\\\\]|\\[\\\\[^/]*/\\]|\\[\\\\[^\\\\]*\\\\\\]|\\[[^\\]]*\\]|\\{\\{[^}]*\\}\\}|\\{[^}]*\\}|\\(\\(\\([^)]*\\)\\)\\)|\\(\\(\\[[^\\]]*\\]\\)\\)|\\(\\([^)]*\\)\\)|\\(\\[[^\\]]*\\]\\)|\\([^)]*\\))';
-    const re = new RegExp(`\\b${id}\\s*${shapeSearch}`);
+    const re = new RegExp(`\\b${id}\\s*${SHAPE_SEARCH}`);
     const m = re.exec(source);
     if (m) {
       const label = extractLabelFromShape(m[1]) || fallbackLabel || id;
@@ -1701,6 +3113,114 @@
     // No existing shape decl anywhere — add a standalone one.
     const label = (fallbackLabel || id).replace(/"/g, '\\"');
     return insertLineAfterHeader(source, `  ${id}${wrap(label)}`);
+  }
+
+
+  // --- Node colors ---
+  // Colors live in the mermaid source as `classDef <name> …` plus
+  // `class <ids> <name>` lines, so they round-trip into the spec and render
+  // anywhere mermaid does. The classDef carries the light-theme colors; the
+  // injected stylesheet below re-tints the same class names in dark mode.
+  const NODE_COLORS = [
+    { key: 'blue',   label: 'Blue',   fill: '#dbeafe', stroke: '#2563eb', text: '#1e3a8a', darkFill: '#1e3a5f', darkStroke: '#60a5fa', darkText: '#dbeafe' },
+    { key: 'purple', label: 'Purple', fill: '#ede9fe', stroke: '#7c3aed', text: '#4c1d95', darkFill: '#2e2350', darkStroke: '#a78bfa', darkText: '#ede9fe' },
+    { key: 'teal',   label: 'Teal',   fill: '#ccfbf1', stroke: '#0d9488', text: '#134e4a', darkFill: '#133d3a', darkStroke: '#2dd4bf', darkText: '#ccfbf1' },
+    { key: 'green',  label: 'Green',  fill: '#dcfce7', stroke: '#16a34a', text: '#14532d', darkFill: '#173d2a', darkStroke: '#4ade80', darkText: '#dcfce7' },
+    { key: 'amber',  label: 'Amber',  fill: '#fef3c7', stroke: '#d97706', text: '#78350f', darkFill: '#3f2e0c', darkStroke: '#fbbf24', darkText: '#fef3c7' },
+    { key: 'red',    label: 'Red',    fill: '#fee2e2', stroke: '#dc2626', text: '#7f1d1d', darkFill: '#451a1a', darkStroke: '#f87171', darkText: '#fee2e2' },
+    { key: 'gray',   label: 'Gray',   fill: '#f1f5f9', stroke: '#64748b', text: '#1e293b', darkFill: '#262b33', darkStroke: '#94a3b8', darkText: '#e2e8f0' },
+  ];
+  const NODE_COLOR_KEYS = NODE_COLORS.map(c => c.key);
+  const COLOR_ALT = NODE_COLOR_KEYS.join('|');
+  const CLASS_LINE_RE = /^\s*class\s+([A-Za-z0-9_,\s]+?)\s+([A-Za-z0-9_]+)\s*;?\s*$/;
+  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+  (function injectDarkNodeColors() {
+    // `#app` outranks mermaid's `#mermaid-<id> .blue>*` rules; both are !important.
+    const css = NODE_COLORS.map(c => `
+      #app .diagram-canvas .node.${c.key} > * { fill: ${c.darkFill} !important; stroke: ${c.darkStroke} !important; }
+      #app .diagram-canvas .node.${c.key} span,
+      #app .diagram-canvas .node.${c.key} p { color: ${c.darkText} !important; }
+      #app .diagram-canvas .node.${c.key} tspan,
+      #app .diagram-canvas .node.${c.key} text { fill: ${c.darkText} !important; }`).join('');
+    const style = document.createElement('style');
+    style.textContent = `@media (prefers-color-scheme: dark) {${css}\n}`;
+    document.head.appendChild(style);
+  })();
+
+  function supportsNodeColor(source) {
+    return /^\s*(flowchart|graph|stateDiagram)/.test(source);
+  }
+
+  function classDefLine(c) {
+    return `  classDef ${c.key} fill:${c.fill},stroke:${c.stroke},color:${c.text}`;
+  }
+
+  function getNodeColor(source, id) {
+    let found = null;
+    for (const line of source.split('\n')) {
+      const m = CLASS_LINE_RE.exec(line);
+      if (m && NODE_COLOR_KEYS.includes(m[2]) && m[1].split(',').map(s => s.trim()).includes(id)) found = m[2];
+    }
+    const inline = new RegExp(`(?:^|[^A-Za-z0-9_])${id}(?:\\s*${SHAPE_SEARCH})?:::(${COLOR_ALT})\\b`).exec(source);
+    return inline ? inline[inline.length - 1] : found;
+  }
+
+  // Remove `id` from palette `class` lines (dropping lines that end up empty).
+  // With `onlyPalette` false it strips the id from every class line — used
+  // when the node itself is deleted.
+  function removeFromClassLines(source, id, onlyPalette = true) {
+    const out = [];
+    for (const line of source.split('\n')) {
+      const m = CLASS_LINE_RE.exec(line);
+      if (!m || (onlyPalette && !NODE_COLOR_KEYS.includes(m[2]))) { out.push(line); continue; }
+      const ids = m[1].split(',').map(s => s.trim()).filter(Boolean);
+      if (!ids.includes(id)) { out.push(line); continue; }
+      const rest = ids.filter(x => x !== id);
+      if (rest.length) out.push(`${line.match(/^\s*/)[0]}class ${rest.join(',')} ${m[2]}`);
+    }
+    return out.join('\n');
+  }
+
+  // Drop palette classDefs that no node uses any more.
+  function pruneUnusedColorDefs(source) {
+    const lines = source.split('\n');
+    const used = new Set();
+    for (const line of lines) {
+      const m = CLASS_LINE_RE.exec(line);
+      if (m) used.add(m[2]);
+    }
+    for (const m of source.matchAll(new RegExp(`:::(${COLOR_ALT})\\b`, 'g'))) used.add(m[1]);
+    const defRe = new RegExp(`^\\s*classDef\\s+(${COLOR_ALT})\\s`);
+    return lines.filter(line => {
+      const m = defRe.exec(line);
+      return !m || used.has(m[1]);
+    }).join('\n');
+  }
+
+  function setNodeColor(source, id, colorKey) {
+    let next = removeFromClassLines(source, id);
+    next = next.replace(new RegExp(`((?:^|[^A-Za-z0-9_])${id}(?:\\s*${SHAPE_SEARCH})?):::(?:${COLOR_ALT})\\b`, 'g'), '$1');
+    // An explicit `style id …` line would override the class, so a picked
+    // color replaces it.
+    next = next.split('\n').filter(line => !new RegExp(`^\\s*style\\s+${id}\\s`).test(line)).join('\n');
+    const color = NODE_COLORS.find(c => c.key === colorKey);
+    if (color) {
+      next = next.replace(/\s+$/, '');
+      if (!new RegExp(`^\\s*classDef\\s+${color.key}\\s`, 'm').test(next)) next += '\n' + classDefLine(color);
+      next += `\n  class ${id} ${color.key}`;
+    }
+    return pruneUnusedColorDefs(next);
+  }
+
+  function applyColorChange(idx, nodeId, colorKey) {
+    const nextSrc = setNodeColor(state.diagrams[idx].currentSource, nodeId, colorKey);
+    if (nextSrc === state.diagrams[idx].currentSource) return;
+    pushUndo();
+    state.diagrams[idx].currentSource = nextSrc;
+    syncSourceTextarea(idx);
+    markDirty(idx);
+    renderDiagram(idx);
   }
 
   // --- Shape picker menu ---
@@ -1721,6 +3241,17 @@
   let shapeMenuCloser = null;
   function openShapeMenu(clientX, clientY, diagramIdx, nodeId, currentLabel) {
     const menu = document.getElementById('shape-menu');
+    const source = state.diagrams[diagramIdx].currentSource;
+    const currentColor = getNodeColor(source, nodeId);
+    const colorSection = !supportsNodeColor(source) ? '' :
+      `<div class="menu-header color-header">Color</div>
+      <div class="color-row">
+        <button type="button" class="color-swatch none${currentColor ? '' : ' current'}" data-color="" title="No color (theme default)" aria-label="No color"></button>` +
+      NODE_COLORS.map(c => `
+        <button type="button" class="color-swatch${c.key === currentColor ? ' current' : ''}" data-color="${c.key}"
+          style="background:${prefersDark ? c.darkFill : c.fill};border-color:${prefersDark ? c.darkStroke : c.stroke}"
+          title="${c.label}" aria-label="${c.label}"></button>`).join('') +
+      `</div>`;
     menu.innerHTML =
       `<div class="menu-header">Shape for “${nodeId}”</div>` +
       SHAPES.map(s => `
@@ -1728,7 +3259,7 @@
           <span class="shape-preview">${s.svg}</span>
           <span class="shape-label">${s.label}</span>
         </button>
-      `).join('');
+      `).join('') + colorSection;
     menu.classList.add('open');
     // Clamp within viewport.
     const rect = menu.getBoundingClientRect();
@@ -1739,6 +3270,12 @@
     menu.style.top = Math.max(4, top) + 'px';
 
     menu.onclick = (e) => {
+      const swatch = e.target.closest('.color-swatch');
+      if (swatch) {
+        closeShapeMenu();
+        applyColorChange(diagramIdx, nodeId, swatch.dataset.color || null);
+        return;
+      }
       const btn = e.target.closest('.shape-btn');
       if (!btn) return;
       const shape = btn.dataset.shape;
@@ -1815,6 +3352,26 @@
     if (ta) ta.value = state.diagrams[idx].currentSource;
   }
 
+  function caretRangeAtPoint(target, clientX, clientY) {
+    const r = document.createRange();
+    if (Number.isFinite(clientX) && Number.isFinite(clientY)) {
+      if (document.caretRangeFromPoint) {
+        const hit = document.caretRangeFromPoint(clientX, clientY);
+        if (hit && target.contains(hit.startContainer)) return hit;
+      } else if (document.caretPositionFromPoint) {
+        const cp = document.caretPositionFromPoint(clientX, clientY);
+        if (cp && target.contains(cp.offsetNode)) {
+          r.setStart(cp.offsetNode, cp.offset);
+          r.collapse(true);
+          return r;
+        }
+      }
+    }
+    r.selectNodeContents(target);
+    r.collapse(false);
+    return r;
+  }
+
   function inlineEdit(target, originalText, onCommit, opts) {
     opts = opts || {};
     const multiline = !!opts.multiline;
@@ -1824,12 +3381,23 @@
     target.setAttribute('spellcheck', 'false');
     target.textContent = originalText;
     target.focus();
-    // Select all
+    // Place the caret. On a double-click entry (event.detail === 2) we drop the
+    // caret at the click point so the user can start typing in place instead of
+    // wiping out the existing text. Triple-click is handled natively by the
+    // browser once the element is contenteditable (the third click selects the
+    // line/paragraph). No event (programmatic entry, e.g. a freshly added empty
+    // bullet) or event.detail >= 3 falls back to select-all.
     const sel = window.getSelection();
-    const range = document.createRange();
-    range.selectNodeContents(target);
     sel.removeAllRanges();
-    sel.addRange(range);
+    const ev = opts.event;
+    const wantSelectAll = !ev || (typeof ev.detail === 'number' && ev.detail >= 3) || !originalText;
+    if (wantSelectAll) {
+      const range = document.createRange();
+      range.selectNodeContents(target);
+      sel.addRange(range);
+    } else {
+      sel.addRange(caretRangeAtPoint(target, ev.clientX, ev.clientY));
+    }
 
     const readText = () => {
       // innerText preserves line breaks from <br> etc.; textContent flattens them.
@@ -1907,6 +3475,32 @@
     return (clone.textContent || '').trim();
   }
 
+  // Insert a label onto an edge that currently has none (Form A: `A --> B`).
+  // Rebuilds the edge's fullText with `|"label"|` right after the arrow, then
+  // does a single string replace in the source. Returns true on success.
+  function addEdgeLabelInSource(idx, edge, newLabel) {
+    if (!edge || !edge.fullText || edge.label != null) return false;
+    const src = state.diagrams[idx].currentSource;
+    const arrow = edge.arrow;
+    // Find where the arrow sits inside fullText. lastIndexOf so `<-->` matches
+    // the trailing `>` correctly and we insert after the whole token.
+    const i = edge.fullText.indexOf(arrow);
+    if (i < 0) return false;
+    const escaped = newLabel.replace(/"/g, '\\"');
+    const newFull =
+      edge.fullText.substring(0, i + arrow.length) +
+      `|"${escaped}"|` +
+      edge.fullText.substring(i + arrow.length);
+    const next = src.replace(edge.fullText, newFull);
+    if (next === src) return false;
+    pushUndo();
+    state.diagrams[idx].currentSource = next;
+    const ta = document.querySelector(`textarea[data-source-idx="${idx}"]`);
+    if (ta) ta.value = next;
+    markDirty(idx);
+    return true;
+  }
+
   function replaceInSource(idx, oldLabel, newLabel) {
     // Escape the old label for a literal regex; then require it to sit inside
     // a mermaid label bracket (["..."], [...], {"..."}, {...}, ((...)), (...), etc.)
@@ -1938,15 +3532,40 @@
     // Side-dot registry keyed by node id. Declared here so attachConnectDots
     // (called during the node loop) can populate it without a TDZ error.
     const nodeConnectDots = new Map();
-    function redrawEdgeEntry(entry) {
-      if (!entry.sourceEdge) return; // can't compute — no id mapping
+    const nodeElById = new Map();
+    svg.querySelectorAll('.node').forEach(n => nodeElById.set(extractNodeId(n), n));
+    // Where an edge should start and end given the current node offsets and
+    // bend. Mermaid pins each end to a side chosen for its own layout; once a
+    // node moves or the arrow bends, that side can end up facing away, so each
+    // end is re-clipped to the node outline on the side facing the other end
+    // (or the bend point).
+    function currentEndpoints(entry) {
       const positions = state.diagrams[idx].nodePositions;
       const srcOff = positions[entry.sourceEdge.source] || { x: 0, y: 0 };
       const tgtOff = positions[entry.sourceEdge.target] || { x: 0, y: 0 };
-      const startAdj = { x: entry.endpoints.start.x + srcOff.x, y: entry.endpoints.start.y + srcOff.y };
-      const endAdj   = { x: entry.endpoints.end.x   + tgtOff.x, y: entry.endpoints.end.y   + tgtOff.y };
+      const start = { x: entry.endpoints.start.x + srcOff.x, y: entry.endpoints.start.y + srcOff.y };
+      const end   = { x: entry.endpoints.end.x   + tgtOff.x, y: entry.endpoints.end.y   + tgtOff.y };
       const waypoint = state.diagrams[idx].edgeWaypoints[entry.edgeId];
       const nothingMoved = srcOff.x === 0 && srcOff.y === 0 && tgtOff.x === 0 && tgtOff.y === 0 && !waypoint;
+      if (nothingMoved || entry.sourceEdge.source === entry.sourceEdge.target) {
+        return { start, end, waypoint, nothingMoved };
+      }
+      const srcEl = nodeElById.get(entry.sourceEdge.source);
+      const tgtEl = nodeElById.get(entry.sourceEdge.target);
+      const srcBox = srcEl && getNodeSvgBBox(srcEl);
+      const tgtBox = tgtEl && getNodeSvgBBox(tgtEl);
+      if (!srcBox || !tgtBox) return { start, end, waypoint, nothingMoved };
+      const srcAim = waypoint || { x: tgtBox.cx, y: tgtBox.cy };
+      const tgtAim = waypoint || { x: srcBox.cx, y: srcBox.cy };
+      return {
+        start: nodeOutlinePoint(srcEl, srcBox, srcAim) || start,
+        end: nodeOutlinePoint(tgtEl, tgtBox, tgtAim) || end,
+        waypoint, nothingMoved
+      };
+    }
+    function redrawEdgeEntry(entry) {
+      if (!entry.sourceEdge) return; // can't compute — no id mapping
+      const { start: startAdj, end: endAdj, waypoint, nothingMoved } = currentEndpoints(entry);
 
       let d;
       if (waypoint) {
@@ -2047,6 +3666,9 @@
         selectNode(idx, nodeId);
       });
       node.addEventListener('dblclick', (e) => {
+        // If the click landed on text that's already contenteditable, let the
+        // browser handle the double-click natively (word selection).
+        if (e.target.closest && e.target.closest('[contenteditable="true"]')) return;
         e.stopPropagation();
         if (pendingClick) { clearTimeout(pendingClick); pendingClick = null; }
         const current = readNodeLabel(node);
@@ -2055,8 +3677,8 @@
           inlineEdit(editTarget, current, (next) => {
             const ok = replaceInSource(idx, current, next);
             if (ok) renderDiagram(idx);
-            else alert(`Could not locate "${current}" in the source. Edit it manually on the right.`);
-          });
+            else toast(`Could not locate "${current}" in the source. Edit it manually on the right.`, { warn: true });
+          }, { event: e });
         } else {
           // Fallback: overlay an HTML input right on top of the node
           const canvasEl = canvas;
@@ -2069,7 +3691,7 @@
               if (next === current) return;
               const ok = replaceInSource(idx, current, next);
               if (ok) renderDiagram(idx);
-              else alert(`Could not locate "${current}" in the source. Edit it manually on the right.`);
+              else toast(`Could not locate "${current}" in the source. Edit it manually on the right.`, { warn: true });
             }
           });
         }
@@ -2170,6 +3792,26 @@
         );
       });
       hoverOverlay.addEventListener('pointerleave', queueHideTooltip);
+
+      // Double-click the arrow itself to add a label when it has none. Mermaid
+      // emits an empty label group for unlabeled edges, so there's nothing on
+      // the label to hit — the arrow overlay becomes the target. If the edge
+      // already has a label the label's own dblclick handles editing instead.
+      hoverOverlay.addEventListener('dblclick', (e) => {
+        if (!sourceEdge || sourceEdge.label != null) return;
+        e.stopPropagation();
+        overlayInput(canvas, e.clientX, e.clientY, {
+          initialValue: '',
+          placeholder: 'New label',
+          width: 200,
+          onCommit: (next) => {
+            if (!next) return;
+            const ok = addEdgeLabelInSource(idx, sourceEdge, next);
+            if (ok) renderDiagram(idx);
+            else toast('Could not add a label to this arrow — edit source on the right.', { warn: true });
+          }
+        });
+      });
 
 
       // Bend handle: <g> wrap containing a fat transparent hit-circle and a
@@ -2334,7 +3976,7 @@
               if (!newId || newId === currentId) { renderDiagram(idx); return; }
               let nextSrc = reconnectEdge(state.diagrams[idx].currentSource, sourceEdge, side, newId);
               if (!nextSrc) {
-                alert(`Could not update the source for this edge. Edit it manually on the right (${sourceEdge.fullText}).`);
+                toast(`Could not update the source for this edge. Edit it manually on the right (<code>${sourceEdge.fullText}</code>).`, { html: true, warn: true });
                 renderDiagram(idx);
                 return;
               }
@@ -2353,7 +3995,7 @@
               const withReconnect = reconnectEdge(nextSrc, sourceEdge, side, newId);
               pushUndo();
               if (!withReconnect) {
-                alert(`Added node "${newId}" but could not wire it into this edge — edit source on the right.`);
+                toast(`Added node "${newId}" but could not wire it into this edge — edit source on the right.`, { warn: true });
                 state.diagrams[idx].currentSource = preserveOrphan(nextSrc);
               } else {
                 state.diagrams[idx].currentSource = preserveOrphan(withReconnect);
@@ -2527,7 +4169,7 @@
       wrap.setAttribute('data-node-id', nodeId);
       wrap.setAttribute('transform', `translate(${bx}, ${by})`);
       const btnTitle = document.createElementNS('http://www.w3.org/2000/svg', 'title');
-      btnTitle.textContent = `Change the shape of "${nodeId}"`;
+      btnTitle.textContent = `Change the shape or color of "${nodeId}"`;
       wrap.appendChild(btnTitle);
 
       const hit = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
@@ -2705,10 +4347,34 @@
       labelEl.addEventListener('pointerleave', queueHideTooltip);
 
       labelEl.addEventListener('dblclick', (e) => {
+        // Already editing → let the browser handle word selection natively.
+        if (e.target.closest && e.target.closest('[contenteditable="true"]')) return;
         e.stopPropagation();
         const current = readEdgeLabel(labelEl);
         if (!current) {
-          alert('This edge has no label yet. Add one by editing the source (e.g. `A -->|new label| B`).');
+          // No label yet — open an inline overlay to add one, then splice it into
+          // the source alongside the arrow. Falls back to a toast if we can't find
+          // the edge in the source (parseEdges couldn't match this one).
+          if (!entry.sourceEdge) {
+            toast('This arrow has no label yet, and its edge could not be located in the source — add one on the right (e.g. <code>A --&gt;|new label| B</code>).', { html: true, warn: true });
+            return;
+          }
+          const r = labelEl.getBoundingClientRect();
+          // Empty label groups often have zero-width rects; anchor the input at
+          // the click point so it lands under the cursor either way.
+          const cx = r.width ? r.left + r.width / 2 : e.clientX;
+          const cy = r.height ? r.top + r.height / 2 : e.clientY;
+          overlayInput(canvas, cx, cy, {
+            initialValue: '',
+            placeholder: 'New label',
+            width: 200,
+            onCommit: (next) => {
+              if (!next) return;
+              const ok = addEdgeLabelInSource(idx, entry.sourceEdge, next);
+              if (ok) renderDiagram(idx);
+              else toast('Could not add a label to this arrow — edit source on the right.', { warn: true });
+            }
+          });
           return;
         }
         const editTarget = findEditableTarget(labelEl);
@@ -2716,8 +4382,8 @@
           inlineEdit(editTarget, current, (next) => {
             const ok = replaceInSource(idx, current, next);
             if (ok) renderDiagram(idx);
-            else alert(`Could not locate "${current}" in the source. Edit it manually on the right.`);
-          });
+            else toast(`Could not locate "${current}" in the source. Edit it manually on the right.`, { warn: true });
+          }, { event: e });
         } else {
           const r = labelEl.getBoundingClientRect();
           overlayInput(canvas, r.left + r.width / 2, r.top + r.height / 2, {
@@ -2728,7 +4394,7 @@
               if (next === current) return;
               const ok = replaceInSource(idx, current, next);
               if (ok) renderDiagram(idx);
-              else alert(`Could not locate "${current}" in the source. Edit it manually on the right.`);
+              else toast(`Could not locate "${current}" in the source. Edit it manually on the right.`, { warn: true });
             }
           });
         }
@@ -2762,11 +4428,7 @@
             if (stored) {
               baseWaypoint = { x: stored.x, y: stored.y };
             } else {
-              const positions = state.diagrams[idx].nodePositions;
-              const srcOff = positions[entry.sourceEdge.source] || { x: 0, y: 0 };
-              const tgtOff = positions[entry.sourceEdge.target] || { x: 0, y: 0 };
-              const startAdj = { x: entry.endpoints.start.x + srcOff.x, y: entry.endpoints.start.y + srcOff.y };
-              const endAdj   = { x: entry.endpoints.end.x   + tgtOff.x, y: entry.endpoints.end.y   + tgtOff.y };
+              const { start: startAdj, end: endAdj } = currentEndpoints(entry);
               baseWaypoint = midpoint(startAdj, endAdj);
             }
           }
@@ -2966,10 +4628,45 @@
     return el;
   }
 
+  // Non-blocking notification. Stacks in the corner, auto-dismisses, click to close.
+  // Use this instead of alert() so soft failures don't halt whatever the user is doing.
+  function toast(message, opts) {
+    opts = opts || {};
+    const stack = document.getElementById('toast-stack');
+    if (!stack) return;
+    const el = document.createElement('div');
+    el.className = 'toast' + (opts.warn ? ' warn' : '');
+    // Allow inline <code> in messages so file paths / snippets read cleanly.
+    if (opts.html) el.innerHTML = message;
+    else el.textContent = message;
+    stack.appendChild(el);
+    // Force a reflow so the transition kicks in from the initial off-screen state.
+    void el.offsetWidth;
+    el.classList.add('visible');
+    const dismiss = () => {
+      if (!el.parentNode) return;
+      el.classList.remove('visible');
+      setTimeout(() => { if (el.parentNode) el.remove(); }, 200);
+    };
+    el.addEventListener('click', dismiss);
+    setTimeout(dismiss, opts.duration || 4000);
+  }
+
   // Shared hover tooltip for node/arrow descriptions. Content shows a stored
   // description (or the auto-summary as a placeholder) and becomes contenteditable
   // when clicked. Blur/Enter commits, Escape cancels.
-  const _tooltipState = { el: null, current: null, hideTimer: null };
+  const TOOLTIP_SHOW_DELAY = 500;
+  const _tooltipState = { el: null, current: null, hideTimer: null, showTimer: null };
+
+  // True while the node or arrow label the tooltip describes is being edited
+  // inline (label contenteditable, or the rename fallback input in its canvas).
+  function tooltipRefBeingEdited() {
+    const ref = _tooltipState.current && _tooltipState.current.refEl;
+    if (!ref || !ref.isConnected) return false;
+    if (ref.querySelector && ref.querySelector('[contenteditable="true"]')) return true;
+    const canvas = ref.closest && ref.closest('.diagram-canvas');
+    return !!(canvas && canvas.querySelector('.inline-overlay-input'));
+  }
   function getTooltip() {
     if (_tooltipState.el) return _tooltipState.el;
     const t = document.createElement('div');
@@ -2989,7 +4686,22 @@
   }
   function showTooltip(refEl, description, defaultText, onCommit) {
     const t = getTooltip();
+    // Don't swap content out from under an edit of the tooltip or its element.
+    if (t.classList.contains('editing') || (t.classList.contains('visible') && tooltipRefBeingEdited())) return;
     if (_tooltipState.hideTimer) { clearTimeout(_tooltipState.hideTimer); _tooltipState.hideTimer = null; }
+    if (_tooltipState.showTimer) { clearTimeout(_tooltipState.showTimer); _tooltipState.showTimer = null; }
+    // Wait before the first tooltip appears; once one is up, moving to a
+    // neighboring element swaps it in right away.
+    if (t.classList.contains('visible')) {
+      renderTooltip(t, refEl, description, defaultText, onCommit);
+    } else {
+      _tooltipState.showTimer = setTimeout(() => {
+        _tooltipState.showTimer = null;
+        if (refEl.isConnected) renderTooltip(t, refEl, description, defaultText, onCommit);
+      }, TOOLTIP_SHOW_DELAY);
+    }
+  }
+  function renderTooltip(t, refEl, description, defaultText, onCommit) {
     _tooltipState.current = { refEl, description, defaultText, onCommit };
     const text = description || defaultText;
     t.classList.toggle('empty', !description);
@@ -3012,13 +4724,26 @@
     });
   }
   function queueHideTooltip() {
+    if (_tooltipState.showTimer) { clearTimeout(_tooltipState.showTimer); _tooltipState.showTimer = null; }
     if (_tooltipState.hideTimer) clearTimeout(_tooltipState.hideTimer);
     _tooltipState.hideTimer = setTimeout(() => {
       _tooltipState.hideTimer = null;
       const t = _tooltipState.el;
-      if (t && !t.classList.contains('editing')) t.classList.remove('visible');
+      if (!t || t.classList.contains('editing') || tooltipRefBeingEdited() || t.matches(':hover')) return;
+      t.classList.remove('visible');
     }, 180);
   }
+  // A tooltip kept up during an inline edit hides once the edit ends, unless
+  // the pointer is still over its element.
+  document.addEventListener('focusout', () => {
+    setTimeout(() => {
+      const t = _tooltipState.el;
+      const ref = _tooltipState.current && _tooltipState.current.refEl;
+      if (!t || !t.classList.contains('visible') || t.classList.contains('editing')) return;
+      if (ref && ref.isConnected && ref.matches(':hover')) return;
+      queueHideTooltip();
+    }, 0);
+  });
   function beginTooltipEdit() {
     const t = _tooltipState.el;
     const cur = _tooltipState.current;
@@ -3162,7 +4887,7 @@
     d.edgeWaypoints = {};
     d.annotations = [];
     document.querySelector(`textarea[data-source-idx="${idx}"]`).value = d.originalSource;
-    renderDiagram(idx);
+    renderDiagram(idx, { keepLayout: false });
     markDirty(idx);
   }
 
@@ -3198,6 +4923,8 @@
     const summaryChanges = {};
     if (bulletsChanged(s.currentWhat, s.originalWhat)) summaryChanges[sectionMap.summaryWhat] = { original: s.originalWhat, current: s.currentWhat };
     if (bulletsChanged(s.currentWhy, s.originalWhy)) summaryChanges[sectionMap.summaryWhy] = { original: s.originalWhy, current: s.currentWhy };
+    if (bulletsChanged(s.currentRules, s.originalRules)) summaryChanges[sectionMap.summaryRules] = { original: s.originalRules, current: s.currentRules };
+    if (bulletsChanged(s.currentOpenQuestions, s.originalOpenQuestions)) summaryChanges[sectionMap.summaryOpenQuestions] = { original: s.originalOpenQuestions, current: s.currentOpenQuestions };
     const payload = {
       generatedAt: new Date().toISOString(),
       specTitle: data.title,
@@ -3328,6 +5055,1095 @@
     }
     if (subItems.length) html += renderListItems(subItems);
     return html;
+  }
+
+  // --- Spec drawer, recent-diffs panel, jump-to-spec, hot reload ---
+
+  const drawer         = document.getElementById('spec-drawer');
+  const drawerOverlay  = document.getElementById('spec-drawer-overlay');
+  const drawerToggle   = document.getElementById('spec-drawer-toggle');
+  const drawerCloseBtn = document.getElementById('drawer-close');
+  const drawerRefresh  = document.getElementById('drawer-refresh');
+  const drawerPathEl   = document.getElementById('drawer-path');
+  const drawerStatusEl = document.getElementById('drawer-status');
+  const drawerSpecEl   = document.getElementById('drawer-spec');
+  const drawerDiffs    = document.getElementById('drawer-diffs');
+  const drawerDiffsCt  = document.getElementById('drawer-diffs-count');
+  const drawerDiffsBd  = document.getElementById('drawer-diffs-body');
+  const drawerChanges  = document.getElementById('drawer-changes');
+  const drawerLegendEl = document.getElementById('drawer-changes-legend');
+
+  // Cache of the last-loaded spec text so jumps don't have to refetch.
+  let specText = '';
+  let specLoaded = false;
+  let specLoadingPromise = null;
+  let pendingJumpMarker = null;
+  // Oldest backup ({ backup, text }) from /spec-history — the spec as it stood
+  // before spec-tacle's first write. Null until a backup exists.
+  let specBaseline = null;
+  const SHOW_CHANGES_KEY = 'spec-tacle:show-changes';
+  let showChanges = false;
+  try { showChanges = localStorage.getItem(SHOW_CHANGES_KEY) === '1'; } catch (_) {}
+
+  function setDrawerStatus(msg, cls) {
+    drawerStatusEl.textContent = msg || '';
+    drawerStatusEl.className = 'drawer-status' + (cls ? ' ' + cls : '');
+    drawerStatusEl.style.display = msg ? '' : 'none';
+  }
+
+  function escapeHtmlLite(s) {
+    return String(s).replace(/[&<>"']/g, (c) => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[c]));
+  }
+
+  // markdown-it instance (lazy-inited on first render). Configured to pass
+  // raw HTML through — spec-tacle anchor comments (<!-- spec-tacle:… -->) are
+  // HTML comments in the source, and letting them through as comments keeps
+  // them invisible without our having to strip them (which would throw off
+  // the token.map line numbers we use for jump-to-marker + diff highlights).
+  let mdInstance = null;
+  function getMd() {
+    if (mdInstance) return mdInstance;
+    if (typeof window.markdownit !== 'function') return null;
+    const md = window.markdownit({
+      html: true,
+      linkify: true,
+      breaks: false,
+      typographer: false,
+    });
+    // Copy each block token's source-line range onto its opening HTML tag so
+    // renderSpecMd/jumpToMarkerInDrawer can map DOM back to spec lines.
+    md.core.ruler.push('spec-tacle:source-line', function (state) {
+      state.tokens.forEach(function (token) {
+        // Fenced and indented code are single tokens, not _open/_close pairs.
+        if (token.map && (token.type.endsWith('_open') || token.type === 'fence' || token.type === 'code_block')) {
+          token.attrSet('data-source-line', String(token.map[0]));
+          token.attrSet('data-source-end',  String(token.map[1]));
+        }
+      });
+    });
+    mdInstance = md;
+    return md;
+  }
+
+  // A leading YAML `--- … ---` frontmatter block is treated by markdown-it as
+  // a setext h2 (the closing `---` underlines the frontmatter body) and
+  // renders as a giant misleading heading. Rewrite the fence lines to a
+  // fenced code block instead — line count stays identical, so source-line
+  // math against the raw file is untouched.
+  function swapFrontmatterFences(text) {
+    const lines = text.split('\n');
+    if (lines[0] !== '---') return text;
+    for (let i = 1; i < lines.length; i++) {
+      if (lines[i] === '---') {
+        lines[0] = '```yaml';
+        lines[i] = '```';
+        return lines.join('\n');
+      }
+    }
+    return text;
+  }
+
+  function renderSpecPre(text, changedLines, highlightKind) {
+    if (!text) { drawerSpecEl.innerHTML = '<span class="marker-line">(spec is empty)</span>'; return; }
+    const md = getMd();
+    if (!md) {
+      // markdown-it failed to load (offline CDN). Fall back to escaped raw
+      // text so the drawer still shows something useful.
+      drawerSpecEl.classList.remove('drawer-spec-md');
+      drawerSpecEl.style.whiteSpace = 'pre-wrap';
+      drawerSpecEl.style.fontFamily = '"SF Mono", Menlo, Consolas, monospace';
+      drawerSpecEl.textContent = text;
+      return;
+    }
+    drawerSpecEl.style.whiteSpace = '';
+    drawerSpecEl.style.fontFamily = '';
+    drawerSpecEl.classList.add('drawer-spec-md');
+    drawerSpecEl.innerHTML = md.render(swapFrontmatterFences(text));
+    // markdown-it renders a code token's attrs on the inner <code>; lift the
+    // line range to the <pre> so highlights and jumps cover the whole box.
+    drawerSpecEl.querySelectorAll('pre > code[data-source-line]').forEach((code) => {
+      const pre = code.parentElement;
+      ['data-source-line', 'data-source-end'].forEach((attr) => {
+        pre.setAttribute(attr, code.getAttribute(attr));
+        code.removeAttribute(attr);
+      });
+    });
+
+    const changed = (changedLines instanceof Set) ? changedLines : null;
+    if (changed && changed.size) highlightLatestUpdate(changed, highlightKind);
+    renderChangesSinceBaseline(text);
+  }
+
+  function highlightLatestUpdate(changed, highlightKind) {
+    // 'consistency' → auto-applied by the follow-up pass (blue). Anything
+    // else (including undefined) → user-driven Update spec (green).
+    const isConsistency = highlightKind === 'consistency';
+    // Walk annotated blocks and flag any whose source-line range overlaps a
+    // changed line. A block spans [start, end); highlight the whole block
+    // even when only one of its lines changed — cleaner than trying to
+    // decorate a partial paragraph.
+    const blocks = drawerSpecEl.querySelectorAll('[data-source-line]');
+    blocks.forEach((block) => {
+      const start = parseInt(block.getAttribute('data-source-line'), 10);
+      const end   = parseInt(block.getAttribute('data-source-end'),  10);
+      if (!Number.isFinite(start) || !Number.isFinite(end)) return;
+      let hit = false;
+      for (let i = start; i < end; i++) {
+        if (changed.has(i)) { hit = true; break; }
+      }
+      if (!hit) return;
+      block.classList.add('spec-line-changed');
+      if (isConsistency) block.classList.add('consistency');
+    });
+  }
+
+  // Line-based LCS diff. Returns ops in newText order: ' ' kept, '+' added,
+  // '-' removed (removed lines sit just before the newText line they
+  // preceded). Null for very large files — the dp table would balloon, and
+  // the drawer should never freeze on a huge spec.
+  function lineDiffOps(oldText, newText) {
+    const a = oldText.split('\n');
+    const b = newText.split('\n');
+    const m = a.length, n = b.length;
+    if (m * n > 1000000) return null;
+    const dp = new Array(m + 1);
+    for (let i = 0; i <= m; i++) dp[i] = new Uint32Array(n + 1);
+    for (let i = m - 1; i >= 0; i--) {
+      for (let j = n - 1; j >= 0; j--) {
+        dp[i][j] = (a[i] === b[j]) ? dp[i + 1][j + 1] + 1 : Math.max(dp[i + 1][j], dp[i][j + 1]);
+      }
+    }
+    const ops = [];
+    let i = 0, j = 0;
+    while (i < m && j < n) {
+      if (a[i] === b[j]) { ops.push({ op: ' ', line: b[j] }); i++; j++; }
+      else if (dp[i + 1][j] >= dp[i][j + 1]) { ops.push({ op: '-', line: a[i] }); i++; }
+      else { ops.push({ op: '+', line: b[j] }); j++; }
+    }
+    while (i < m) ops.push({ op: '-', line: a[i++] });
+    while (j < n) ops.push({ op: '+', line: b[j++] });
+    return ops;
+  }
+
+  // Set of 0-based line indices in `newText` that were added or changed
+  // relative to `oldText`, or null when the diff was skipped for size.
+  function diffChangedLineSet(oldText, newText) {
+    const ops = lineDiffOps(oldText, newText);
+    if (!ops) return null;
+    const added = new Set();
+    let j = 0;
+    for (const o of ops) {
+      if (o.op === '+') added.add(j);
+      if (o.op !== '-') j++;
+    }
+    return added;
+  }
+
+  const MARKER_LINE_RE = /^\s*<!--\s*\/?spec-tacle:[^>]*-->\s*$/;
+
+  // "Show changes": diff the rendered spec against the baseline and mark
+  // blocks in place. Added/changed lines light up the smallest rendered block
+  // that holds them; removed lines are re-inserted as struck-through raw
+  // markdown just before the block that now follows them. Anchor comments are
+  // invisible in the drawer, so removed marker lines are dropped too.
+  function renderChangesSinceBaseline(text) {
+    drawerLegendEl.hidden = true;
+    if (!showChanges || !specBaseline || !drawerSpecEl.classList.contains('drawer-spec-md')) return;
+    const ops = lineDiffOps(specBaseline.text, text);
+    drawerLegendEl.hidden = false;
+    if (!ops) {
+      drawerLegendEl.textContent = 'Spec is too large to diff in the browser.';
+      return;
+    }
+    const added = new Set();
+    const removedRuns = []; // { at: newText line index, lines: [] }
+    let j = 0;
+    let adds = 0, dels = 0;
+    for (const o of ops) {
+      if (o.op === ' ') { j++; continue; }
+      if (MARKER_LINE_RE.test(o.line)) { if (o.op === '+') j++; continue; }
+      if (o.op === '+') {
+        added.add(j);
+        j++;
+        if (o.line.trim()) adds++;
+        continue;
+      }
+      const last = removedRuns[removedRuns.length - 1];
+      if (last && last.at === j) last.lines.push(o.line);
+      else removedRuns.push({ at: j, lines: [o.line] });
+      if (o.line.trim()) dels++;
+    }
+
+    const blocks = Array.from(drawerSpecEl.querySelectorAll('[data-source-line]'));
+    const range = (el) => [
+      parseInt(el.getAttribute('data-source-line'), 10),
+      parseInt(el.getAttribute('data-source-end'), 10),
+    ];
+
+    // Added: flag each hit block that has no hit block inside it, so a changed
+    // list item lights up alone instead of the whole list.
+    const hits = new Set(blocks.filter((el) => {
+      const [start, end] = range(el);
+      for (let i = start; i < end; i++) if (added.has(i)) return true;
+      return false;
+    }));
+    hits.forEach((el) => {
+      for (const other of hits) if (other !== el && el.contains(other)) return;
+      el.classList.add('spec-diff-add');
+    });
+
+    // Removed: document order tracks source order, so the first block starting
+    // at or after the run's position is where the lines used to be.
+    removedRuns.forEach((run) => {
+      if (!run.lines.some((l) => l.trim())) return;
+      const body = run.lines.join('\n').replace(/^\n+|\n+$/g, '');
+      const next = blocks.find((el) => range(el)[0] >= run.at);
+      let node;
+      if (next && next.tagName === 'TR') {
+        node = document.createElement('tr');
+        const td = document.createElement('td');
+        td.colSpan = next.children.length || 1;
+        td.textContent = body;
+        node.appendChild(td);
+      } else {
+        node = document.createElement(next && next.tagName === 'LI' ? 'li' : 'div');
+        node.textContent = body;
+      }
+      node.className = 'spec-diff-del';
+      if (next) next.parentNode.insertBefore(node, next);
+      else drawerSpecEl.appendChild(node);
+    });
+
+    const since = specBaseline.backup ? ` since ${escapeHtmlLite(specBaseline.backup)}` : '';
+    drawerLegendEl.innerHTML = (adds || dels)
+      ? `${adds} line${adds === 1 ? '' : 's'} added, ${dels} removed${since}` +
+        '<span class="swatch add"></span>new or changed<span class="swatch del"></span>removed'
+      : `No changes${since}.`;
+  }
+
+  function syncChangesToggle() {
+    const available = !!specBaseline;
+    drawerChanges.disabled = !available;
+    drawerChanges.setAttribute('aria-pressed', available && showChanges ? 'true' : 'false');
+    drawerChanges.textContent = available && showChanges ? 'Hide changes' : 'Show changes';
+    drawerChanges.title = available
+      ? `Mark everything spec-tacle has changed in this spec, compared with ${specBaseline.backup} (the spec before the first Update spec)`
+      : 'Nothing to compare yet — changes show up here after the first Update spec';
+  }
+
+  function markerLocationInText(text, marker) {
+    const open = `<!-- spec-tacle:${marker} -->`;
+    const alt  = `<!-- /spec-tacle:${marker} -->`;
+    let idx = text.indexOf(open);
+    if (idx < 0) idx = text.indexOf(alt);
+    if (idx < 0) {
+      // Fallback: prefix match — e.g. jumping to "diagram:foo" hits "diagram:foo:caption"
+      // if the wrapping marker was never written. Better than nothing.
+      const re = new RegExp('<!--\\s*/?spec-tacle:' + marker.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+      const m = re.exec(text);
+      if (m) idx = m.index;
+    }
+    if (idx < 0) return null;
+    const before = text.slice(0, idx);
+    const line = before.split('\n').length; // 1-based
+    return { charIndex: idx, line };
+  }
+
+  function jumpToMarkerInDrawer(marker) {
+    if (!specLoaded) { pendingJumpMarker = marker; return; }
+    const loc = markerLocationInText(specText, marker);
+    if (!loc) {
+      setDrawerStatus(`Could not find marker "${marker}" in spec — the section anchor may not be written to this file yet.`, 'err');
+      return;
+    }
+    setDrawerStatus('', null);
+    // loc.line is 1-based; token.map[start] is 0-based. Find the rendered
+    // block whose source-line range covers or immediately follows the marker
+    // line — the anchor comment itself is invisible (HTML comment), so we
+    // flash the first real block at-or-after the marker.
+    const target0 = loc.line - 1;
+    const blocks = Array.from(drawerSpecEl.querySelectorAll('[data-source-line]'));
+    let chosen = null;
+    let bestStart = -1;
+    for (const el of blocks) {
+      const start = parseInt(el.getAttribute('data-source-line'), 10);
+      const end   = parseInt(el.getAttribute('data-source-end'),  10);
+      if (!Number.isFinite(start)) continue;
+      // Prefer the deepest block that contains the line.
+      if (start <= target0 && (Number.isFinite(end) ? target0 < end : true)) {
+        if (start >= bestStart) { chosen = el; bestStart = start; }
+      }
+    }
+    if (!chosen) {
+      // No block spans the line (marker sits alone on a line between blocks).
+      // Fall back to the first block that starts on or after the marker line.
+      let bestGap = Infinity;
+      for (const el of blocks) {
+        const start = parseInt(el.getAttribute('data-source-line'), 10);
+        if (!Number.isFinite(start) || start < target0) continue;
+        const gap = start - target0;
+        if (gap < bestGap) { bestGap = gap; chosen = el; }
+      }
+    }
+    if (!chosen) return;
+    chosen.classList.add('anchor-flash');
+    // 'auto' (instant) — 'smooth' silently no-ops on the drawer's overflow
+    // container in some browsers; the flash animation carries the visual
+    // continuity instead.
+    chosen.scrollIntoView({ block: 'center', behavior: 'auto' });
+    // Strip the flash class after the animation so it doesn't stick.
+    setTimeout(() => { chosen.classList.remove('anchor-flash'); }, 1500);
+  }
+
+  function openDrawer() {
+    drawer.hidden = false;
+    drawerOverlay.hidden = false;
+    // Force a reflow so the transition runs from the hidden state.
+    void drawer.offsetHeight;
+    drawer.classList.add('open');
+    drawerOverlay.classList.add('open');
+    drawer.setAttribute('aria-hidden', 'false');
+    drawerToggle.classList.add('open');
+    if (!specLoaded && !specLoadingPromise) loadSpecAndDiffs();
+  }
+
+  function closeDrawer() {
+    drawer.classList.remove('open');
+    drawerOverlay.classList.remove('open');
+    drawer.setAttribute('aria-hidden', 'true');
+    drawerToggle.classList.remove('open');
+    setTimeout(() => {
+      if (!drawer.classList.contains('open')) {
+        drawer.hidden = true;
+        drawerOverlay.hidden = true;
+      }
+    }, 240);
+  }
+
+  function isDrawerOpen() { return drawer.classList.contains('open'); }
+
+  drawerToggle.addEventListener('click', () => (isDrawerOpen() ? closeDrawer() : openDrawer()));
+  drawerCloseBtn.addEventListener('click', closeDrawer);
+  drawerOverlay.addEventListener('click', closeDrawer);
+  drawerChanges.addEventListener('click', () => {
+    showChanges = !showChanges;
+    try { localStorage.setItem(SHOW_CHANGES_KEY, showChanges ? '1' : '0'); } catch (_) {}
+    syncChangesToggle();
+    if (specLoaded) renderSpecPre(specText, null, null);
+  });
+  drawerRefresh.addEventListener('click', () => {
+    specLoaded = false;
+    loadSpecAndDiffs();
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && isDrawerOpen()) { e.stopPropagation(); closeDrawer(); }
+  }, true);
+
+  // Any element with data-jump-marker (summary + diagram cards) opens the drawer
+  // and scrolls to the matching <!-- spec-tacle:… --> anchor.
+  document.addEventListener('click', (e) => {
+    const btn = e.target && e.target.closest && e.target.closest('[data-jump-marker]');
+    if (!btn) return;
+    const marker = btn.dataset.jumpMarker;
+    if (!marker) return;
+    e.preventDefault();
+    openDrawer();
+    if (specLoaded) jumpToMarkerInDrawer(marker);
+    else pendingJumpMarker = marker;
+  });
+
+  async function loadSpecAndDiffs(opts) {
+    opts = opts || {};
+    const wantHighlight = !!opts.highlightChanges;
+    const highlightKind = opts.highlightKind || 'user';
+    // Captured at the caller's turn — used to diff against the freshly-loaded
+    // spec. Falls back to whatever specText currently holds, which is fine for
+    // the highlight-off path.
+    const previousText = (opts.previousText != null) ? opts.previousText : specText;
+    if (!serverBase || !data.specPath) {
+      // Inline fallback: static demos (demoMode / file:// preview) can embed
+      // the spec markdown in the data JSON so the drawer still shows something
+      // useful. Read-only — Update/Undo are already disabled here.
+      if (typeof data.specSource === 'string' && data.specSource) {
+        if (drawerPathEl) drawerPathEl.textContent = data.specPath || '(embedded)';
+        specText = data.specSource;
+        specLoaded = true;
+        renderSpecPre(specText, null, null);
+        drawerDiffsCt.textContent = '';
+        drawerDiffsBd.innerHTML = '<div class="diff-empty">Static demo — no update history.</div>';
+        setDrawerStatus('Static demo — spec source is embedded and read-only.', null);
+        if (pendingJumpMarker) {
+          const m = pendingJumpMarker;
+          pendingJumpMarker = null;
+          jumpToMarkerInDrawer(m);
+        }
+        return;
+      }
+      setDrawerStatus('Spec drawer needs the round-trip server — the file:// preview cannot fetch the spec source.', 'err');
+      drawerSpecEl.innerHTML = '<span class="marker-line">(no server)</span>';
+      drawerDiffsCt.textContent = '';
+      drawerDiffsBd.innerHTML = '<div class="diff-empty">No server, no history.</div>';
+      return;
+    }
+    if (drawerPathEl) drawerPathEl.textContent = data.specPath;
+    setDrawerStatus(specLoaded ? 'Refreshing spec…' : 'Loading spec…', 'loading');
+    drawerSpecEl.classList.add('loading');
+    // Run source + history in parallel — both hit the server; no reason to serialize.
+    specLoadingPromise = (async () => {
+      const [srcRes, histRes] = await Promise.all([
+        fetch(`${serverBase}/spec-source?specPath=${encodeURIComponent(data.specPath)}`, { cache: 'no-store' }),
+        fetch(`${serverBase}/spec-history?specPath=${encodeURIComponent(data.specPath)}&limit=5`, { cache: 'no-store' }),
+      ]);
+      const srcBody  = await srcRes.json().catch(() => ({}));
+      const histBody = await histRes.json().catch(() => ({}));
+      if (!srcRes.ok || !srcBody.ok) throw new Error(srcBody.error || `spec-source ${srcRes.status}`);
+      const newText = srcBody.text || '';
+      const prevBaselineText = specBaseline ? specBaseline.text : null;
+      specBaseline = (histBody && histBody.ok && histBody.baseline) ? histBody.baseline : null;
+      syncChangesToggle();
+      const baselineMoved = (specBaseline ? specBaseline.text : null) !== prevBaselineText;
+      // If a redundant reload (e.g. SSE echo of our own Update spec) brings
+      // the same bytes back and we're not asked to highlight, keep the current
+      // DOM so any existing highlight spans stick around.
+      const contentUnchanged = specLoaded && newText === specText;
+      specText = newText;
+      specLoaded = true;
+      if (!(contentUnchanged && !wantHighlight && !(showChanges && baselineMoved))) {
+        let changed = null;
+        if (wantHighlight && previousText && previousText !== newText) {
+          try { changed = diffChangedLineSet(previousText, newText); } catch (_) { changed = null; }
+        }
+        renderSpecPre(specText, changed, highlightKind);
+      }
+      const entries = (histBody && histBody.ok && Array.isArray(histBody.entries)) ? histBody.entries : [];
+      renderDiffs(entries);
+      setDrawerStatus('', null);
+      if (pendingJumpMarker) {
+        const m = pendingJumpMarker;
+        pendingJumpMarker = null;
+        jumpToMarkerInDrawer(m);
+      }
+    })();
+    try {
+      await specLoadingPromise;
+    } catch (err) {
+      specLoaded = false;
+      setDrawerStatus(`Could not load spec: ${err.message}`, 'err');
+    } finally {
+      drawerSpecEl.classList.remove('loading');
+      specLoadingPromise = null;
+    }
+  }
+
+  function renderDiffs(entries) {
+    if (!entries.length) {
+      drawerDiffsCt.textContent = '';
+      drawerDiffsBd.innerHTML = '<div class="diff-empty">No recent updates yet. Hit Update spec on the visualizer and the diff will show here.</div>';
+      return;
+    }
+    drawerDiffsCt.textContent = `(${entries.length})`;
+    const parts = entries.map((entry) => {
+      const changed = entry.ops.filter(o => o.op !== ' ');
+      if (!changed.length) {
+        return `<div class="diff-entry"><div class="diff-label">${escapeHtmlLite(entry.backup)}</div><div class="diff-empty">No line-level changes.</div></div>`;
+      }
+      // Collapse long ' ' runs to a single "…" line so context stays useful without
+      // dumping the whole file into the drawer.
+      const compact = [];
+      let ctxRun = 0;
+      const CTX = 2;
+      const total = entry.ops.length;
+      entry.ops.forEach((op, i) => {
+        if (op.op === ' ') {
+          ctxRun++;
+          const near = entry.ops.slice(Math.max(0, i - CTX), Math.min(total, i + CTX + 1)).some(o => o.op !== ' ');
+          if (near) compact.push(op);
+          else if (compact.length && compact[compact.length - 1].op !== '…') compact.push({ op: '…', line: '' });
+        } else {
+          ctxRun = 0;
+          compact.push(op);
+        }
+      });
+      const body = compact.map(op => {
+        if (op.op === '…') return `<span class="marker-line">    …</span>`;
+        if (op.op === '+') return `<span class="diff-line-add">+ ${escapeHtmlLite(op.line)}</span>`;
+        if (op.op === '-') return `<span class="diff-line-del">- ${escapeHtmlLite(op.line)}</span>`;
+        return `  ${escapeHtmlLite(op.line)}`;
+      }).join('\n');
+      const adds = entry.ops.filter(o => o.op === '+').length;
+      const dels = entry.ops.filter(o => o.op === '-').length;
+      return `<div class="diff-entry"><div class="diff-label">${escapeHtmlLite(entry.backup)} · +${adds} / −${dels}</div><pre class="diff-body">${body}</pre></div>`;
+    });
+    drawerDiffsBd.innerHTML = parts.join('');
+  }
+
+  // --- Loading overlay + hot reload after Update spec ---
+  const loadingOverlay = document.getElementById('loading-overlay');
+  const loadingMessage = document.getElementById('loading-message');
+  window.__specTacleShowLoading = function (msg) {
+    if (msg) loadingMessage.textContent = msg;
+    loadingOverlay.classList.add('visible');
+    loadingOverlay.setAttribute('aria-hidden', 'false');
+  };
+  window.__specTacleHideLoading = function () {
+    loadingOverlay.classList.remove('visible');
+    loadingOverlay.setAttribute('aria-hidden', 'true');
+  };
+  // After Update spec succeeds, refetch the spec source + history so the drawer
+  // reflects the freshly-written file (hot reload). Callers can pass
+  // { highlightChanges: true, previousText } to flag the diff in the drawer.
+  window.__specTacleHotReload = async function (opts) {
+    await loadSpecAndDiffs(opts);
+  };
+  // Suppresses the SSE-triggered reload that immediately follows our own
+  // Update spec / Undo — the direct call already refetched with the correct
+  // previousText, and the echo would clobber freshly-drawn highlights.
+  let lastLocalWriteAt = 0;
+  window.__specTacleMarkLocalWrite = function () { lastLocalWriteAt = Date.now(); };
+  window.__specTacleWasLocalWriteRecent = function () { return Date.now() - lastLocalWriteAt < 3000; };
+
+  // Push channel — server broadcasts a `spec-changed` event whenever the spec
+  // file changes (via /update-spec on any tab, an /undo, or a plain-editor save
+  // on disk). We hot-reload the drawer's spec text + diff history, but leave
+  // the diagrams, drag positions, annotations, and unsaved edits alone. A full
+  // page reload would eat those; this doesn't. If EventSource is unavailable
+  // (older browsers, sandboxed contexts) we silently fall back to the existing
+  // manual Refresh button in the drawer.
+  // --- Consistency-pass banner + partial hot-reload ---
+  // The banner is a small state machine driven by three inputs, in priority order:
+  //   1. Server-authoritative state — GET /consistency-pending on load + reconnect
+  //      + fallback poll while any entry is known. This is what survives any SSE
+  //      drop; the queue file is the source of truth.
+  //   2. SSE events (consistency-pending, consistency-claimed, consistency-progress,
+  //      consistency-released, consistency-applied, consistency-dismissed).
+  //   3. Local optimism — showAppliedFlash() paints the brief green after a
+  //      known /consistency-apply so the user sees the finish immediately.
+  const consistencyBanner = document.getElementById('consistency-banner');
+  const consistencyBannerTitle = consistencyBanner ? consistencyBanner.querySelector('.banner-title') : null;
+  const consistencyBannerSub = consistencyBanner ? consistencyBanner.querySelector('.banner-sub') : null;
+  const consistencyBannerActions = consistencyBanner ? consistencyBanner.querySelector('.banner-actions') : null;
+  const consistencyBannerFill = consistencyBanner ? consistencyBanner.querySelector('.banner-progress .fill') : null;
+
+  // The most recent server-decorated entry for this tab's spec (or null),
+  // plus the hookArmed flag from /consistency-pending. Everything the banner
+  // renders comes from these two values — that way whichever path updated
+  // them last, the render is the same function of state.
+  let currentPendingEntry = null;
+  let hookArmed = false;
+  let bannerFlashTimer = null;
+  let staleWatchTimer = null;
+  let handoffWatchTimer = null;
+  let pollTimer = null;
+
+  // How long an unclaimed entry gets to sit before we treat the handoff as
+  // stalled. Auto-agent startup + skill load usually lands the first claim
+  // inside ~15s; 30s is enough headroom that a healthy run never trips it,
+  // short enough that a real stall (permission dialog, missing binary) is
+  // visible before the reader wanders off.
+  const HANDOFF_STALL_MS = 30 * 1000;
+
+  function renderConsistencyBanner() {
+    if (!consistencyBanner) return;
+    if (bannerFlashTimer) return; // an "applied" flash is showing; leave it alone
+    const e = currentPendingEntry;
+    consistencyBanner.classList.remove('visible', 'queued', 'active', 'stale', 'applied');
+    if (consistencyBannerActions) consistencyBannerActions.innerHTML = '';
+    if (handoffWatchTimer) { clearTimeout(handoffWatchTimer); handoffWatchTimer = null; }
+    if (!e) {
+      if (staleWatchTimer) { clearTimeout(staleWatchTimer); staleWatchTimer = null; }
+      return;
+    }
+    consistencyBanner.classList.add('visible');
+    const state = e.claimState || 'unclaimed';
+    if (state === 'active') {
+      consistencyBanner.classList.add('active');
+      const percent = e.progress && Number.isFinite(e.progress.percent) ? e.progress.percent : 0;
+      const phase = e.progress && e.progress.phase ? e.progress.phase : 'working';
+      const note = e.progress && e.progress.note ? e.progress.note : '';
+      const agent = (e.claim && e.claim.agent) || 'an agent';
+      if (consistencyBannerTitle) consistencyBannerTitle.textContent = `${agent} — ${phase} (${percent}%)`;
+      if (consistencyBannerSub) consistencyBannerSub.textContent = note || `claim expires ${formatClock(e.claimExpiresAt)}`;
+      if (consistencyBannerFill) consistencyBannerFill.style.width = `${percent}%`;
+      scheduleStaleWatch(e);
+    } else if (state === 'stale') {
+      consistencyBanner.classList.add('stale');
+      const agent = (e.claim && e.claim.agent) || 'an agent';
+      if (consistencyBannerTitle) consistencyBannerTitle.textContent = `${agent} — claim expired`;
+      if (consistencyBannerSub) consistencyBannerSub.textContent = `no heartbeat since ${formatClock(e.claimExpiresAt)}. Ping your agent again, or release the claim.`;
+      addBannerButton('Release claim', () => releaseClaim(e.id));
+      addBannerButton('Copy prompt', () => copyAgentPrompt(e));
+    } else if (e.spawnError) {
+      // The auto-agent subprocess crashed on spawn (bad shell quoting in the
+      // prompt, missing `claude` binary, unrecognized --model, immediate auth
+      // refusal). The server already released the claim and stamped
+      // spawnError onto the entry — render the failure immediately instead
+      // of waiting out the 30s handoff timer, and show the operator the log
+      // tail so they know what to fix without opening the log file.
+      consistencyBanner.classList.add('stale');
+      const err = e.spawnError;
+      const how = err.signal ? `signal ${err.signal}` : `exit ${err.exitCode}`;
+      const durSec = Number.isFinite(err.durationMs) ? (err.durationMs / 1000).toFixed(1) : '?';
+      if (consistencyBannerTitle) consistencyBannerTitle.textContent = `Auto-agent crashed on spawn (${how} in ${durSec}s)`;
+      const tailHint = err.tail
+        ? err.tail.split('\n').filter(Boolean).slice(-2).join(' · ')
+        : 'no output before exit';
+      if (consistencyBannerSub) {
+        consistencyBannerSub.textContent = err.logPath
+          ? `${tailHint} — full log: ${err.logPath}`
+          : tailHint;
+      }
+      addBannerButton('Copy prompt', () => copyAgentPrompt(e));
+    } else {
+      // Unclaimed. Split into three sub-states so a healthy auto-agent
+      // handoff isn't nagged at, but a real stall (or a server without a
+      // hook armed) still tells the reader what to do.
+      const now = Date.now();
+      const startedAt = e.hookFiredAt || e.changedAt || now;
+      const ageMs = now - startedAt;
+      const stalled = ageMs >= HANDOFF_STALL_MS;
+      if (hookArmed && !stalled) {
+        // Optimistic: hook fired, expect a claim any moment.
+        consistencyBanner.classList.add('active');
+        if (consistencyBannerTitle) consistencyBannerTitle.textContent = 'Consistency pass queued';
+        if (consistencyBannerSub) consistencyBannerSub.textContent = 'auto-agent picking this up…';
+        if (consistencyBannerFill) consistencyBannerFill.style.width = '0%';
+        // Re-render right at the threshold so the banner flips to the
+        // stalled state without waiting for the next poll or SSE.
+        const wait = Math.max(1000, HANDOFF_STALL_MS - ageMs + 250);
+        handoffWatchTimer = setTimeout(() => {
+          handoffWatchTimer = null;
+          renderConsistencyBanner();
+          refreshConsistencyStatus();
+        }, wait);
+      } else if (hookArmed && stalled) {
+        // Hook fired but nothing claimed in time — real problem.
+        consistencyBanner.classList.add('stale');
+        if (consistencyBannerTitle) consistencyBannerTitle.textContent = 'Auto-agent hasn’t picked this up';
+        const secs = Math.round(ageMs / 1000);
+        if (consistencyBannerSub) consistencyBannerSub.textContent = `no claim after ${secs}s. Likely the subprocess stalled on a permission dialog. Check the server log, or ping your agent.`;
+        addBannerButton('Copy prompt', () => copyAgentPrompt(e));
+      } else {
+        // No hook armed — user is the pickup path. Quiet nudge, not a warning.
+        consistencyBanner.classList.add('queued');
+        if (consistencyBannerTitle) consistencyBannerTitle.textContent = 'Consistency pass queued';
+        if (consistencyBannerSub) consistencyBannerSub.textContent = 'no auto-agent hook is armed — ping your agent to run the pass.';
+        addBannerButton('Copy prompt', () => copyAgentPrompt(e));
+      }
+    }
+  }
+
+  function addBannerButton(label, onClick) {
+    if (!consistencyBannerActions) return;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'banner-btn';
+    btn.textContent = label;
+    btn.addEventListener('click', onClick);
+    consistencyBannerActions.appendChild(btn);
+  }
+
+  function formatClock(ms) {
+    if (!Number.isFinite(ms)) return '';
+    const d = new Date(ms);
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  }
+
+  // Server marks a claim active/stale relative to its own clock. To flip the
+  // banner from active → stale between poll cycles, schedule a local re-render
+  // right at the reported expiry.
+  function scheduleStaleWatch(entry) {
+    if (staleWatchTimer) { clearTimeout(staleWatchTimer); staleWatchTimer = null; }
+    if (!entry || !Number.isFinite(entry.claimExpiresAt)) return;
+    const wait = Math.max(0, entry.claimExpiresAt - Date.now()) + 250;
+    if (wait > 24 * 3600 * 1000) return; // guard against nonsense values
+    staleWatchTimer = setTimeout(() => {
+      staleWatchTimer = null;
+      if (currentPendingEntry && currentPendingEntry.id === entry.id) {
+        currentPendingEntry = { ...currentPendingEntry, claimState: 'stale' };
+        renderConsistencyBanner();
+      }
+      // The next poll or SSE tick will confirm the transition against the server.
+      refreshConsistencyStatus();
+    }, wait);
+  }
+
+  function copyAgentPrompt(entry) {
+    const parts = [
+      'Please run the pending spec-tacle consistency pass.',
+      `Entry: ${entry.id}`,
+      `Spec: ${entry.specPath}`,
+    ];
+    const text = parts.join('\n');
+    try {
+      if (navigator && navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => {
+          setTemporarySub('prompt copied — paste into your agent.');
+        }, () => setTemporarySub('copy blocked; the prompt is in the console.'));
+      } else {
+        setTemporarySub('clipboard unavailable; the prompt is in the console.');
+      }
+    } catch (_) {
+      setTemporarySub('copy blocked; the prompt is in the console.');
+    }
+    // Always log — the copy path can fail silently in some browsers.
+    console.info('[spec-tacle] agent prompt:\n' + text);
+  }
+
+  function setTemporarySub(text) {
+    if (!consistencyBannerSub) return;
+    const previous = consistencyBannerSub.textContent;
+    consistencyBannerSub.textContent = text;
+    setTimeout(() => {
+      if (consistencyBannerSub && consistencyBannerSub.textContent === text) {
+        consistencyBannerSub.textContent = previous;
+      }
+    }, 3000);
+  }
+
+  function releaseClaim(entryId) {
+    if (!serverBase || !entryId) return;
+    fetch(`${serverBase}/consistency-release`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ entryId }),
+    }).catch(() => { /* the poll will re-sync */ }).finally(() => refreshConsistencyStatus());
+  }
+
+  // Server-authoritative fetch — the ONE path that guarantees the banner
+  // matches the queue file. Called on load, on every SSE reconnect, on a
+  // 30-second fallback poll while any entry is known, and after any local
+  // state-changing action (claim/release from the UI).
+  function refreshConsistencyStatus() {
+    if (!serverBase || !data.specPath) return;
+    fetch(`${serverBase}/consistency-pending?specPath=${encodeURIComponent(data.specPath)}`, { cache: 'no-store' })
+      .then(r => r.json())
+      .then(body => {
+        if (!body || !body.ok) return;
+        hookArmed = !!body.hookArmed;
+        // Pick the newest entry for this spec — the banner shows one at a time.
+        const entries = Array.isArray(body.entries) ? body.entries.slice() : [];
+        entries.sort((a, b) => (b.changedAt || 0) - (a.changedAt || 0));
+        currentPendingEntry = entries[0] || null;
+        renderConsistencyBanner();
+        schedulePoll();
+      })
+      .catch(() => { /* transient — the next poll retries */ });
+  }
+
+  // Poll every 5s while an entry is known pending; when the queue is empty
+  // we stay quiet. SSE is the primary channel, but progress feels sluggish
+  // when a dropped event forces a 30s wait — 5s is short enough to keep the
+  // bar honest, long enough not to hammer the server.
+  function schedulePoll() {
+    if (pollTimer) { clearTimeout(pollTimer); pollTimer = null; }
+    if (!currentPendingEntry) return;
+    pollTimer = setTimeout(refreshConsistencyStatus, 5000);
+  }
+
+  // Brief green flash after consistency-applied, then defer back to whatever
+  // the queue actually contains (usually empty, since apply clears the entry).
+  function showAppliedFlash(msg) {
+    if (!consistencyBanner) return;
+    if (bannerFlashTimer) { clearTimeout(bannerFlashTimer); bannerFlashTimer = null; }
+    consistencyBanner.classList.remove('queued', 'active', 'stale');
+    consistencyBanner.classList.add('visible', 'applied');
+    if (consistencyBannerActions) consistencyBannerActions.innerHTML = '';
+    const parts = [];
+    const sc = Object.keys((msg && msg.appliedSections) || {}).length;
+    const dc = Object.keys((msg && msg.appliedDiagrams) || {}).length;
+    if (sc) parts.push(`${sc} section${sc === 1 ? '' : 's'}`);
+    if (dc) parts.push(`${dc} diagram${dc === 1 ? '' : 's'}`);
+    if (consistencyBannerTitle) consistencyBannerTitle.textContent = 'Consistency pass applied';
+    if (consistencyBannerSub) consistencyBannerSub.textContent = `updated ${parts.join(' + ') || 'nothing'}.`;
+    bannerFlashTimer = setTimeout(() => {
+      bannerFlashTimer = null;
+      renderConsistencyBanner();
+    }, 4000);
+  }
+
+  if (serverBase && typeof EventSource !== 'undefined') {
+    try {
+      // Pass the spec path so the server arms an fs.watch on it immediately —
+      // otherwise the watcher wouldn't fire until the drawer was opened at
+      // least once and /spec-source had installed it as a side effect.
+      const q = data.specPath ? `?specPath=${encodeURIComponent(data.specPath)}` : '';
+      const es = new EventSource(`${serverBase}/events${q}`);
+      // The EventSource 'open' fires on the initial connection AND on every
+      // auto-reconnect. Re-fetching pending state here backfills anything the
+      // browser missed while the stream was down.
+      es.addEventListener('open', () => { refreshConsistencyStatus(); });
+      es.addEventListener('spec-changed', (ev) => {
+        let msg = {};
+        try { msg = JSON.parse(ev.data); } catch (_) { return; }
+        if (!data.specPath || msg.specPath !== data.specPath) return;
+        // Our own Update spec / Undo already ran a highlight-aware reload.
+        // The file-watcher echo would refetch the same bytes with no
+        // previousText, wiping the highlight spans — so skip while a local
+        // write is still fresh.
+        if (window.__specTacleWasLocalWriteRecent && window.__specTacleWasLocalWriteRecent()) return;
+        if (window.__specTacleHotReload) window.__specTacleHotReload();
+      });
+      es.addEventListener('consistency-pending', (ev) => {
+        let msg = {};
+        try { msg = JSON.parse(ev.data); } catch (_) { return; }
+        if (!data.specPath || msg.specPath !== data.specPath) return;
+        // Fast path — server now embeds the decorated entry, so we can paint
+        // the banner without a round-trip. The scheduled poll still fires
+        // 5s later for verification.
+        if (msg.entry) {
+          if (typeof msg.hookArmed === 'boolean') hookArmed = msg.hookArmed;
+          currentPendingEntry = msg.entry;
+          renderConsistencyBanner();
+          schedulePoll();
+        } else {
+          refreshConsistencyStatus();
+        }
+      });
+      es.addEventListener('consistency-claimed', (ev) => {
+        let msg = {};
+        try { msg = JSON.parse(ev.data); } catch (_) { return; }
+        if (!data.specPath || msg.specPath !== data.specPath) return;
+        if (msg.entry) {
+          currentPendingEntry = msg.entry;
+          renderConsistencyBanner();
+          schedulePoll();
+        } else {
+          refreshConsistencyStatus();
+        }
+      });
+      es.addEventListener('consistency-progress', (ev) => {
+        let msg = {};
+        try { msg = JSON.parse(ev.data); } catch (_) { return; }
+        if (!data.specPath || msg.specPath !== data.specPath) return;
+        if (msg.entry) {
+          currentPendingEntry = msg.entry;
+          renderConsistencyBanner();
+          schedulePoll();
+        } else if (currentPendingEntry && currentPendingEntry.id === msg.entryId) {
+          // Legacy path (older server without embedded entry): patch in place.
+          currentPendingEntry = {
+            ...currentPendingEntry,
+            progress: msg.progress || null,
+            claimExpiresAt: msg.claimExpiresAt || currentPendingEntry.claimExpiresAt,
+            claimState: 'active',
+          };
+          renderConsistencyBanner();
+          refreshConsistencyStatus();
+        }
+      });
+      es.addEventListener('consistency-released', (ev) => {
+        let msg = {};
+        try { msg = JSON.parse(ev.data); } catch (_) { return; }
+        if (!data.specPath || msg.specPath !== data.specPath) return;
+        refreshConsistencyStatus();
+      });
+      es.addEventListener('consistency-spawn-failed', (ev) => {
+        let msg = {};
+        try { msg = JSON.parse(ev.data); } catch (_) { return; }
+        if (!data.specPath || msg.specPath !== data.specPath) return;
+        // The server has already stamped spawnError onto the queue entry and
+        // released the claim; refreshing pulls the decorated entry back and
+        // renderConsistencyBanner switches to the spawn-failed branch.
+        refreshConsistencyStatus();
+      });
+      es.addEventListener('consistency-applied', (ev) => {
+        let msg = {};
+        try { msg = JSON.parse(ev.data); } catch (_) { return; }
+        if (!data.specPath || msg.specPath !== data.specPath) return;
+        if (window.__specTacleMarkLocalWrite) window.__specTacleMarkLocalWrite();
+        applyConsistencyPayload(msg);
+        const prev = specLoaded ? specText : '';
+        if (window.__specTacleHotReload) {
+          window.__specTacleHotReload({
+            highlightChanges: true,
+            highlightKind: 'consistency',
+            previousText: prev,
+          });
+        }
+        showAppliedFlash(msg);
+        refreshConsistencyStatus();
+      });
+      es.addEventListener('consistency-dismissed', () => { refreshConsistencyStatus(); });
+      es.addEventListener('spec-finalized', (ev) => {
+        // A finalize elsewhere (another tab, curl, the CLI) invalidates
+        // Update/Undo on this tab too — the file no longer has markers to
+        // write into. Mirror the local finalize UX: lock the buttons, tell
+        // the user, hot-reload the drawer so it shows the cleaned spec.
+        let msg = {};
+        try { msg = JSON.parse(ev.data); } catch (_) { return; }
+        if (!data.specPath || msg.specPath !== data.specPath) return;
+        for (const id of ['btn-update-spec', 'btn-undo-spec', 'btn-finalize']) {
+          const b = document.getElementById(id);
+          if (b) b.disabled = true;
+        }
+        const removed = Array.isArray(msg.removed) ? msg.removed : [];
+        const line = removed.length
+          ? `spec finalized elsewhere — removed ${removed.join('; ')}`
+          : 'spec finalized elsewhere';
+        setServerStatus(line, 'ok');
+        if (window.__specTacleWasLocalWriteRecent && window.__specTacleWasLocalWriteRecent()) return;
+        if (window.__specTacleHotReload) window.__specTacleHotReload();
+      });
+      es.addEventListener('error', () => { /* browser reconnects; open handler will re-sync */ });
+    } catch (_) { /* no push channel — refreshConsistencyStatus + poll still work */ }
+  }
+
+  // Belt-and-suspenders: on first load, ALWAYS ask the server what's pending —
+  // regardless of whether SSE opened. This is what makes a page reload
+  // discover an already-existing queue entry (e.g. the one that outlived the
+  // last agent session).
+  if (serverBase && data.specPath) refreshConsistencyStatus();
+
+  function parseBulletMarkdown(text) {
+    return String(text || '')
+      .split('\n')
+      .map(l => l.replace(/^\s*[-*]\s+/, '').trim())
+      .filter(l => l.length);
+  }
+
+  function flashElement(el) {
+    if (!el || !el.classList) return;
+    el.classList.remove('consistency-flash');
+    // Force reflow so re-adding the class restarts the animation on a repeated pass.
+    void el.offsetWidth;
+    el.classList.add('consistency-flash');
+    setTimeout(() => { if (el && el.classList) el.classList.remove('consistency-flash'); }, 4200);
+  }
+
+  // Applies the consistency-applied SSE payload to in-memory state and to the
+  // DOM without a full page reload. For each affected field: if the user has
+  // no unsaved edit (currentX === originalX), overwrite both and re-render so
+  // the freshly-agreed value shows immediately. If they DO have an unsaved
+  // edit, only update originalX so the "dirty" flag reflects the new base but
+  // their in-progress text isn't lost, and log a hint to the console.
+  function applyConsistencyPayload(payload) {
+    const sections = payload && payload.appliedSections ? payload.appliedSections : {};
+    const diagrams = payload && payload.appliedDiagrams ? payload.appliedDiagrams : {};
+
+    // --- Summary bullets ---
+    const summaryWhatKey = sectionMap.summaryWhat;
+    const summaryWhyKey = sectionMap.summaryWhy;
+    const summaryRulesKey = sectionMap.summaryRules;
+    if (Object.prototype.hasOwnProperty.call(sections, summaryWhatKey)) {
+      const next = parseBulletMarkdown(sections[summaryWhatKey]);
+      const s = state.summary;
+      const userDirty = bulletsChanged(s.currentWhat, s.originalWhat);
+      s.originalWhat = next.slice();
+      if (!userDirty) {
+        s.currentWhat = next.slice();
+        renderBullets('what');
+        const list = document.querySelector('[data-summary="what"]');
+        if (list) flashElement(list);
+      } else {
+        console.info('[spec-tacle] consistency pass rewrote summary:what; kept your unsaved edits.');
+      }
+    }
+    if (Object.prototype.hasOwnProperty.call(sections, summaryWhyKey)) {
+      const next = parseBulletMarkdown(sections[summaryWhyKey]);
+      const s = state.summary;
+      const userDirty = bulletsChanged(s.currentWhy, s.originalWhy);
+      s.originalWhy = next.slice();
+      if (!userDirty) {
+        s.currentWhy = next.slice();
+        renderBullets('why');
+        const list = document.querySelector('[data-summary="why"]');
+        if (list) flashElement(list);
+      } else {
+        console.info('[spec-tacle] consistency pass rewrote summary:why; kept your unsaved edits.');
+      }
+    }
+    if (Object.prototype.hasOwnProperty.call(sections, summaryRulesKey)) {
+      const next = parseBulletMarkdown(sections[summaryRulesKey]);
+      const s = state.summary;
+      const userDirty = bulletsChanged(s.currentRules, s.originalRules);
+      s.originalRules = next.slice();
+      if (!userDirty) {
+        s.currentRules = next.slice();
+        renderBullets('rules');
+        const list = document.querySelector('[data-summary="rules"]');
+        if (list) flashElement(list);
+      } else {
+        console.info('[spec-tacle] consistency pass rewrote summary:rules; kept your unsaved edits.');
+      }
+    }
+    const summaryOpenQuestionsKey = sectionMap.summaryOpenQuestions;
+    if (openQuestionsUl && Object.prototype.hasOwnProperty.call(sections, summaryOpenQuestionsKey)) {
+      const next = parseBulletMarkdown(sections[summaryOpenQuestionsKey]);
+      const s = state.summary;
+      const userDirty = bulletsChanged(s.currentOpenQuestions, s.originalOpenQuestions);
+      s.originalOpenQuestions = next.slice();
+      if (!userDirty) {
+        s.currentOpenQuestions = next.slice();
+        renderBullets('openQuestions');
+        const list = document.querySelector('[data-summary="openQuestions"]');
+        if (list) flashElement(list);
+      } else {
+        console.info('[spec-tacle] consistency pass rewrote summary:open-questions; kept your unsaved edits.');
+      }
+    }
+
+    // --- Per-diagram caption / detail / notes come in via section names
+    // (diagram:<id>:caption, diagram:<id>:detail, diagram:<id>:notes). ---
+    state.diagrams.forEach((d, idx) => {
+      const capKey = `diagram:${d.id}:caption`;
+      const detKey = `diagram:${d.id}:detail`;
+      const notKey = `diagram:${d.id}:notes`;
+      if (Object.prototype.hasOwnProperty.call(sections, capKey)) {
+        const next = String(sections[capKey]);
+        const dirty = d.currentCaption !== d.originalCaption;
+        d.originalCaption = next;
+        if (!dirty) {
+          d.currentCaption = next;
+          const el = document.querySelector(`[data-caption-idx="${idx}"]`);
+          if (el) { el.innerHTML = mdBold(next); flashElement(el); }
+        }
+      }
+      if (Object.prototype.hasOwnProperty.call(sections, detKey)) {
+        const next = String(sections[detKey]);
+        const dirty = d.currentDetail !== d.originalDetail;
+        d.originalDetail = next;
+        if (!dirty) {
+          d.currentDetail = next;
+          const el = document.querySelector(`[data-detail-idx="${idx}"]`);
+          if (el) { el.innerHTML = mdRich(next); flashElement(el); }
+        }
+      }
+      if (Object.prototype.hasOwnProperty.call(sections, notKey)) {
+        const next = String(sections[notKey]);
+        const dirty = d.currentNotes !== d.originalNotes;
+        d.originalNotes = next;
+        if (!dirty) {
+          d.currentNotes = next;
+          renderNotes(idx);
+          const wrap = document.querySelector(`[data-notes-idx="${idx}"]`);
+          if (wrap) flashElement(wrap);
+        }
+      }
+    });
+
+    // --- Diagram source rewrites (mermaid or table markdown). ---
+    Object.keys(diagrams).forEach((id) => {
+      const entry = diagrams[id];
+      const idx = state.diagrams.findIndex(x => x.id === id);
+      if (idx < 0) return;
+      const d = state.diagrams[idx];
+      const next = String(entry && entry.source != null ? entry.source : '');
+      const dirty = d.currentSource !== d.originalSource;
+      d.originalSource = next;
+      if (!dirty) {
+        d.currentSource = next;
+        const ta = document.querySelector(`textarea[data-source-idx="${idx}"]`);
+        if (ta) ta.value = next;
+        renderDiagram(idx);
+        const canvas = document.querySelector(`[data-canvas-idx="${idx}"]`);
+        if (canvas) flashElement(canvas);
+      }
+    });
+
+    if (typeof markGlobalDirty === 'function') markGlobalDirty();
   }
 })();
 </script>

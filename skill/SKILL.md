@@ -1,6 +1,6 @@
 ---
 name: spec-tacle
-description: Turn a software spec into a browsable HTML visualizer — a technical what/why summary plus editable mermaid diagrams (architecture, user flow, dependency map, data-summary charts). Round-trip user edits back into the spec. Use when the user asks to "visualize this spec", "make a spec-tacle for X", "render diagrams for this spec", or points at a spec file and asks for a picture of it.
+description: Turn a software spec into a browsable HTML visualizer — a technical what/why summary plus editable mermaid diagrams (architecture, user flow, dependency map, data-summary charts). Round-trip user edits back into the spec. Use when the user asks to "visualize this spec", "make a spec-tacle for X", "render diagrams for this spec", or points at a spec file and asks for a picture of it. Also use when the user asks to run a pending spec-tacle consistency pass.
 ---
 
 # spec-tacle
@@ -9,13 +9,13 @@ Take a written spec, produce an HTML page a person can open in a browser that sh
 
 1. A tight **technical summary** — brief, scannable bulleted lists at the top: *what* is being built, and (only when they earn their place) *why* and the *rules* the system must uphold. All sharpened with `no-ai-slop`. What is always present. Why defaults to 2-3 bullets and is omitted when the reasons are already obvious from the Whats — but can run longer when the spec genuinely has more load-bearing motivations that add to the document. Rules is omitted when the spec has no non-negotiable constraints worth naming.
 2. A set of **editable mermaid diagrams** — architecture (data/request flow), user flow (task completion paths), a dependency map (what decisions shape what outcomes), and a **data-summary chart** (usually a pie or bar) when the spec makes a quantitative promise a reader should be able to argue with. Not every spec needs all of these; pick the ones that make the spec easier to hold in your head.
-3. **Direct manipulation** — nodes drag, source is editable, annotations can be attached to any node or edge. Every inline text edit uses the same gesture: **double-click drops the cursor where you clicked** (so you can amend a word without wiping the whole field), **triple-click selects the whole value** before edit mode. Once you're in edit mode the browser's native contenteditable behavior takes over — double-click selects a word, triple-click selects the line.
+3. **Direct manipulation** — nodes drag and take a new shape or color, source is editable, annotations can be attached to any node or edge. Every inline text edit uses the same gesture: **double-click drops the cursor where you clicked** (so you can amend a word without wiping the whole field), **triple-click selects the whole value** before edit mode. Once you're in edit mode the browser's native contenteditable behavior takes over — double-click selects a word, triple-click selects the line. Each diagram card has a **Full screen** button in its header that expands the diagram to fill the viewport (and enters browser fullscreen where allowed); every editing gesture still works there, and Esc or **Exit full screen** returns it to the page.
 4. An **open questions** section below the diagrams when the spec has unresolved items — same editable-bullets shape as the top summary, but a separate pane so it reads as the "still to decide" panel. Skip the section entirely for specs with no open items.
 5. An **export payload** the user can hand back to reconcile edits into the spec.
 
 The project lives at `_project-management/personal/mike/spec-tacle/`. It contains:
 
-- `lib/template.html` — the reusable HTML shell (mermaid + drag + annotate + inline-edit + export)
+- `lib/template.html` — the reusable HTML shell (mermaid + drag + annotate + inline-edit + full-screen + export)
 - `lib/render.js` — substitutes a JSON data blob into the template (invoked via `npx spec-tacle_skill render`)
 - `lib/serve.js` — local HTTP server that round-trips visualizer edits into the spec file with timestamped backups (invoked via `npx spec-tacle_skill serve`; see "Live editing" below)
 - `example/example-spec.md` — a fictional Tasky spec used as the reference example, with marker anchors
@@ -52,6 +52,41 @@ The skill runs the full workflow itself using its own shell commands:
 5. Runs `npx spec-tacle_skill serve --root … --open …` in the background, which auto-opens the visualizer in the user's default browser (Step 8).
 
 The user should never need to run `npx spec-tacle_skill render` or `npx spec-tacle_skill serve` by hand. If the skill can't run those commands in this environment, say so plainly rather than asking the user to run them.
+
+### Tell the user what's happening as you go
+
+A first run takes a few minutes, and the user sees only a stream of tool calls unless you tell them what you're doing. Before each stage of the Generate workflow, post one short plain-language line in the conversation. Say what you're doing to *their document*, not which command or file you're touching.
+
+- Write for someone who has never heard of mermaid, JSON, or markers. Don't use words like "render", "parse", "data JSON", "anchors", or "serve".
+- One line per stage, posted before you start it. Don't narrate each tool call.
+- Name specifics when you have them: the document's title, how many diagrams, what they show.
+
+Example lines, in order:
+
+1. "Reading through *Snip URL Shortener* to pull out the main pieces and how they connect."
+2. (Only if Step 0 applies) "This is a PDF, so I'm first writing it up as an editable spec next to the original."
+3. "Writing a short summary of what the system is and why it's built this way."
+4. "Drawing 3 diagrams: how the services fit together, what a user does to shorten a link, and where traffic goes."
+5. "Building the visual page from the summary and diagrams."
+6. "Adding small bookmarks to your spec so edits on the page can find their way back to the right spot."
+7. "Opening the page in your browser. Edit anything there, then hit **Update spec** to write your changes back."
+
+If a stage is skipped or fails, say so in the same plain terms ("Couldn't open your browser automatically; the page is at http://localhost:8765/…").
+
+## Keep the tool current (run first, at most every three days)
+
+The template, renderer, and server ship in the `spec-tacle_skill` npm package alongside this file, so an old install renders with an old visualizer even if these instructions look fine. Before Step 0, update the **whole package** when it's due — not just this SKILL.md:
+
+1. **Is a check due?** Look at the mtime of `.last-update-check` in the folder this SKILL.md was installed to (`~/.claude/skills/spec-tacle/` for Claude Code, `~/.agents/skills/spec-tacle/` for other agents). If it exists and is under 3 days old, skip this section.
+2. **Compare versions.** `npx spec-tacle_skill --version` is what's installed; `npm view spec-tacle_skill version` is the latest published. If npm can't be reached (offline, sandbox, registry error), carry on with the installed version and don't retry this session.
+3. **If npm is newer, pull the full package:**
+   - If it's installed globally (`npm ls -g spec-tacle_skill` lists it, and not as a `->` symlink from `npm link`), run `npm install -g spec-tacle_skill@latest`. Leave a linked dev checkout alone.
+   - Run `npx -y spec-tacle_skill@latest install`. This downloads the latest package (template, `render.js`, `serve.js`, examples) into npx's cache and rewrites SKILL.md in every skills directory it manages.
+   - Confirm `npx spec-tacle_skill --version` now reports the new version. If it still shows the old one, a project-local copy in `node_modules` is winning. Run `npm install spec-tacle_skill@latest` in that project, or use `npx -y spec-tacle_skill@latest` for this session's commands.
+   - Re-read the freshly installed SKILL.md and follow it from here on. The steps below may have changed.
+4. **Record the check.** Touch that same `.last-update-check` whether or not an update happened, so the next session skips the check.
+
+Don't ask the user before updating; tell them in one line afterward (e.g. "Updated spec-tacle 0.1.9 → 0.2.0."). If any step is blocked (a sandbox denies the write or the network), say so in one line and continue with what's installed.
 
 ## Generate a visualizer from a spec
 
@@ -119,6 +154,34 @@ A `histogram` is a specific shape of data-summary chart: **one variable, buckete
 - Node ids are short, stable, kebab or camel — they show up in the export payload when the user annotates them.
 - If the spec is genuinely silent on flow direction or condition, leave it unlabeled rather than guess.
 
+**Color-code flowchart and state nodes by role.** Color makes a diagram scannable: the reader should be able to find every data store, every failure path, or every outside party without reading a single label. Use only the visualizer's palette, written as mermaid `classDef` + `class` lines at the end of the source. The node picker (◇ or right-click) reads and writes these exact lines, so users can recolor a node and the change round-trips into the spec:
+
+```
+  classDef blue fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
+  classDef purple fill:#ede9fe,stroke:#7c3aed,color:#4c1d95
+  classDef teal fill:#ccfbf1,stroke:#0d9488,color:#134e4a
+  classDef green fill:#dcfce7,stroke:#16a34a,color:#14532d
+  classDef amber fill:#fef3c7,stroke:#d97706,color:#78350f
+  classDef red fill:#fee2e2,stroke:#dc2626,color:#7f1d1d
+  classDef gray fill:#f1f5f9,stroke:#64748b,color:#1e293b
+  class Browser,Start blue
+  class PG,Redis amber
+```
+
+Copy the classDef lines verbatim; the visualizer re-tints these class names for dark mode, and any other hex value or class name is invisible to the picker. Include only the classDefs the diagram uses. Default role mapping, applied the same way in every diagram of one visualizer:
+
+| Class | Role |
+|---|---|
+| `blue` | People, clients, and user-facing screens or steps |
+| `purple` | Internal services and processing steps |
+| `teal` | Queues, events, pub/sub, and other async hops |
+| `amber` | Data stores and persisted records |
+| `gray` | Third-party or external systems |
+| `green` | Success, end states, and outcomes a decision buys |
+| `red` | Failure paths, rollbacks, and open questions |
+
+Leave decision diamonds and nodes that fit no role uncolored. Keep each diagram to three or four colors, five at most; past that the colors stop grouping anything and read as noise. When a diagram uses color, add a one-clause key to its caption ("amber nodes store data; gray ones sit outside our control"). Skip color entirely for charts, tables, and sequence diagrams.
+
 **For `user flow` and `information flow` diagrams, keep only the main ideas.** These pictures are for the reader to hold the shape of the experience or the shape of the data path in their head — they aren't the implementation checklist.
 
 - **User flow.** Show the pages, screens, or surfaces the user actually moves between, the primary action on each, and the major branches (success vs. failure, member vs. guest, first-time vs. returning). **Cut** micro-detail: individual form-field validation, per-error toast text, spinner/loading states, tooltip copy, disabled-button reasons, accessibility affordances, retry-with-backoff timers. If a step is "the user fills in and submits a form," that's one node — not five nodes for each field. If an error path fans out into a dozen validation messages, collapse it into one "invalid input → same page with error" edge.
@@ -151,6 +214,8 @@ Both are plain prose. Apply the writing rules from the appendix to every sentenc
 **Step 4d — leave the per-diagram notes slot empty.** Every diagram card in the visualizer has an "Add notes…" area under the mermaid canvas. Users click it to jot general thoughts about that diagram; those notes round-trip into the spec via a `<!-- spec-tacle:diagram:<id>:notes -->` marker section on the next Update spec. Do not fill in `notes` when you generate the data JSON — leave it empty (or omit the field entirely). It's the user's slot.
 
 **Step 4c — seed per-node and per-arrow descriptions.** Hover shows the description; click the tooltip to edit. Seed `descriptions` with one sentence per significant node and arrow that answers "what is this and what does it do" — under ~20 words, don't repeat the label, no bolding. Keys are `"node:<id>"` and `"edge:<edgeId>"` (edge ids are mermaid's `L-<source>-<target>-<n>`; skip the entry if you're not sure and let the user add it in-browser).
+
+Every arrow that isn't a plain solid line (dotted `-.->`, `-.-`, or `-. label .->`) must get a description, and that description must say why it's drawn that way — e.g. "Dotted: async, fire-and-forget after the write commits." or "Dotted: optional, only when the team has email invites enabled." A reader who sees a dotted arrow has no other way to learn what the style means. This overrides the skip-if-unsure rule above: work out the edge id rather than leaving it out, and if you can't name a reason for the dotted style, draw the arrow solid instead.
 
 **Step 5 — build the data JSON.** Shape:
 
@@ -234,21 +299,23 @@ The order within a diagram section is caption, then detail, then notes, then the
 
 **Step 8 — start the round-trip server (it auto-opens the visualizer).** Without the server running the Update spec / Undo buttons in the visualizer disable themselves (the page detects `file://` and won't accept edits), so if you skip this step the user gets a read-only page and thinks the tool is broken.
 
-Run this yourself as a long-running background process. **Pass `--auto-agent`** so every Update spec fires a headless `claude -p` subprocess that runs the consistency pass automatically — without it, the queue fills up and the visualizer banner stays "pending" until you (the outer session) drive each pass by hand.
+Run this yourself as a long-running background process. **Pass `--auto-agent`** so every Update spec fires a headless agent subprocess (`claude -p`, or `codex exec` under Codex) that runs the consistency pass automatically — without it, the queue fills up and the visualizer banner stays "pending" until you (the outer session) drive each pass by hand.
 
 ```
 npx spec-tacle_skill serve --root <path/to/served-root> --open <relative/path/to/spec-slug-visualizer.html> --auto-agent
 ```
 
 - Run it in the background (your tool's `run_in_background` option, or `&` in a plain shell). Don't wait for it to exit — it stays up until the user stops it.
+- **Which agent.** The server uses the agent it was started from (Codex if its env carries `CODEX_*` markers, Claude Code if `CLAUDECODE=1`), then whichever of `claude` / `codex` is on PATH. Pass `--agent claude|codex` to force one. For any other agent CLI, use `--on-consistency-pending '<cli> … {prompt}'`; `{prompt}` expands to the full shell-quoted consistency-pass prompt. The Codex preset runs `codex exec --json --skip-git-repo-check --sandbox workspace-write -c sandbox_workspace_write.network_access=true`, and its JSONL events (`command_execution`, `file_change`, `turn.completed`) drive the banner the same way Claude's stream-json does.
 - With `--auto-agent`, the server auto-claims each queue entry on the operator's behalf the moment the hook fires (agent label `spec-tacle-auto-agent`) and seeds a 5% "auto-agent spawning" progress line. That flips the visualizer banner immediately from `queued` → `active`, so a 60–120s pass doesn't false-alarm as `stalled` at 30s. The default `claude -p` subprocess also runs with `--output-format stream-json --verbose`, and the server parses each event on the wire — every `tool_use` the sub-agent emits (Read, Edit, Bash, Grep, …) becomes a live `consistency-progress` broadcast, so the banner reads "Read example-spec.md", "Bash: curl … /consistency-apply", etc. in real time, without the sub-agent having to POST progress itself. Percent steps ~7% per tool call, capped at 90; a final `result` event bumps to 95% "wrapping up". Every subprocess's raw stream-json is captured to `<served-root>/.spec-tacle-agent-logs/<entryId>.log` (pretty-print with `jq`), and the server prints an `auto-agent for <id> finished (exit N, Ns) — tail <log>` line when the child exits. If the subprocess dies without applying, the exit handler releases the auto-claim so the banner flips back to `queued` for a retry instead of getting stuck in `active`. Custom `--on-consistency-pending` commands do NOT get stream-json parsing — the server can't assume a user script's stdout is JSON — so those still rely on the sub-agent POSTing `/consistency-progress` explicitly.
-- **Dev-loop caveat (only when you're launching the server from inside a claude session, not the normal terminal path).** The parent claude session sets `HTTP_PROXY`/`HTTPS_PROXY` env vars pointing at a session-scoped filtering proxy whose credentials only bind to the active tool_use. The server auto-scrubs those (plus Claude Code session markers) from the subprocess env when it detects `CLAUDECODE=1` on its own env, but the server itself must ALSO run outside macOS Seatbelt or the subprocess can't reach `api.anthropic.com` at all (Seatbelt inherits fork/exec; without the session proxy the sandbox blocks DNS with `ENOTFOUND`). Run the serve command with `dangerouslyDisableSandbox: true` (or the `!` prefix in a plain shell) to unsandbox it. None of this reproduces when a user runs `spec-tacle_skill demo` from their own terminal — the whole cascade is specific to running spec-tacle inside another claude.
+- **Dev-loop caveat (only when you're launching the server from inside a claude session, not the normal terminal path).** The parent claude session sets `HTTP_PROXY`/`HTTPS_PROXY` env vars pointing at a session-scoped filtering proxy whose credentials only bind to the active tool_use. The server auto-scrubs those (plus Claude Code session markers) from the subprocess env when it detects `CLAUDECODE=1` on its own env, but the server itself must ALSO run outside macOS Seatbelt or the subprocess can't reach `api.anthropic.com` at all (Seatbelt inherits fork/exec; without the session proxy the sandbox blocks DNS with `ENOTFOUND`). Run the serve command with `dangerouslyDisableSandbox: true` (or the `!` prefix in a plain shell) to unsandbox it. None of this reproduces when a user runs `spec-tacle_skill demo` from their own terminal. Codex has the same shape: a server started inside Codex's sandbox with `CODEX_SANDBOX_NETWORK_DISABLED=1` hands that sandbox to the child `codex exec`. The server scrubs the `CODEX_*` markers and prints a warning, but the server still has to run outside the sandbox (approve the escalated command).
 - Pick `--root` so it contains **both** the spec and the visualizer HTML. When the data JSON sits in `generated/` and the spec sits in `docs/` or `example/`, that's the repo root, not either subdir. Then set `specPath` in the data JSON to the same-root-relative path (`example/example-spec.md`, not just `example-spec.md`) — the server resolves `specPath` against `--root`, and a mismatch shows up as "spec not found: …" from Update spec. **Sanity-check this before starting the server:** every data JSON you emit must satisfy `test -f "<--root>/<specPath>"`. The server also runs a same-basename fallback under the served root (logs `[spec-tacle] specPath fallback: …`), which recovers Update spec silently when there's exactly one match, but a stale value here means every request pays the walk — fix the data JSON.
 - `--open` fires the visualizer in the user's default browser once the server binds. No separate `open` / `xdg-open` / `start` step is needed, and no need to ask the user to click a link.
 - If port 8765 is taken the server auto-increments (up to +10). The actual URL is in the server's banner.
 - If a spec-tacle server is already running on the same root, reuse it — don't start a second one. Just tell the user where to look.
 - The server pushes a `spec-changed` event over Server-Sent Events (`GET /events`) whenever the spec file changes — from any tab's Update spec, an Undo, or a direct edit on disk. The visualizer subscribes on load and **hot-reloads only the spec drawer** (text + diff history) when it fires; the diagrams, drag positions, annotations, and any unsaved textarea edits stay untouched. So when you edit the spec yourself while a demo is open, don't tell the user to refresh — the drawer catches up on its own within a couple hundred milliseconds. Reserve a full page reload for when the visualizer HTML or data JSON changes (rare — usually only after you re-render).
 - While an Update spec (or Undo) is in flight and the drawer is open, the drawer dims the spec pane and spins the status bar so a reader can see the flyout catching up. Once the fresh spec arrives, the drawer flags the added or changed lines with a green stripe against a soft green background. Only the most recent Update's diff is highlighted — the next Update replaces those spans, and a manual Refresh or an external file-change event clears them. The highlight is a reading aid; the round-trip is exactly what it was before.
+- The drawer header's **Show changes** toggle marks everything spec-tacle has changed in the spec since its first Update spec, not just the latest one. It diffs the current file against the oldest backup in `backups/` (the server returns it as `baseline` from `/spec-history`): new or changed blocks get a static green stripe, and removed lines reappear as struck-through red markdown where they used to sit. Anchor comments are left out on both sides. The toggle stays disabled until a backup exists, and Finalize (which deletes `backups/`) disables it again. Your own `consistency-apply` writes and direct edits to the file count as tool changes once the first backup exists, so keep consistency passes narrow. Everything you rewrite shows up in the reader's diff.
 
 ### Consistency pass (agent-driven follow-up after Update spec)
 
@@ -257,8 +324,8 @@ After every user Update spec, the server appends a **consistency-pass queue entr
 The visualizer shows a small "Consistency pass pending — an agent is reviewing related sections…" banner in the header with a spinner while it waits. It does not attempt the reasoning itself.
 
 **Who runs the pass** depends on whether you started the server with `--auto-agent`:
-- **With `--auto-agent` (recommended for the standard demo).** The server spawns a headless `claude -p …` subprocess for every queued entry, auto-claims on its behalf, and runs the pass end-to-end without your involvement. You just watch the log — the server prints `consistency-pending hook firing for <id>` when it spawns and `auto-agent for <id> finished (exit N, Ns)` when it exits. Full subprocess output is at `<served-root>/.spec-tacle-agent-logs/<entryId>.log`. If it fails, the log names the reason (`ERR_PROXY_TUNNEL`, `ENOTFOUND`, permission stall, etc.) — see the dev-loop caveat in Step 8 above.
-- **Without `--auto-agent` (or when the subprocess crashes).** You drive it yourself.
+- **With `--auto-agent` (recommended for the standard demo).** The server spawns a headless agent subprocess (`claude -p …` or `codex exec …`) for every queued entry, auto-claims on its behalf, and runs the pass end-to-end without your involvement. You just watch the log — the server prints `consistency-pending hook firing for <id>` when it spawns and `auto-agent for <id> finished (exit N, Ns)` when it exits. Full subprocess output is at `<served-root>/.spec-tacle-agent-logs/<entryId>.log`. If it fails, the log names the reason (`ERR_PROXY_TUNNEL`, `ENOTFOUND`, permission stall, etc.) — see the dev-loop caveat in Step 8 above.
+- **Without `--auto-agent` (or when the subprocess crashes, or no agent CLI was found).** You drive it yourself. This is also the path when the user opens a session and says "run the pending spec-tacle consistency pass": run `npx spec-tacle_skill consistency-check` in the served root to list the queued entries, then work each one as described below.
 
 **Fast-death handling.** A subprocess that exits non-zero in under 5 seconds almost never ran the pass and failed — it's a spawn error: shell-quoted characters in the prompt (backticks, unquoted `<foo>`), a missing `claude` binary, an unrecognized `--model`, or an immediate auth refusal. The server classifies these separately from a normal exit:
 

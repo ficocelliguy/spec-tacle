@@ -141,7 +141,7 @@ The visualizer at `generated/tasky-visualizer.html` renders these. Each diagram 
 ### System architecture and data flow
 
 <!-- spec-tacle:diagram:architecture:caption -->
-The full data plane. **HTTPS** for CRUD, a **WebSocket** for pushed events, and **Redis pub/sub** as the fan-out that keeps every open browser in sync within a second.
+The full data plane. **HTTPS** for CRUD, a **WebSocket** for pushed events, and **Redis pub/sub** as the fan-out that keeps every open browser in sync within a second. Blue is the client, purple our services, teal the pub/sub hop, amber storage, and gray the outside email provider.
 <!-- /spec-tacle:diagram:architecture:caption -->
 
 <!-- spec-tacle:diagram:architecture:detail -->
@@ -202,13 +202,24 @@ flowchart LR
   API -->|"send errors/warnings"| Logger
   WS -->|"send errors"| Logger
   PG --> Logger
+
+  classDef blue fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
+  classDef purple fill:#ede9fe,stroke:#7c3aed,color:#4c1d95
+  classDef teal fill:#ccfbf1,stroke:#0d9488,color:#134e4a
+  classDef amber fill:#fef3c7,stroke:#d97706,color:#78350f
+  classDef gray fill:#f1f5f9,stroke:#64748b,color:#1e293b
+  class Browser blue
+  class API,WS,Mail,Logger purple
+  class Redis teal
+  class PG amber
+  class Provider gray
 ```
 <!-- /spec-tacle:diagram:architecture -->
 
 ### User flow — create a task
 
 <!-- spec-tacle:diagram:create-task-flow:caption -->
-The nine-step round-trip from a member typing a title to every open client seeing the row. **Validation failure** rolls back the optimistic insert with a toast.
+The nine-step round-trip from a member typing a title to every open client seeing the row. **Validation failure** rolls back the optimistic insert with a toast. Blue steps happen in the browser, teal ones on the async fan-out, and red marks the failure path.
 <!-- /spec-tacle:diagram:create-task-flow:caption -->
 
 <!-- spec-tacle:diagram:create-task-flow:detail -->
@@ -242,13 +253,22 @@ flowchart TD
   Start --> Click --> Type --> Post --> Validate
   Validate -- ok --> Save --> Publish --> Fanout --> Insert
   Validate -- fail --> Error
+
+  classDef blue fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
+  classDef teal fill:#ccfbf1,stroke:#0d9488,color:#134e4a
+  classDef amber fill:#fef3c7,stroke:#d97706,color:#78350f
+  classDef red fill:#fee2e2,stroke:#dc2626,color:#7f1d1d
+  class Start,Click,Type,Post,Insert blue
+  class Publish,Fanout teal
+  class Save amber
+  class Error red
 ```
 <!-- /spec-tacle:diagram:create-task-flow -->
 
 ### User flow — invite a teammate
 
 <!-- spec-tacle:diagram:invite-flow:caption -->
-How a team lead brings a new member onto the team, from typing an email address to the invitee landing on the shared list with the right **role**.
+How a team lead brings a new member onto the team, from typing an email address to the invitee landing on the shared list with the right **role**. Blue steps are what a person does; gray is the outside email provider.
 <!-- /spec-tacle:diagram:invite-flow:caption -->
 
 <!-- spec-tacle:diagram:invite-flow:detail -->
@@ -284,13 +304,24 @@ flowchart TD
   Lead --> Settings --> Enter --> Invite --> API1 --> Queue --> Send --> Click --> Signup
   Signup -- yes --> Login --> Join
   Signup -- no --> Register --> Join
+
+  classDef blue fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
+  classDef purple fill:#ede9fe,stroke:#7c3aed,color:#4c1d95
+  classDef teal fill:#ccfbf1,stroke:#0d9488,color:#134e4a
+  classDef green fill:#dcfce7,stroke:#16a34a,color:#14532d
+  classDef gray fill:#f1f5f9,stroke:#64748b,color:#1e293b
+  class Lead,Settings,Enter,Invite,Click,Login,Register blue
+  class API1 purple
+  class Queue teal
+  class Join green
+  class Send gray
 ```
 <!-- /spec-tacle:diagram:invite-flow -->
 
 ### Information flow — a task record from write to every screen
 
 <!-- spec-tacle:diagram:task-record-flow:caption -->
-The task record's journey from a keystroke in one browser to the same row appearing in every other open browser for the team. **Redis** is the fan-out; the activity log is written on the same Postgres transaction as the row itself.
+The task record's journey from a keystroke in one browser to the same row appearing in every other open browser for the team. **Redis** is the fan-out; the activity log is written on the same Postgres transaction as the row itself. Amber marks what gets persisted; teal marks what only travels.
 <!-- /spec-tacle:diagram:task-record-flow:caption -->
 
 <!-- spec-tacle:diagram:task-record-flow:detail -->
@@ -341,13 +372,22 @@ flowchart LR
   Row -->|"publish on Redis"| Event
   Event -->|"WS gateway subscribes"| Frame
   Frame -->|"reconcile"| Local
+
+  classDef blue fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
+  classDef purple fill:#ede9fe,stroke:#7c3aed,color:#4c1d95
+  classDef teal fill:#ccfbf1,stroke:#0d9488,color:#134e4a
+  classDef amber fill:#fef3c7,stroke:#d97706,color:#78350f
+  class Draft,Local blue
+  class Post purple
+  class Event,Frame teal
+  class Row,Audit amber
 ```
 <!-- /spec-tacle:diagram:task-record-flow -->
 
 ### Key decisions and what they shape
 
 <!-- spec-tacle:diagram:decisions:caption -->
-The five v1 decisions and the constraints they cascade into. Read left-to-right to trace **why** a constraint exists; read right-to-left to find **which decision** to revisit if a downstream constraint no longer holds.
+The five v1 decisions and the constraints they cascade into. Read left-to-right to trace **why** a constraint exists; read right-to-left to find **which decision** to revisit if a downstream constraint no longer holds. Green nodes are consequences, gray is out of scope, and red is still open.
 <!-- /spec-tacle:diagram:decisions:caption -->
 
 <!-- spec-tacle:diagram:decisions:detail -->
@@ -380,6 +420,13 @@ flowchart LR
   D4 --> R5["Relational joins across users/teams/tasks"]
   D5 --> R6["Read-only stakeholder access"]
   D5 --> OQ1["Open question:\nlink expiration policy"]
+
+  classDef green fill:#dcfce7,stroke:#16a34a,color:#14532d
+  classDef red fill:#fee2e2,stroke:#dc2626,color:#7f1d1d
+  classDef gray fill:#f1f5f9,stroke:#64748b,color:#1e293b
+  class R1,R2,R3,R4,R5,R6 green
+  class OQ1 red
+  class OOS1 gray
 ```
 <!-- /spec-tacle:diagram:decisions -->
 
