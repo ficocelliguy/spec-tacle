@@ -12,12 +12,13 @@ version: 0.1
 **What we're building**
 
 <!-- spec-tacle:summary:what -->
-- Single-page web client in the browser talking to a stateless REST API
-- Postgres stores users, teams, tasks, comments; Redis pub/sub carries real-time events
-- A separate **WebSocket gateway** holds live connections and fans events out to every open browser for the team
-- A mail worker sends invites and notifications through a third-party provider
-- Four roles (member, team lead, magic-link guest, admin) and three surfaces (list, team settings, list item detail)
-- a logging server to capture error logs and user logins
+- Tasky is a shared to-do list for small teams: one web app, open in each person's browser, where the whole team sees the same list
+- The browser app sends every change to a REST API, a server that handles each request on its own and keeps nothing in memory between them
+- Postgres, the database, stores users, teams, tasks, and comments; Redis, a message relay, passes each change from the API to the gateway below
+- A **WebSocket gateway**, a server that keeps a connection open to each browser, pushes every change to the rest of the team as it happens
+- A mail worker, a background job, sends invites and notifications through an outside email provider
+- Four kinds of user (member, team lead, admin, and a guest who views by emailed link with no account) work across three screens: the list, a single task, and team settings
+- A logging server records errors and user logins
 <!-- /spec-tacle:summary:what -->
 
 **Why it earns the effort**

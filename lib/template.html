@@ -973,6 +973,33 @@
   section.summary .summary-heading .jump-to-spec { margin-left: auto; }
   .diagram-header .jump-to-spec { margin-left: auto; }
   .diagram-header .expand-diagram { margin-left: -4px; }
+
+  /* Sequence diagrams and charts: every text is double-click editable. */
+  .diagram-canvas.text-editable svg text { cursor: text; }
+  .diagram-canvas.text-editable svg text:hover { fill: var(--accent) !important; }
+
+  /* --- Source-section chips: where in the spec's own text this came from --- */
+  .spec-refs {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    margin: 6px 0 8px;
+    font-size: 11px;
+    color: var(--ink-dim);
+  }
+  .spec-refs-label { letter-spacing: 0.2px; }
+  .spec-ref {
+    font-size: 11px;
+    padding: 2px 9px;
+    border: 1px solid var(--line);
+    background: transparent;
+    color: var(--ink-dim);
+    border-radius: 12px;
+    cursor: pointer;
+  }
+  .spec-ref:hover { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
+  .spec-ref::before { content: "§ "; }
   .diagram-header .expand-diagram::before { content: "⤢"; }
   .diagram-card.expanded .diagram-header .expand-diagram::before { content: "✕"; font-size: 11px; }
 
@@ -1644,6 +1671,30 @@
   const openQuestionsOptedIn = Array.isArray(data.summary?.openQuestions) ||
     (data.sectionMap && typeof data.sectionMap.summaryOpenQuestions === 'string');
 
+  // Source-section chips. `refs` is a list of heading texts from the spec's
+  // own sections (not the ones spec-tacle added); each chip opens the drawer
+  // at that heading. "Parent > Child" picks a sub-heading under a parent.
+  const summaryRefs = (data.summaryRefs && typeof data.summaryRefs === 'object') ? data.summaryRefs : {};
+  function specRefsHtml(refs) {
+    const list = (Array.isArray(refs) ? refs : []).map((r) => String(r || '').trim()).filter(Boolean);
+    // A single source section is already the "View in spec" target.
+    if (list.length < 2) return '';
+    const chips = list.map((r) =>
+      `<button type="button" class="spec-ref" data-jump-heading="${escapeHtml(r)}" title="Open the spec drawer and jump to this section of the source file">${escapeHtml(r)}</button>`
+    ).join('');
+    return `<div class="spec-refs"><span class="spec-refs-label">From the spec</span>${chips}</div>`;
+  }
+
+  // "View in spec" goes to where the content sits in the spec's own text: the
+  // first source heading. The spec-tacle anchor is only a fallback for data
+  // JSONs written before specRefs existed.
+  function viewInSpecAttr(refs, fallbackMarker) {
+    const first = (Array.isArray(refs) ? refs : []).map((r) => String(r || '').trim()).find(Boolean);
+    return first
+      ? `data-jump-heading="${escapeHtml(first)}"`
+      : `data-jump-marker="${escapeHtml(fallbackMarker)}"`;
+  }
+
   const summarySection = document.createElement('section');
   summarySection.className = 'summary';
   summarySection.innerHTML = `
@@ -1651,22 +1702,25 @@
       <h1 id="doc-title"></h1>
       <span class="section-label">Technical summary</span>
       <span class="subtitle" id="doc-subtitle"></span>
-      <button type="button" class="jump-to-spec" data-jump-marker="summary:what" title="Open the spec drawer and jump to the summary in the source file">View in spec</button>
+      <button type="button" class="jump-to-spec" ${viewInSpecAttr(summaryRefs.what, 'summary:what')} title="Open the spec drawer and jump to the section of the spec this summary was drawn from">View in spec</button>
     </div>
     <div class="block">
       <div class="block-label">What</div>
       <ul id="summary-what-list" class="summary-list" data-summary="what"></ul>
       <button type="button" class="add-bullet" data-target="what" title="Add a new bullet to the What list">+ Add bullet</button>
+      ${specRefsHtml(summaryRefs.what)}
     </div>
     <div class="block">
       <div class="block-label">Why</div>
       <ul id="summary-why-list" class="summary-list" data-summary="why"></ul>
       <button type="button" class="add-bullet" data-target="why" title="Add a new bullet to the Why list">+ Add bullet</button>
+      ${specRefsHtml(summaryRefs.why)}
     </div>
     <div class="block">
       <div class="block-label">Rules</div>
       <ul id="summary-rules-list" class="summary-list" data-summary="rules"></ul>
       <button type="button" class="add-bullet" data-target="rules" title="Add a new bullet to the Rules list">+ Add bullet</button>
+      ${specRefsHtml(summaryRefs.rules)}
     </div>
     <div class="edit-hint">Double-click a bullet to edit. Wrap key terms in **double asterisks** to bold them. Enter commits, Esc cancels, empty commit removes the bullet.</div>
   `;
@@ -1884,6 +1938,7 @@
 
 
   const HINT_MERMAID = 'Hover a node or arrow to see a description tooltip; click the tooltip to edit it. Click a node to select it, then Delete/Backspace to remove it (and its edges). Drag a node to reposition; arrows and labels follow. Hover a node for its four side dots and shape and color picker (◇); right-click a node opens the same picker. Drag a side dot to another node to create a new arrow, or into empty space to spawn a new node in edit mode. Hover an arrow for its handles: drag the blue circle (or the label itself) to bend, drag the green/orange endpoints to reconnect. Double-click a node, edge label, caption, detail, or bullet to edit its text inline — the cursor lands where you clicked, so triple-click when you want to replace everything. Double-click an unlabeled arrow to add a new label. Click the "Add notes…" area below to jot general thoughts about this diagram. Wrap key terms in double asterisks to bold them. Ctrl/⌘+Z undoes the last edit.';
+  const HINT_TEXT = 'Double-click any text in the diagram (an actor, a message, a note, a title, a chart label) to edit it in place. Enter commits, Esc cancels. Renaming an actor renames it on every message it sends or receives. To add, remove, or reorder steps, or to change a chart\'s numbers, open the Source pane on the right, edit the source, and click Re-render. Double-click the caption, detail, or a bullet to edit its text. Click the "Add notes…" area below to jot general thoughts about this diagram. Ctrl/⌘+Z undoes the last edit.';
   const HINT_TABLE = 'Double-click a header or cell to edit it in place; the cursor lands where you clicked, triple-click to select the whole cell. Enter commits, Esc cancels. Wrap key terms in double asterisks to bold them. To add or remove columns or rows, open the Source pane on the right and edit the markdown table directly — the visualizer re-renders when you re-render. Caption, detail, and notes all edit inline the same way. Ctrl/⌘+Z undoes the last edit.';
   const SOURCE_HINT_MERMAID = 'Show or hide the mermaid source for this diagram';
   const SOURCE_HINT_TABLE = 'Show or hide the raw markdown table source';
@@ -1963,14 +2018,15 @@
       <div class="diagram-header">
         <h3>${escapeHtml(diagram.title)}</h3>
         <span class="kind" title="Diagram type">${escapeHtml(kindLabel(diagram.kind))}</span>
-        <button type="button" class="jump-to-spec" data-jump-marker="diagram:${escapeHtml(diagram.id)}" title="Open the spec drawer and jump to this diagram in the source file">View in spec</button>
+        <button type="button" class="jump-to-spec" ${viewInSpecAttr(diagram.specRefs, 'diagram:' + diagram.id)} title="Open the spec drawer and jump to the section of the spec this diagram was drawn from">View in spec</button>
         <button type="button" class="jump-to-spec expand-diagram" data-expand-idx="${idx}" aria-pressed="false" title="Expand this diagram to fill the screen (Esc to exit)">Full screen</button>
       </div>
       <div class="diagram-caption" data-caption-idx="${idx}" title="Double-click to edit (wrap key terms in **double asterisks** to bold)">${mdBold(diagram.caption || '')}</div>
+      ${specRefsHtml(diagram.specRefs)}
       <details class="diagram-detail" open>
         <summary title="Show or hide the longer description of this diagram">About the ${escapeHtml(diagram.title)}</summary>
         <div class="detail-content" data-detail-idx="${idx}" title="Double-click to edit the detail text. Use dash-space for bullets and two-space indent for nested bullets. Wrap key terms in **double asterisks** to bold.">${mdRich(diagram.detail || '')}</div>
-        <div class="hint">${isTable ? HINT_TABLE : HINT_MERMAID}</div>
+        <div class="hint">${isTable ? HINT_TABLE : (/^\s*(flowchart|graph|stateDiagram)/.test(diagram.source || '') ? HINT_MERMAID : HINT_TEXT)}</div>
       </details>
       <div class="diagram-body" data-body-idx="${idx}">
         <div class="diagram-canvas" data-canvas-idx="${idx}"></div>
@@ -2008,11 +2064,12 @@
       <div class="summary-heading">
         <h2>Open questions</h2>
         <span class="section-label">Unresolved</span>
-        <button type="button" class="jump-to-spec" data-jump-marker="${escapeHtml(sectionMap.summaryOpenQuestions)}" title="Open the spec drawer and jump to Open questions in the source file">View in spec</button>
+        <button type="button" class="jump-to-spec" ${viewInSpecAttr(summaryRefs.openQuestions, sectionMap.summaryOpenQuestions)} title="Open the spec drawer and jump to Open questions in the source file">View in spec</button>
       </div>
       <div class="block">
         <ul id="summary-open-questions-list" class="summary-list" data-summary="openQuestions"></ul>
         <button type="button" class="add-bullet" data-target="openQuestions" title="Add a new open question">+ Add question</button>
+      ${specRefsHtml(summaryRefs.openQuestions)}
       </div>
       <div class="edit-hint">Double-click a question to edit. Wrap key terms in **double asterisks** to bold them. Enter commits, Esc cancels, empty commit removes the bullet.</div>
     `;
@@ -2534,6 +2591,9 @@
       ensureViewBoxRoom(canvas);
       if (prevLayout) reconcileLayout(canvas, idx, prevLayout);
       wireInteractions(canvas, idx);
+      const plainText = !isNodeGraph(diagram.currentSource);
+      canvas.classList.toggle('text-editable', plainText);
+      if (plainText) wireTextEditing(canvas, idx);
       applyStoredPositions(canvas, idx);
       renderAnnotations(idx);
     } catch (err) {
@@ -3525,6 +3585,102 @@
     return true;
   }
 
+  // Flowcharts and state diagrams get the full node/arrow toolkit from
+  // wireInteractions. Every other mermaid kind (sequence, pie, xychart,
+  // quadrant, …) has no .node elements, so it gets wireTextEditing instead.
+  function isNodeGraph(source) {
+    return /^\s*(flowchart|graph|stateDiagram)/.test(source);
+  }
+
+  function setDiagramSource(idx, next) {
+    state.diagrams[idx].currentSource = next;
+    const ta = document.querySelector(`textarea[data-source-idx="${idx}"]`);
+    if (ta) ta.value = next;
+  }
+
+  // Replace the nth whole-token occurrence of `oldText` in the source (every
+  // occurrence when `all` is set). Returns false when it isn't there, which is
+  // the case for text mermaid computes itself (percentages, numeric ticks).
+  function replaceTextInSource(idx, oldText, newText, { nth = 0, all = false } = {}) {
+    const src = state.diagrams[idx].currentSource;
+    const escaped = oldText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const re = new RegExp(`(^|[^\\w])${escaped}(?![\\w])`, 'gm');
+    let seen = 0;
+    let hit = false;
+    const next = src.replace(re, (whole, lead) => {
+      const mine = all || seen === nth;
+      seen++;
+      if (!mine) return whole;
+      hit = true;
+      return lead + newText;
+    });
+    if (!hit) return false;
+    setDiagramSource(idx, next);
+    return true;
+  }
+
+  // Rename a sequence-diagram actor. With an alias (`participant W as Web
+  // client`) only the alias changes; without one the name is the identifier,
+  // so every message line that uses it changes too.
+  function renameSequenceActor(idx, oldText, newText) {
+    const src = state.diagrams[idx].currentSource;
+    let hit = false;
+    const next = src.split('\n').map((line) => {
+      const m = /^(\s*(?:create\s+)?(?:participant|actor)\s+\S+\s+as\s+)(.+?)\s*$/.exec(line);
+      if (!m || m[2] !== oldText) return line;
+      hit = true;
+      return m[1] + newText;
+    }).join('\n');
+    if (hit) { setDiagramSource(idx, next); return true; }
+    return replaceTextInSource(idx, oldText, newText, { all: true });
+  }
+
+  // Double-click any text in a sequence diagram or chart to edit it in place.
+  // The edit is written into the mermaid source and the diagram re-renders.
+  function wireTextEditing(canvas, idx) {
+    const svg = canvas.querySelector('svg');
+    if (!svg) return;
+    const textOf = (el) => (el.textContent || '').replace(/\s+/g, ' ').trim();
+    // Keywords mermaid draws itself ("loop", "alt", "opt"); not user text.
+    const texts = [...svg.querySelectorAll('text')].filter((t) => !t.classList.contains('labelText') && textOf(t));
+    const openSource = () => {
+      const pane = canvas.parentElement && canvas.parentElement.querySelector('details.source-pane');
+      if (pane) pane.open = true;
+    };
+    texts.forEach((t) => {
+      t.addEventListener('dblclick', (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        const shown = textOf(t);
+        const isActor = t.classList.contains('actor') || !!t.closest('.actor');
+        // Mermaid wraps loop/alt conditions in brackets and appends " [n]" to
+        // pie legend entries; neither is in the source.
+        const current = t.classList.contains('loopText')
+          ? shown.replace(/^\[\s*/, '').replace(/\s*\]$/, '')
+          : (t.closest('.legend') ? shown.replace(/\s*\[[^\]]*\]$/, '') : shown);
+        // Same text can appear more than once (two "ok" replies): edit the
+        // occurrence that matches this element's position among its twins.
+        const nth = texts.filter((o) => !(o.classList.contains('actor') || o.closest('.actor')) && textOf(o) === shown).indexOf(t);
+        const r = t.getBoundingClientRect();
+        overlayInput(canvas, r.left + r.width / 2 - 100, r.top - 6, {
+          initialValue: current,
+          placeholder: 'Edit text',
+          width: Math.max(200, r.width + 24),
+          onCommit: (next) => {
+            if (next === current) return;
+            pushUndo();
+            const ok = isActor
+              ? renameSequenceActor(idx, current, next)
+              : replaceTextInSource(idx, current, next, { nth: Math.max(0, nth) });
+            if (ok) { renderDiagram(idx); markDirty(idx); return; }
+            openSource();
+            toast(`"${current}" is not written as text in the source (mermaid computes it). Edit the numbers or structure in the Source pane on the right.`, { warn: true });
+          }
+        });
+      });
+    });
+  }
+
   function wireInteractions(canvas, idx) {
     const svg = canvas.querySelector('svg');
     if (!svg) return;
@@ -3747,9 +3903,27 @@
     // Mermaid emits label groups in the same order as edge paths (one per edge).
     const edgeLabelGroups = [...svg.querySelectorAll('g.edgeLabels > g')];
 
+    // Pair each drawn arrow with its edge in the source. Mermaid ids its paths
+    // `L-<source>-<target>-<n>`, which holds up when mermaid draws edges in a
+    // different order than the source lists them (subgraphs do this) or when
+    // parseEdges skips a line it can't read. Pairing by position alone would
+    // then attach an arrow to the wrong pair of nodes.
+    const claimed = new Set();
+    function sourceEdgeFor(pathEl, i) {
+      const m = /^L-(.+)-(.+)-(\d+)$/.exec(pathEl.id || '');
+      if (m) {
+        const byIds = edgesInSource.filter(e => e.source === m[1] && e.target === m[2] && !claimed.has(e));
+        if (byIds.length) { claimed.add(byIds[0]); return byIds[0]; }
+        return null;
+      }
+      const byIndex = edgesInSource[i];
+      if (byIndex && !claimed.has(byIndex)) { claimed.add(byIndex); return byIndex; }
+      return null;
+    }
+
     uniquePaths.forEach((edge, i) => {
       const edgeId = edge.id || `edge-${i}`;
-      const sourceEdge = edgesInSource[i] || null; // may be null if parse can't match this one
+      const sourceEdge = sourceEdgeFor(edge, i); // null if the source edge can't be identified
       const handleGroup = []; // all handles for this edge; toggled together on hover
 
       // Cache the original path once so we can rebuild with fresh waypoints or revert.
@@ -4051,6 +4225,11 @@
     // Apply pending relocations first — new nodes just added via arrow-drag get
     // moved to the user's drop point before we sync edges.
     applyPendingRelocations();
+    // Move every node to its stored offset BEFORE syncing edges. The edge
+    // redraw clips each end to the node's live outline, so a node still
+    // sitting at mermaid's base position would get its arrow drawn to where
+    // it used to be, and the arrow would float free once the node moved.
+    applyStoredPositions(canvas, idx);
     // Sync every edge to the current node-position/waypoint state (matters after
     // a re-render where some nodes have stored offsets).
     edgeRegistry.forEach(redrawEdgeEntry);
@@ -4074,7 +4253,6 @@
         };
       });
       state.diagrams[idx].pendingRelocations = {};
-      applyStoredPositions(canvas, idx);
     }
 
     function applyPendingEdit() {
@@ -5082,6 +5260,7 @@
   let specLoaded = false;
   let specLoadingPromise = null;
   let pendingJumpMarker = null;
+  let pendingJumpHeading = null;
   // Oldest backup ({ backup, text }) from /spec-history — the spec as it stood
   // before spec-tacle's first write. Null until a backup exists.
   let specBaseline = null;
@@ -5401,6 +5580,58 @@
     setTimeout(() => { chosen.classList.remove('anchor-flash'); }, 1500);
   }
 
+  const headingKey = (s) => String(s).replace(/[\u0060*_]/g, '').replace(/\s+/g, ' ').trim().toLowerCase();
+
+  // Jump to a heading in the spec's own text. `ref` is the heading text, or
+  // "Parent > Child" to pick a sub-heading under a specific parent. Flashes
+  // the heading and the section under it.
+  function jumpToHeadingInDrawer(ref) {
+    if (!specLoaded) { pendingJumpHeading = ref; return; }
+    const path = String(ref).split(' > ').map(headingKey).filter(Boolean);
+    const want = path[path.length - 1];
+    const parents = path.slice(0, -1);
+    const headings = Array.from(drawerSpecEl.querySelectorAll('h1, h2, h3, h4, h5, h6'));
+    const level = (el) => parseInt(el.tagName.slice(1), 10);
+    const ancestors = []; // keys of the open headings above the current one
+    let chosen = null;
+    let loose = null;
+    for (const h of headings) {
+      while (ancestors.length && ancestors[ancestors.length - 1].level >= level(h)) ancestors.pop();
+      const key = headingKey(h.textContent);
+      const underParents = parents.every((p) => ancestors.some((a) => a.key === p));
+      if (key === want && underParents) { chosen = h; break; }
+      if (!loose && want && key.includes(want)) loose = h;
+      ancestors.push({ level: level(h), key });
+    }
+    chosen = chosen || loose;
+    if (!chosen) {
+      setDrawerStatus(`Could not find the section "${ref}" in the spec. Its heading may have been renamed.`, 'err');
+      return;
+    }
+    setDrawerStatus('', null);
+    const flashed = [chosen];
+    for (let el = chosen.nextElementSibling; el; el = el.nextElementSibling) {
+      if (/^H[1-6]$/.test(el.tagName) && level(el) <= level(chosen)) break;
+      flashed.push(el);
+    }
+    flashed.forEach((el) => el.classList.add('anchor-flash'));
+    chosen.scrollIntoView({ block: 'start', behavior: 'auto' });
+    setTimeout(() => { flashed.forEach((el) => el.classList.remove('anchor-flash')); }, 1500);
+  }
+
+  function flushPendingJump() {
+    if (pendingJumpMarker) {
+      const m = pendingJumpMarker;
+      pendingJumpMarker = null;
+      jumpToMarkerInDrawer(m);
+    }
+    if (pendingJumpHeading) {
+      const h = pendingJumpHeading;
+      pendingJumpHeading = null;
+      jumpToHeadingInDrawer(h);
+    }
+  }
+
   function openDrawer() {
     drawer.hidden = false;
     drawerOverlay.hidden = false;
@@ -5459,6 +5690,18 @@
     else pendingJumpMarker = marker;
   });
 
+  // Source-section chips (data-jump-heading) open the drawer at a heading in
+  // the spec's own text rather than at a spec-tacle anchor.
+  document.addEventListener('click', (e) => {
+    const chip = e.target && e.target.closest && e.target.closest('[data-jump-heading]');
+    if (!chip) return;
+    const heading = chip.dataset.jumpHeading;
+    if (!heading) return;
+    e.preventDefault();
+    openDrawer();
+    jumpToHeadingInDrawer(heading);
+  });
+
   async function loadSpecAndDiffs(opts) {
     opts = opts || {};
     const wantHighlight = !!opts.highlightChanges;
@@ -5479,11 +5722,7 @@
         drawerDiffsCt.textContent = '';
         drawerDiffsBd.innerHTML = '<div class="diff-empty">Static demo — no update history.</div>';
         setDrawerStatus('Static demo — spec source is embedded and read-only.', null);
-        if (pendingJumpMarker) {
-          const m = pendingJumpMarker;
-          pendingJumpMarker = null;
-          jumpToMarkerInDrawer(m);
-        }
+        flushPendingJump();
         return;
       }
       setDrawerStatus('Spec drawer needs the round-trip server — the file:// preview cannot fetch the spec source.', 'err');
@@ -5525,11 +5764,7 @@
       const entries = (histBody && histBody.ok && Array.isArray(histBody.entries)) ? histBody.entries : [];
       renderDiffs(entries);
       setDrawerStatus('', null);
-      if (pendingJumpMarker) {
-        const m = pendingJumpMarker;
-        pendingJumpMarker = null;
-        jumpToMarkerInDrawer(m);
-      }
+      flushPendingJump();
     })();
     try {
       await specLoadingPromise;
@@ -5860,6 +6095,8 @@
     const dc = Object.keys((msg && msg.appliedDiagrams) || {}).length;
     if (sc) parts.push(`${sc} section${sc === 1 ? '' : 's'}`);
     if (dc) parts.push(`${dc} diagram${dc === 1 ? '' : 's'}`);
+    const pc = (msg && msg.appliedProse) || 0;
+    if (pc) parts.push(`${pc} spec passage${pc === 1 ? '' : 's'}`);
     if (consistencyBannerTitle) consistencyBannerTitle.textContent = 'Consistency pass applied';
     if (consistencyBannerSub) consistencyBannerSub.textContent = `updated ${parts.join(' + ') || 'nothing'}.`;
     bannerFlashTimer = setTimeout(() => {

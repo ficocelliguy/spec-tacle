@@ -86,3 +86,42 @@ test('bold markers are balanced (** ... **) across all prose fields', () => {
     assert.equal(count % 2, 0, `unbalanced "**" markers in: ${s.slice(0, 80)}…`);
   }
 });
+
+test('every specRefs / summaryRefs entry names a heading in the spec\'s own sections', () => {
+  const data = JSON.parse(fs.readFileSync(DATA_PATH, 'utf-8'));
+  const spec = fs.readFileSync(path.join(__dirname, '..', data.specPath), 'utf-8');
+  // Headings above "## Diagrams" are the author's; the rest are spec-tacle's.
+  const own = spec.split(/^## Diagrams\s*$/m)[0];
+  const headings = new Set((own.match(/^#{1,6} .+$/gm) || []).map(h => h.replace(/^#+ /, '').trim()));
+  const refs = [];
+  for (const list of Object.values(data.summaryRefs || {})) refs.push(...list);
+  for (const d of data.diagrams) {
+    assert.ok(Array.isArray(d.specRefs) && d.specRefs.length, `diagram "${d.id}" has no specRefs`);
+    refs.push(...d.specRefs);
+  }
+  for (const ref of refs) {
+    for (const part of ref.split(' > ')) {
+      assert.ok(headings.has(part), `ref "${ref}" names no heading in ${data.specPath}`);
+    }
+  }
+});
+
+test('the static Snip demo embeds its spec and every source-section ref resolves in it', () => {
+  const docs = path.join(__dirname, '..', 'docs');
+  const data = JSON.parse(fs.readFileSync(path.join(docs, 'snip-data.json'), 'utf-8'));
+  const spec = fs.readFileSync(path.join(docs, 'snip-spec.md'), 'utf-8');
+  assert.equal(data.specSource, spec, 'snip-data.json specSource must match docs/snip-spec.md');
+  const html = fs.readFileSync(path.join(docs, 'index.html'), 'utf-8');
+  assert.ok(html.includes('"summaryRefs"') && html.includes('wireTextEditing'), 'docs/index.html is rendered from an older template or data');
+  const own = spec.split(/^## Diagrams\s*$/m)[0];
+  const headings = new Set((own.match(/^#{1,6} .+$/gm) || []).map(h => h.replace(/^#+ /, '').trim()));
+  const refs = [];
+  for (const list of Object.values(data.summaryRefs || {})) refs.push(...list);
+  for (const d of data.diagrams) {
+    assert.ok(Array.isArray(d.specRefs) && d.specRefs.length, `diagram "${d.id}" has no specRefs`);
+    refs.push(...d.specRefs);
+  }
+  for (const ref of refs) {
+    for (const part of ref.split(' > ')) assert.ok(headings.has(part), `ref "${ref}" names no heading in snip-spec.md`);
+  }
+});

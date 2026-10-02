@@ -7,11 +7,12 @@ description: Turn a software spec into a browsable HTML visualizer — a technic
 
 Take a written spec, produce an HTML page a person can open in a browser that shows:
 
-1. A tight **technical summary** — brief, scannable bulleted lists at the top: *what* is being built, and (only when they earn their place) *why* and the *rules* the system must uphold. All sharpened with `no-ai-slop`. What is always present. Why defaults to 2-3 bullets and is omitted when the reasons are already obvious from the Whats — but can run longer when the spec genuinely has more load-bearing motivations that add to the document. Rules is omitted when the spec has no non-negotiable constraints worth naming.
+1. A tight **technical summary** — brief, scannable bulleted lists at the top: *what* is being built, and (only when they earn their place) *why* and the *rules* the system must uphold. All sharpened with `no-ai-slop`. What is always present, and is written for someone who has never seen the spec: it says what the thing is before naming its parts and explains each term where it first appears. Why defaults to 2-3 bullets and is omitted when the reasons are already obvious from the Whats — but can run longer when the spec genuinely has more load-bearing motivations that add to the document. Rules is omitted when the spec has no non-negotiable constraints worth naming.
 2. A set of **editable mermaid diagrams** — architecture (data/request flow), user flow (task completion paths), a dependency map (what decisions shape what outcomes), and a **data-summary chart** (usually a pie or bar) when the spec makes a quantitative promise a reader should be able to argue with. Not every spec needs all of these; pick the ones that make the spec easier to hold in your head.
-3. **Direct manipulation** — nodes drag and take a new shape or color, source is editable, annotations can be attached to any node or edge. Every inline text edit uses the same gesture: **double-click drops the cursor where you clicked** (so you can amend a word without wiping the whole field), **triple-click selects the whole value** before edit mode. Once you're in edit mode the browser's native contenteditable behavior takes over — double-click selects a word, triple-click selects the line. Each diagram card has a **Full screen** button in its header that expands the diagram to fill the viewport (and enters browser fullscreen where allowed); every editing gesture still works there, and Esc or **Exit full screen** returns it to the page.
+3. **Direct manipulation** — every diagram, table, and piece of text is editable in place. Flowchart and state nodes drag and take a new shape or color; sequence diagrams and charts take double-click edits on any actor, message, note, title, or label; table cells edit inline; the source is editable; annotations can be attached to any node or edge. Every inline text edit uses the same gesture: **double-click drops the cursor where you clicked** (so you can amend a word without wiping the whole field), **triple-click selects the whole value** before edit mode. Once you're in edit mode the browser's native contenteditable behavior takes over — double-click selects a word, triple-click selects the line. Each diagram card has a **Full screen** button in its header that expands the diagram to fill the viewport (and enters browser fullscreen where allowed); every editing gesture still works there, and Esc or **Exit full screen** returns it to the page.
 4. An **open questions** section below the diagrams when the spec has unresolved items — same editable-bullets shape as the top summary, but a separate pane so it reads as the "still to decide" panel. Skip the section entirely for specs with no open items.
-5. An **export payload** the user can hand back to reconcile edits into the spec.
+5. **Source-section links** — the **View in spec** button on the summary and on every diagram opens the spec drawer at the section of the spec's own text that piece was drawn from, so the reader can check a picture against the prose it summarizes. It goes to the spec as the author wrote it, never to the sections spec-tacle adds. When a diagram or summary list draws on more than one section, "From the spec" chips list them all.
+6. An **export payload** the user can hand back to reconcile edits into the spec.
 
 The project lives at `_project-management/personal/mike/spec-tacle/`. It contains:
 
@@ -104,7 +105,13 @@ Once the spec is a markdown file, proceed to Step 1. The rest of the workflow as
 
 **Step 2 — draft the summary as short bullets.** The top summary is meant to be scanned in ten seconds — err on the side of fewer bullets and fewer lists. What is always drafted. Why and Rules each earn their place only when they add clarity the What list doesn't already carry; when in doubt, leave them out. Open Questions renders as its own pane below the diagrams (not in the top summary block).
 
-- **What.** The system in its simplest true form. 3-6 bullets. One bullet per top-level component, one per user surface, one per data-plane fact. Each bullet stands alone. No adjectives that aren't in the spec.
+- **What.** The system in its simplest true form. 3-7 bullets. One bullet per top-level component, one per user surface, one per data-plane fact. Each bullet stands alone. No adjectives that aren't in the spec. **Write it for a reader who has not read the spec, has never heard of the product, and doesn't know the stack.** What is the first thing on the page, and often the only thing a stakeholder reads:
+  - **Open with what the thing is and who uses it**, in plain words, before any component. "Tasky is a shared to-do list for small teams, used in the browser" comes before anything about APIs or databases. Name the product; don't start from "the client" or "the service" as if the reader knows which one.
+  - **Explain every term the first time it appears**, in a few words, right where it's used. Keep the spec's own term so the bullet still matches the diagrams, and add the plain meaning beside it: "a REST API, a server that handles each request on its own", "Redis, a message relay", "a guest who views by emailed link with no account" for a magic-link guest. This covers technology names, acronyms, role names, and the team's internal names for screens, jobs, and features.
+  - **Say what a component does for the user, not only what it's called.** "A WebSocket gateway holds live connections" assumes the reader knows why that matters. "A WebSocket gateway keeps a connection open to each browser and pushes every change to the rest of the team as it happens" doesn't.
+  - **Don't lean on context the reader lacks.** No "the existing flow", "the new model", "the current system", "as before", or "v2" without saying what it refers to. No shorthand lists that only mean something to the team ("three surfaces", "the usual roles"): name the items.
+  - **Test each bullet on a new hire's first day.** If they would have to ask "what's that?" about any word, explain the word or replace it. If the explanation would run past a short clause, the term is too deep for the summary; describe what it does and leave the name to the diagrams.
+  - Explain a term once, on first use. Later bullets, the Why and Rules lists, and the diagrams can use it bare.
 - **Why.** The problem the system solves and the load-bearing decisions that fall out of it. **Default to 2-3 bullets** — the ones a reader can't infer from the Whats. Go longer only when the spec has more genuinely load-bearing motivations that add to the rest of the document (each extra bullet must carry a reason the reader wouldn't otherwise have); never pad to fill the block. **Omit the list entirely** if the reasoning is already obvious from the What bullets, or the spec's motivations are throwaway ("nice to have," "asked for by the team") rather than load-bearing. Cite the spec's own reasoning; don't invent motivations.
 - **Rules.** The non-negotiables the system must uphold — hard constraints, invariants, safety/compliance/security requirements, "must" and "must not" statements. One bullet per rule. Each rule is a claim the reader could argue with. **Omit the list entirely** when the spec has no such constraints, or when what constraints exist aren't important enough to earn a summary slot (fold them into a diagram detail or leave them in the prose). Do not fabricate rules to fill the block. Common sources: compliance clauses (GDPR/HIPAA/SOC2/PCI), platform limits, performance/SLA budgets ("p95 under 200ms"), scope boundaries ("no write access from guests"), data-retention rules, feature flags that gate production behavior.
 - **Open questions.** Unresolved items the spec itself flags as open — an "Open Questions" section, "TBD" notes, assumptions marked for confirmation, decisions punted to a later meeting. One bullet per open item. Skip the list entirely if the spec resolves every question it raises. Common sources: the spec's own **Open Questions** section, sentences that start with "Assumption:" or "TBD", capabilities the spec says need review, retention/scope questions the author left for stakeholders. This list renders as a separate section below the diagrams, not in the top summary block.
@@ -116,7 +123,7 @@ Once the spec is a markdown file, proceed to Step 1. The rest of the workflow as
 - A **Why** bullet names a reason the system exists in this shape. It doesn't restate the shape (that's What) and it doesn't restate the constraint (that's Rules). "Optimistic UI so live collaboration feels correct" is a Why. "Optimistic UI, which must roll back on server reject" is a Why fused with a Rule; split it.
 - **The overlap test:** read each bullet in isolation and ask "which of the three (or four) lists does this belong in?" If the answer is "two of them," rewrite so the answer is one.
 
-Bullets, not paragraphs. A reader should be able to scan each list in ten seconds and know what's true. If a bullet needs two clauses, split it. **Bolding in the summary is very sparing** — one or two `**bold**` terms across each *entire* list, reserved for the single most load-bearing noun the whole document turns on. Most bullets have no bolding at all. Bolding everything is the same as bolding nothing. Captions, details, and descriptions can bold more freely (see the appendix).
+Bullets, not paragraphs. A reader should be able to scan each list in ten seconds and know what's true. If a bullet needs two clauses, split it. The one exception is a What bullet that carries a short explanation of a term: a clear bullet that runs a few words longer beats a short one the reader can't parse. **Bolding in the summary is very sparing** — one or two `**bold**` terms across each *entire* list, reserved for the single most load-bearing noun the whole document turns on. Most bullets have no bolding at all. Bolding everything is the same as bolding nothing. Captions, details, and descriptions can bold more freely (see the appendix).
 
 Then run the writing rules from the appendix over every bullet. Cut em-dashes and fluffy short sentences. Never characterize things the spec doesn't say — see `CLAUDE.md`'s "Don't characterize what you can't source" rule.
 
@@ -137,11 +144,27 @@ Then run the writing rules from the appendix over every bullet. Cut em-dashes an
 
 **Every diagram gets a visible type label** in the visualizer — the value of `kind` in the data JSON drives a badge in the diagram header that reads as a human phrase ("Architecture Diagram", "User Flow", "Information Flow", "Decision Chart", "Dependency Map", "State Diagram", "Sequence Diagram", "Data Summary", "Histogram", "Table"). Pick the kind that matches what the diagram actually shows, not what feels loosely close — a reader should be able to tell at a glance whether they're looking at an architecture picture or a user-flow picture without reading the title. New kinds render as title-cased labels automatically; use one of the listed kinds unless the spec really warrants a new category.
 
+**Everything on the page must be editable in place.** A reader who can't change a picture assumes the tool is broken. What each kind supports:
+
+| Kind | Edit in the picture | Needs the Source pane |
+|---|---|---|
+| Flowcharts (`architecture`, `user flow`, `information flow`, `dependency map`, `decision chart`) and `state` | Rename, recolor, reshape, drag, delete nodes; add, relabel, bend, reconnect arrows | Nothing |
+| `sequence` | Double-click an actor, message, note, or loop condition to rewrite it; renaming an actor renames it on every message | Adding, removing, or reordering messages |
+| `data summary`, `histogram` | Double-click the title, a legend entry, or an axis label to rewrite it | Changing the numbers (percentages and numeric ticks are computed by mermaid) |
+| `table` | Double-click any header or cell | Adding or removing rows and columns |
+
+Every caption, detail, summary bullet, open question, and notes area is double-click editable for all kinds. Two things follow for you:
+
+- **Prefer the kind with the most direct editing when two would work.** A short exchange between two or three parties reads as well in a `user flow` or `information flow` flowchart, where the reader can add and reconnect steps by hand. Keep `sequence` for cases where the order of messages over time between named actors is the point (auth handshakes, retries, a fix-and-sync loop).
+- **Stay inside the listed kinds and mermaid forms.** Other mermaid diagram types (class, ER, journey, gantt, mindmap, timeline) render, but nobody has checked their in-picture editing. Don't emit them. If the content only fits one of those, use a `table` or a flowchart.
+
+When you draft a `sequence` diagram, write it so in-picture edits land cleanly: declare every actor up front with `participant`, keep each message on one line with no `<br/>`, and don't use the keywords `loop`, `alt`, `opt`, `par`, or `end` as message text.
+
 Fewer, load-bearing diagrams beats a full menu. One is fine. Skip a diagram if the spec doesn't have the content to make it truthful.
 
 A `table` earns its place when the spec has a bunch of items that share the same shape and the reader's real question is "how do these compare across the same set of dimensions?" A flowchart or dependency map is the wrong tool for that — there are no directional connections, just parallel entries. Common triggers: a **roles × capabilities** matrix, a **phased rollout** with per-phase gates and durations, an **options comparison** (COTS vs SaaS vs custom), a **tiers** grid (free/pro/enterprise), a **surfaces × supported operations** matrix. Rule of thumb: if the answer to "does this thing support X?" is a lookup across many rows, it's a table. If the answer is "X only exists because of Y, which only exists because of Z," it's a dependency map.
 
-A `data summary` chart earns its place only when the surrounding decisions **assume a distribution** that isn't spelled out anywhere — the redirect latency budget the "why" section promises, the write-heavy activity mix a real-time sync design is priced against, the roll-out split a phased plan implies. If the spec already says the numbers in prose, a chart adds nothing. Don't invent numbers to fill a chart; if the values are a guess, label them as guesses in the detail block so the reader knows what they're arguing with. Charts are non-interactive (no draggable nodes, no per-node descriptions), so all the meaning lives in the caption, detail, and the mermaid data itself.
+A `data summary` chart earns its place only when the surrounding decisions **assume a distribution** that isn't spelled out anywhere — the redirect latency budget the "why" section promises, the write-heavy activity mix a real-time sync design is priced against, the roll-out split a phased plan implies. If the spec already says the numbers in prose, a chart adds nothing. Don't invent numbers to fill a chart; if the values are a guess, label them as guesses in the detail block so the reader knows what they're arguing with. Charts have no draggable nodes and no per-node descriptions, so all the meaning lives in the caption, detail, and the mermaid data itself. Their titles and labels are double-click editable; their numbers change in the Source pane.
 
 A `histogram` is a specific shape of data-summary chart: **one variable, bucketed, count-per-bucket on the y-axis**. Reach for it when the spec's argument turns on the *shape* of a distribution — a p95 latency claim (does the tail actually collapse into the budget?), a task-size assumption (are 90% of requests small enough for the hot path?), a session-length model (is the mode where the pricing assumed?). Draft it as `xychart-beta` with a titled x-axis of ordered bucket labels and a y-axis of counts. Same guess-labeling rule as any other chart: if the bucket counts aren't from a real measurement, say so in the detail. If the spec would be equally clear as a single sentence ("p95 is 180ms"), skip the histogram.
 
@@ -217,6 +240,18 @@ Both are plain prose. Apply the writing rules from the appendix to every sentenc
 
 Every arrow that isn't a plain solid line (dotted `-.->`, `-.-`, or `-. label .->`) must get a description, and that description must say why it's drawn that way — e.g. "Dotted: async, fire-and-forget after the write commits." or "Dotted: optional, only when the team has email invites enabled." A reader who sees a dotted arrow has no other way to learn what the style means. This overrides the skip-if-unsure rule above: work out the edge id rather than leaving it out, and if you can't name a reason for the dotted style, draw the arrow solid instead.
 
+**Step 4e — connect every diagram and summary list to the spec's own sections.** "View in spec" takes the reader to the original text a piece came from, not to the section spec-tacle wrote for it. It can only do that if you record where each piece came from:
+
+- For each diagram, list in `specRefs` the headings of the sections you drew it from. An architecture diagram built from "Architecture" and "Request flow (create task)" names both.
+- For each summary list you drafted, list its source headings in `summaryRefs` under `what`, `why`, `rules`, or `openQuestions`.
+- Write each heading exactly as it appears in the spec, without the `#` marks. When the same heading text appears twice, or a sub-heading is clearer with its parent, write `"Parent > Child"` (`"Architecture > Components"`).
+- Point only at sections that existed before spec-tacle ran. Never list the `## Diagrams` section or anything under it.
+- One to three headings per diagram or list. Name the sections a reader would check the picture against, not every section that mentions a node.
+- **Order matters: the first heading is where "View in spec" lands.** Put the section that most directly describes the piece first. The summary's button uses the first `summaryRefs.what` heading; the Open questions button uses the first `summaryRefs.openQuestions` heading. Two or more headings also render as "From the spec" chips, one per section.
+- If a diagram rests on something the spec never states in one place (an assumption you tagged, a chart of guessed numbers), point at the nearest section that motivates it, and say in the detail that the numbers are a guess.
+
+A heading that no longer exists shows the reader a "could not find the section" message, so keep these lists current whenever a heading is renamed.
+
 **Step 5 — build the data JSON.** Shape:
 
 ```json
@@ -237,6 +272,12 @@ Every arrow that isn't a plain solid line (dotted `-.->`, `-.-`, or `-. label .-
     "rules":         ["short bullet", "short bullet", "…"],
     "openQuestions": ["short bullet", "short bullet", "…"]
   },
+  "summaryRefs": {
+    "what":          ["<heading in the spec's own text>", "…"],
+    "why":           ["<heading>", "…"],
+    "rules":         ["<heading>", "…"],
+    "openQuestions": ["<heading>", "…"]
+  },
   "diagrams": [
     {
       "id": "<slug>",
@@ -244,6 +285,7 @@ Every arrow that isn't a plain solid line (dotted `-.->`, `-.-`, or `-. label .-
       "title": "<human title>",
       "caption": "<two or three sentences shown directly above the diagram; bold key terms with **asterisks**>",
       "detail":  "<longer paragraph or bulleted list shown in the 'About the <title>' section under the diagram (expanded by default)>",
+      "specRefs": ["<heading of a section in the spec's own text that this diagram was drawn from>", "…"],
       "source":  "<mermaid source for every kind except 'table'; 'table' holds a markdown pipe table (header row, `|---|---|` alignment row, then data rows). Use \\n for newlines in either case.>",
       "descriptions": {
         "node:<id>": "<what this node is and does, shown on hover, editable in place>",
@@ -262,6 +304,7 @@ Notes on the shape:
 - `subtitle` is a **one-sentence context line** that renders directly below the title. Always write one. It tells a reader who has never seen the spec what the document covers and for which product or system (e.g. "This spec covers what a clerk sees and can do on one delivered report in Platform Reporting."). One complete sentence, sourced from the spec's own summary, held to the writing rules in the appendix. Don't spend it on the file path, date, or status; the spec drawer already shows the file.
 - `summary.what`, `summary.why`, `summary.rules`, and `summary.openQuestions` are arrays of short bullet strings. Never use paragraph text there — the visualizer renders each element as its own `<li>`. `summary.what` is always present. `summary.why` is optional — omit the key (or leave `[]`) when the reasons are already obvious from the What list; when included, default to 2-3 bullets and go longer only when the spec has more genuinely load-bearing motivations. `summary.rules` is optional — omit the key (or leave `[]`) for specs with no non-negotiable constraints. `summary.openQuestions` is optional — omit the key entirely when the spec has no open items, so the visualizer skips rendering the section. When you include it, the section renders as its own pane below the diagrams (not inside the top summary block).
 - `caption` is two or three sentences of italic subtext directly above the diagram. `detail` is a longer paragraph or bulleted list in an "About the <diagram title>" block that starts expanded (the reader can collapse it). Both accept `**bold**` markdown for key terms; `detail` also accepts `- ` / `  - ` nested bullet lists.
+- `specRefs` (per diagram) and `summaryRefs` (per summary list) are arrays of heading texts from the spec's own sections (see Step 4e). The first heading is the "View in spec" target; with two or more, each also renders as a "From the spec" chip. Either way the drawer opens at that heading and flashes the section under it. Always fill them in: without them "View in spec" has no original location to go to and falls back to the section spec-tacle added.
 - `descriptions` is optional — a map from `node:<id>` / `edge:L-<source>-<target>-<n>` keys to one-sentence descriptions shown on hover, editable on click.
 - `notes` is optional and usually empty on first render. It's a per-diagram free-form user notes area (supports `**bold**` and `- ` / `  - ` nested bullets). Users click the "Add notes…" area under each diagram to add general thoughts; those get written back into the spec via a `diagram:<id>:notes` marker section on Update.
 - `serverUrl` is normally `null`. The visualizer falls back to `location.origin` when served through `npx spec-tacle_skill serve`, and disables Update/Undo when opened via `file://`. Only set it if the visualizer will be served from a different origin than the one hosting the spec-tacle server.
@@ -298,6 +341,14 @@ On every Update spec the round-trip regenerates the inventory from the current m
 
 The order within a diagram section is caption, then detail, then notes, then the source block, with a human-readable `### Diagram title` heading above the caption. `example-spec.md` in the spec-tacle project directory is the reference — copy its shape.
 
+**Step 7b — check the new sections against the whole spec.** Before you start the server, read the spec once more from the top with the summary and diagram sections in place. Everything you added has to agree with the text it came from: same names, same numbers, same direction of flow, same scope.
+
+- Where your summary or a diagram says something the spec's own sections don't support, fix your section. The spec is the source of truth on the first run.
+- Where two of the spec's own sections disagree with each other (the Architecture section names a component the Key Decisions section says was dropped), don't pick a winner. Draw what the more specific section says, tag it `**Assumption:**`, and add an Open Questions bullet naming both sections.
+- Confirm every heading in `specRefs` and `summaryRefs` exists in the file.
+
+- Confirm every diagram is one of the listed kinds and that its `kind` matches its mermaid header (`sequence` ↔ `sequenceDiagram`, `state` ↔ `stateDiagram-v2`, `table` ↔ a pipe table). A mismatch gives the card the wrong editing hint.
+
 **Step 8 — start the round-trip server (it auto-opens the visualizer).** Without the server running the Update spec / Undo buttons in the visualizer disable themselves (the page detects `file://` and won't accept edits), so if you skip this step the user gets a read-only page and thinks the tool is broken.
 
 Run this yourself as a long-running background process. **Pass `--auto-agent`** so every Update spec fires a headless agent subprocess (`claude -p`, or `codex exec` under Codex) that runs the consistency pass automatically — without it, the queue fills up and the visualizer banner stays "pending" until you (the outer session) drive each pass by hand.
@@ -316,11 +367,13 @@ npx spec-tacle_skill serve --root <path/to/served-root> --open <relative/path/to
 - If a spec-tacle server is already running on the same root, reuse it — don't start a second one. Just tell the user where to look.
 - The server pushes a `spec-changed` event over Server-Sent Events (`GET /events`) whenever the spec file changes — from any tab's Update spec, an Undo, or a direct edit on disk. The visualizer subscribes on load and **hot-reloads only the spec drawer** (text + diff history) when it fires; the diagrams, drag positions, annotations, and any unsaved textarea edits stay untouched. So when you edit the spec yourself while a demo is open, don't tell the user to refresh — the drawer catches up on its own within a couple hundred milliseconds. Reserve a full page reload for when the visualizer HTML or data JSON changes (rare — usually only after you re-render).
 - While an Update spec (or Undo) is in flight and the drawer is open, the drawer dims the spec pane and spins the status bar so a reader can see the flyout catching up. Once the fresh spec arrives, the drawer flags the added or changed lines with a green stripe against a soft green background. Only the most recent Update's diff is highlighted — the next Update replaces those spans, and a manual Refresh or an external file-change event clears them. The highlight is a reading aid; the round-trip is exactly what it was before.
-- The drawer header's **Show changes** toggle marks everything spec-tacle has changed in the spec since its first Update spec, not just the latest one. It diffs the current file against the oldest backup in `backups/` (the server returns it as `baseline` from `/spec-history`): new or changed blocks get a static green stripe, and removed lines reappear as struck-through red markdown where they used to sit. Anchor comments are left out on both sides. The toggle stays disabled until a backup exists, and Finalize (which deletes `backups/`) disables it again. Your own `consistency-apply` writes and direct edits to the file count as tool changes once the first backup exists, so keep consistency passes narrow. Everything you rewrite shows up in the reader's diff.
+- The drawer header's **Show changes** toggle marks everything spec-tacle has changed in the spec since its first Update spec, not just the latest one. It diffs the current file against the oldest backup in `backups/` (the server returns it as `baseline` from `/spec-history`): new or changed blocks get a static green stripe, and removed lines reappear as struck-through red markdown where they used to sit. Anchor comments are left out on both sides. The toggle stays disabled until a backup exists, and Finalize (which deletes `backups/`) disables it again. Your own `consistency-apply` writes count as tool changes once the first backup exists, including `prose` edits to the spec's own sections. Everything you rewrite shows up in the reader's diff, so change only what the user's edit made wrong.
 
 ### Consistency pass (agent-driven follow-up after Update spec)
 
-After every user Update spec, the server appends a **consistency-pass queue entry** to `<served-root>/.spec-tacle-consistency-pending.json`, broadcasts a `consistency-pending` SSE event to every open visualizer tab, and prints a `[spec-tacle] consistency-pass pending for <spec> (id …)` line to its stdout. The queue entry carries the section names, diagram ids, and before/after content of what the user just changed — enough context for a reasoning agent to propose related edits to the summary bullets, other diagrams, or the plain-prose part of the spec.
+After every user Update spec, the server appends a **consistency-pass queue entry** to `<served-root>/.spec-tacle-consistency-pending.json`, broadcasts a `consistency-pending` SSE event to every open visualizer tab, and prints a `[spec-tacle] consistency-pass pending for <spec> (id …)` line to its stdout. The queue entry carries the section names, diagram ids, and before/after content of what the user just changed — enough context for a reasoning agent to find everything else in the spec that the edit made wrong.
+
+**The pass covers the whole spec.** That means the spec's own sections (overview, users, flows, architecture, key decisions, scope, open questions) as well as the summary and diagram sections spec-tacle added. A user who renames a component in a diagram expects the Architecture section to use the new name too. Checking only the marker-anchored sections leaves the original text contradicting the picture, which is the worse half to get wrong: it's the part other people and coding agents read.
 
 The visualizer shows a small "Consistency pass pending — an agent is reviewing related sections…" banner in the header with a spinner while it waits. It does not attempt the reasoning itself.
 
@@ -336,42 +389,63 @@ The visualizer shows a small "Consistency pass pending — an agent is reviewing
 
 When you see a spawn-failed banner, do NOT retry the auto-agent as-is — the failure is deterministic. Read the log tail, fix the cause (usually a stray character in a customized `--on-consistency-pending` prompt), then either restart the server or drive the pass yourself.
 
-**Your responsibility for communication (read this before you touch anything).** The visualizer is watching the *server*, not the file. A direct `Edit` to a marker-anchored section (a summary bullet, a diagram caption / detail / notes, a diagram source block) is **wrong during a consistency pass** — it fires the file watcher's `spec-changed` event, which refreshes the drawer, and that is *all*. The pending banner stays up. The diagram card doesn't hot-reload. The blue "auto-applied" highlight never paints. The queue entry never clears. The user sees a stuck UI while your edit sits in the file.
+**Your responsibility for communication (read this before you touch anything).** The visualizer is watching the *server*, not the file. A direct `Edit` to the spec is **wrong during a consistency pass** — it fires the file watcher's `spec-changed` event, which refreshes the drawer, and that is *all*. The pending banner stays up. The diagram card doesn't hot-reload. The blue "auto-applied" highlight never paints. The queue entry never clears. No backup is written, so Undo can't take the change back. The user sees a stuck UI while your edit sits in the file.
 
-**Every edit you make inside a marker-anchored section during a consistency pass MUST be posted through the server** — either `POST /consistency-apply` directly, or `npx spec-tacle_skill consistency-apply <edits.json>` (which posts for you). That endpoint is what:
+**Every edit you make during a consistency pass MUST be posted through the server, in one payload** — either `POST /consistency-apply` directly, or `npx spec-tacle_skill consistency-apply <edits.json>` (which posts for you). The payload has two halves:
 
-- Applies the edit (with a timestamped backup, same as `/update-spec`).
-- Broadcasts the `consistency-applied` SSE that hot-reloads the affected summary bullets and diagram cards *in place* and paints the blue highlight.
+- `sections` and `diagrams` carry changes inside marker-anchored sections (summary bullets, a diagram's caption / detail / notes / source), same shape as `/update-spec`.
+- `prose` carries changes to the spec's own text outside every marker: an array of `{ "find": "<exact existing text>", "replace": "<new text>" }`. `find` must match the file exactly (whitespace included) and exactly once; quote enough of the sentence to make it unique. To add a sentence, `find` the text it follows and `replace` with that text plus the new sentence. A `find` that is missing, ambiguous, or inside a marker-anchored section comes back as a 422 naming the edit, and nothing is written. Fix it and post again.
+
+That endpoint is what:
+
+- Applies every edit in a single write (with one timestamped backup, same as `/update-spec`).
+- Broadcasts the `consistency-applied` SSE that hot-reloads the affected summary bullets and diagram cards *in place* and paints the blue highlight, on the rewritten prose as well.
 - Clears the queue entry (via the `entryId` in the payload) so the pending banner disappears.
-
-`Edit` is only appropriate for *bare prose outside every marker anchor* — a new sentence in a Constraints section, a note in Open Questions, a heading edit. Even those pick up the drawer refresh via `spec-changed`; you don't have to do anything extra for the drawer, but you still cannot use `Edit` for anything the round-trip owns.
 
 **If you decide no follow-up edits are warranted, don't just walk away** — post `/consistency-dismiss` (or `/consistency-release` if you claimed) so the banner clears. Silently exiting leaves the entry pending forever.
 
 **Your job as the invoking Claude session, when the user hasn't opted out:**
 
 1. When you see a `[spec-tacle] consistency-pass pending` line (or the user asks you to run the pass, or you're about to hand off), run `npx spec-tacle_skill consistency-check --root <served-root>`. It prints the pending entries with their section/diagram names.
-2. For each entry, read the spec (path in the entry) and the entry's before/after content. Reason about which OTHER marker-anchored sections need to change to stay consistent with what the user just wrote:
+2. For each entry, read the spec (path in the entry) and the entry's before/after content. **The user's edit is the source of truth.** Where it disagrees with another section, a diagram, or a decision recorded elsewhere in the spec, the other place is the one that's wrong: update it to match. Never revert the user's change, soften it, or rewrite it back toward the old wording. The only edits you may make to the text the user just wrote are spelling fixes and minor readability tweaks that leave its meaning intact. Then read the whole spec top to bottom and find every OTHER place that now disagrees with what the user just wrote. Check both halves:
+
+   *The spec's own sections* (everything outside the markers):
+   - A renamed component, role, or surface gets the new name everywhere the old one appears: Solution Overview, Architecture, flow steps, Key Decisions, data-model notes.
+   - A changed number (a latency budget, a team-size limit, a retention period) is updated in every sentence that states the old one.
+   - An added or removed node, edge, step, or role is added to or removed from the section that authoritatively describes it. A new store in the architecture diagram gets a line in the Components list; a removed flow step comes out of that flow's numbered steps.
+   - A new Rule, or a rewritten one, is restated where the spec records constraints. If a Key Decisions entry or an Out of Scope line says the opposite, rewrite that entry to match.
+   - A resolved Open Question is removed from the spec's Open Questions section and its answer written into the section it was hanging over.
+   - If the user's edit introduces a fact the spec has no section for, add a sentence to the closest section and tag it `**Assumption:**` rather than inventing a new section.
+
+   *The marker-anchored sections* spec-tacle added:
    - A rewritten diagram caption or detail should propagate its load-bearing terms into the summary (What/Why/Rules bullets) if the summary talks about the same component or constraint.
    - A rewritten summary bullet often implies a diagram caption, detail, or notes update — same load-bearing noun should read the same way in both.
    - A rewritten **Rules** bullet often has consequences for a diagram: a new "must never" invariant should show up somewhere in the architecture edges or user-flow branches; an updated latency budget should surface in the data-summary chart or its detail.
    - A new or rewritten **Open Questions** bullet often reflects a real uncertainty the diagrams and other bullets are still resting on. If a question calls out an unconfirmed assumption, flag the corresponding term in the prose (a "Assumption:" line, a note in Key Decisions) — but do NOT preemptively rewrite a Rule or diagram edge to resolve the question, because the whole point is that the answer isn't in yet.
    - A renamed component in a diagram source (e.g. `WS` → `Realtime`) should replace the old name in every other diagram's inventory + description, and in the summary and any related caption/detail that names it.
    - A rewritten notes block often signals the reader wants that observation reflected in the detail or the summary.
-3. Apply the writing rules from the appendix to every proposed edit — cut filler, keep the spec's own vocabulary, don't invent structure the spec doesn't support.
-4. Build an edits JSON with the SAME shape as `/update-spec` plus `entryId`:
+3. Apply the writing rules from the appendix to every proposed edit in a marker-anchored section. In the spec's own sections, match the author's existing voice and change as few words as the fix needs — cut filler, keep the spec's own vocabulary, don't invent structure the spec doesn't support.
+4. Build an edits JSON with the SAME shape as `/update-spec` plus `entryId` and `prose`:
    ```json
-   { "specPath": "…", "entryId": "…", "sections": { "diagram:arch:caption": "…", … }, "diagrams": { "arch": { "source": "…", "kind": "flowchart" } } }
+   {
+     "specPath": "…",
+     "entryId": "…",
+     "sections": { "diagram:arch:caption": "…", … },
+     "diagrams": { "arch": { "source": "…", "kind": "flowchart" } },
+     "prose": [ { "find": "The WebSocket gateway holds long-lived connections", "replace": "The Realtime gateway holds long-lived connections" } ]
+   }
    ```
    Save it to a scratch file, then post it with `npx spec-tacle_skill consistency-apply <edits.json>`. The server writes the follow-up (with a backup), clears the queue entry, and broadcasts `consistency-applied` over SSE. **Do not `Edit` the spec file to make these changes yourself** — the visualizer won't hot-reload the diagram cards, won't paint the blue highlight, and will keep the pending banner up until you post to the endpoint.
-5. If you decide no related sections need to change, drop the queue entry so the banner clears — `curl -sS -X POST http://127.0.0.1:<port>/consistency-dismiss -H 'content-type: application/json' -d '{"entryId":"…","specPath":"…"}'` (the CLI doesn't ship a dedicated `dismiss` subcommand yet). Silently exiting without dismissing leaves the banner spinning forever.
+
+   After it applies, re-sync the data JSON and re-render. If the pass renamed a heading, update `specRefs` and `summaryRefs` to the new heading text in the same step, or the "From the spec" chips stop finding their section.
+5. If you decide nothing else in the spec needs to change, drop the queue entry so the banner clears — `curl -sS -X POST http://127.0.0.1:<port>/consistency-dismiss -H 'content-type: application/json' -d '{"entryId":"…","specPath":"…"}'` (the CLI doesn't ship a dedicated `dismiss` subcommand yet). Silently exiting without dismissing leaves the banner spinning forever.
 
 When the visualizer receives `consistency-applied`, it:
 - **Hot-reloads the affected summary bullet lists and diagram cards in place** — caption, detail, notes, and diagram source get overwritten with the new content and re-rendered (mermaid re-parsed, notes re-flowed) without a full page reload. If the user had unsaved edits in one of those fields, the base line moves to the auto-applied value but their in-progress text is preserved — a `[spec-tacle]` console info line names the field so the user knows their local edit is now diverging from a new baseline.
 - **Highlights the auto-applied lines in the drawer with a distinct color** (blue against a soft-blue background, with a blue left stripe) so the reader can tell an agent-applied line apart from a hand-edited one. The main-visualizer fields that just changed also flash blue-to-transparent for a few seconds.
-- The Undo button still works — it restores the pre-consistency backup, since every /consistency-apply writes its own timestamped backup.
+- The Undo button still works — it restores the pre-consistency backup, since every /consistency-apply writes its own timestamped backup. That covers `prose` edits to the spec's own sections too, which is the reason they go through the endpoint and not a direct file edit.
 
-Keep the pass narrow. If a user's edit is a cosmetic caption tweak, the right consistency pass is often no edit at all. Dismiss the queue entry rather than fabricating related changes to fill a diff. **Only touch sections you can name a specific reason to touch.**
+Read widely, edit narrowly. The pass reads the whole spec every time, but it changes only the passages the user's edit made wrong. If a user's edit is a cosmetic caption tweak, the right consistency pass is often no edit at all. Dismiss the queue entry rather than fabricating related changes to fill a diff. **Only touch passages you can name a specific reason to touch**, and leave the author's wording alone everywhere else: no restyling, no reflowing, no applying the writing rules to sentences you weren't already changing. Narrow never means undoing the user's edit to make the inconsistency go away. If their change contradicts three other sections, the pass updates those three sections.
 
 Tell the user, in one short line, what you opened, the port the server is on, and where their edits will be written. Don't recap the whole workflow.
 
@@ -400,15 +474,16 @@ The visualizer's **Export changes** button produces `spec-tacle-edits.json`. Whe
 - Locate the section of the spec that describes that piece of the system. Propose the smallest edit — a sentence rewrite, an added bullet, or a note in Open Questions. For caption/detail/summary edits, the marker section itself is the target — write the new text straight into it.
 - Present the change list to the user first. Do not silently edit the spec.
 
-**Step 4 — apply the confirmed edits to the spec.** Use Edit tool, one change per section. If the change contradicts a decision in the spec, don't quietly override it — surface the conflict and ask.
+**Step 4 — apply the confirmed edits to the spec.** Use Edit tool, one change per section. Check each change against the whole spec, the author's own sections included, not only the summary and diagram sections. If the change contradicts a decision in the spec, the user's change wins: update the decision and every other place that disagrees with it, and name those updates in your summary. Do not revert or water down the user's change to preserve the old decision. Spelling fixes and minor readability tweaks to their wording are fine.
 
-**Step 5 — regenerate the data JSON and re-render.** So the visualizer reflects the new source of truth. Preserve node positions and annotations from the payload where they still make sense (same node ids).
+**Step 5 — regenerate the data JSON and re-render.** So the visualizer reflects the new source of truth. Update `specRefs` and `summaryRefs` if a heading changed. Preserve node positions and annotations from the payload where they still make sense (same node ids).
 
 ## Style and constraints
 
 - **Precision beats coverage.** A visualizer that shows two things clearly beats one that crams in every relationship. If the spec is thin in one area, don't fabricate connections to fill a diagram.
 - **Use the spec's language.** If the spec calls it "WebSocket gateway," the diagram says "WebSocket gateway," not "realtime service" or "push server."
 - **Ask before inventing structure.** If the spec is ambiguous about direction, ownership, or which component talks to which, list the ambiguities and ask. One question at a time.
+- **The user's edit is correct.** When a change the user made disagrees with the rest of the spec, fix the rest of the spec. Don't revert their change; limit your edits to their text to spelling and minor readability.
 - **No performed contrition on reconciliation.** If you got a diagram wrong and the user fixed it, apply the fix, briefly note what changed in the spec, and move on. Don't editorialize.
 - **The generated HTML file is disposable.** Regenerate freely. The spec is the source of truth; the visualizer is a reading aid.
 

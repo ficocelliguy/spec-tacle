@@ -9,7 +9,7 @@ const path = require('node:path');
 const http = require('node:http');
 
 const {
-  applyUpdates, replaceBetweenMarkers, start, makeServer,
+  applyUpdates, applyProseEdits, replaceBetweenMarkers, start, makeServer,
   readConsistencyQueue, CONSISTENCY_QUEUE_FILENAME, extractMarkerContent,
   deriveProgressFromStreamJson,
   stripSpecTacleArtifacts,
@@ -290,6 +290,62 @@ test('HTTP round-trip: /update-spec enqueues a consistency-pass entry and /consi
     // Two backups exist (one per write).
     const backups = fs.readdirSync(path.join(tmp, 'backups'));
     assert.equal(backups.length, 2);
+  } finally {
+    server.close();
+    fs.rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
+test('applyProseEdits rewrites text outside the markers and rejects anything it cannot place', () => {
+  const src =
+    '# Spec\n\nThe WS gateway fans out events.\n\nRetry twice.\n\nRetry twice.\n\n' +
+    '<!-- spec-tacle:summary:what -->\n- WS gateway\n<!-- /spec-tacle:summary:what -->\n';
+  const out = applyProseEdits(src, [{ find: 'The WS gateway fans', replace: 'The Realtime gateway fans' }]);
+  assert.match(out, /The Realtime gateway fans out events\./);
+  assert.match(out, /- WS gateway/, 'marker-anchored content is left alone');
+  assert.equal(applyProseEdits(src, undefined), src);
+
+  const status = (prose) => {
+    try { applyProseEdits(src, prose); } catch (e) { return [e.status, e.message]; }
+    return [null, ''];
+  };
+  assert.deepEqual(status([{ find: 'no such text', replace: 'x' }])[0], 422);
+  assert.match(status([{ find: 'Retry twice.', replace: 'x' }])[1], /more than once/);
+  assert.match(status([{ find: '- WS gateway', replace: 'x' }])[1], /summary:what/);
+  assert.match(status([{ find: '', replace: 'x' }])[1], /non-empty "find"/);
+});
+
+test('HTTP: /consistency-apply lands prose and marker edits in one write, and a bad prose edit writes nothing', async () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'spec-tacle-prose-test-'));
+  const specFile = path.join(tmp, 'spec.md');
+  const original =
+    '# Spec\n\n## Architecture\n\nThe WS gateway fans out events.\n\n' +
+    '<!-- spec-tacle:summary:what -->\n- WS gateway\n<!-- /spec-tacle:summary:what -->\n';
+  fs.writeFileSync(specFile, original);
+  const port = 19000 + Math.floor(Math.random() * 1000);
+  const server = start({ root: tmp, port });
+  try {
+    await new Promise((res) => setTimeout(res, 60));
+    const bad = await httpPost(port, '/consistency-apply', JSON.stringify({
+      specPath: 'spec.md',
+      sections: { 'summary:what': '- Realtime gateway' },
+      prose: [{ find: 'The websocket gateway', replace: 'The Realtime gateway' }],
+    }));
+    assert.equal(bad.status, 422);
+    assert.equal(bad.json.ok, false);
+    assert.equal(fs.readFileSync(specFile, 'utf-8'), original, 'nothing is written when a prose edit misses');
+
+    const good = await httpPost(port, '/consistency-apply', JSON.stringify({
+      specPath: 'spec.md',
+      sections: { 'summary:what': '- Realtime gateway' },
+      prose: [{ find: 'The WS gateway', replace: 'The Realtime gateway' }],
+    }));
+    assert.equal(good.status, 200);
+    assert.equal(good.json.changed, true);
+    const text = fs.readFileSync(specFile, 'utf-8');
+    assert.match(text, /The Realtime gateway fans out events\./);
+    assert.match(text, /- Realtime gateway/);
+    assert.equal(fs.readdirSync(path.join(tmp, 'backups')).length, 1, 'one backup covers both halves');
   } finally {
     server.close();
     fs.rmSync(tmp, { recursive: true, force: true });

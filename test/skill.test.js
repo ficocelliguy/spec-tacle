@@ -28,7 +28,7 @@ test('SKILL.md documents every marker anchor pair the server round-trips', () =>
 });
 
 test('SKILL.md describes every top-level data JSON field', () => {
-  const fields = ['title', 'specPath', 'summary', 'diagrams', 'sectionMap', 'serverUrl'];
+  const fields = ['title', 'specPath', 'summary', 'summaryRefs', 'diagrams', 'sectionMap', 'serverUrl'];
   for (const f of fields) {
     assert.match(skill, new RegExp(`"${f}"|\\b${f}\\b`),
       `SKILL.md missing field "${f}"`);
@@ -36,7 +36,7 @@ test('SKILL.md describes every top-level data JSON field', () => {
 });
 
 test('SKILL.md describes every per-diagram field', () => {
-  const fields = ['id', 'kind', 'title', 'caption', 'detail', 'source', 'descriptions', 'notes'];
+  const fields = ['id', 'kind', 'title', 'caption', 'detail', 'specRefs', 'source', 'descriptions', 'notes'];
   for (const f of fields) {
     assert.match(skill, new RegExp(`"${f}"|\\b${f}\\b`),
       `SKILL.md missing diagram field "${f}"`);

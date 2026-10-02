@@ -182,9 +182,13 @@
     letter-spacing: 0.5px;
   }
   section.summary .summary-heading .subtitle {
-    font-size: 12px;
+    /* One-sentence context line: its own row below the title. */
+    flex-basis: 100%;
+    order: 1;
+    font-size: 13px;
     color: var(--ink-dim);
   }
+  section.summary .summary-heading .subtitle:empty { display: none; }
   section.summary .block { margin-bottom: 14px; }
   section.summary .block:last-child { margin-bottom: 0; }
   section.summary .block-label { font-size: 12px; font-weight: 600; color: var(--accent); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
@@ -969,6 +973,33 @@
   section.summary .summary-heading .jump-to-spec { margin-left: auto; }
   .diagram-header .jump-to-spec { margin-left: auto; }
   .diagram-header .expand-diagram { margin-left: -4px; }
+
+  /* Sequence diagrams and charts: every text is double-click editable. */
+  .diagram-canvas.text-editable svg text { cursor: text; }
+  .diagram-canvas.text-editable svg text:hover { fill: var(--accent) !important; }
+
+  /* --- Source-section chips: where in the spec's own text this came from --- */
+  .spec-refs {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    margin: 6px 0 8px;
+    font-size: 11px;
+    color: var(--ink-dim);
+  }
+  .spec-refs-label { letter-spacing: 0.2px; }
+  .spec-ref {
+    font-size: 11px;
+    padding: 2px 9px;
+    border: 1px solid var(--line);
+    background: transparent;
+    color: var(--ink-dim);
+    border-radius: 12px;
+    cursor: pointer;
+  }
+  .spec-ref:hover { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
+  .spec-ref::before { content: "§ "; }
   .diagram-header .expand-diagram::before { content: "⤢"; }
   .diagram-card.expanded .diagram-header .expand-diagram::before { content: "✕"; font-size: 11px; }
 
@@ -1617,7 +1648,7 @@
   </div>
 </div>
 
-<script id="specdata" type="application/json">{"title":"Snip — a lean URL shortener","subtitle":"GitHub Pages demo — everything editable in-browser, nothing saved","specPath":"snip-spec.md","serverUrl":null,"sectionMap":{"summaryWhat":"summary:what","summaryWhy":"summary:why"},"summary":{"what":["One HTTP service with two surfaces: a create-link API and a redirect endpoint at the short host","**Postgres** stores the short code, target URL, owner, and expiration; a click log table backs the analytics rollup","A worker rolls per-click rows into hourly and daily aggregates so dashboards read one row per link per day","Two roles: authenticated creators (via API token) and anonymous viewers who follow the short link"],"why":["Existing shorteners are either bloated dashboards or bare hosted forms with no owner history","Snip picks a **narrow shape** (one code → one target, plus a click log) so the storage and the analytics stay boring","Analytics separated from the redirect path so the redirect stays fast under load","Custom domains are v2 — v1 assumes one shared short host so the storage schema doesn't need a tenant column"]},"diagrams":[{"id":"architecture","kind":"architecture","title":"Service shape and data flow","caption":"Two entry paths (**create** and **redirect**) share Postgres; a background worker builds the analytics rollup from the click log so the redirect never blocks on aggregation. Blue nodes are callers, purple our services, and amber the tables.","detail":"- **Create path**: authenticated client → API `POST /links` → Postgres `links`\n- **Redirect path**: anonymous browser → short host `GET /:code` → Postgres `links` lookup → 301 → append a row to `click_log`\n- **Analytics**: rollup worker reads `click_log` on a schedule, upserts hourly/daily aggregates into `link_stats`\n- **How to read**: the create/redirect paths sit on top of Postgres; the worker branches off `click_log` and writes back to a separate table so the analytics load never touches the redirect path","source":"flowchart LR\n  Client[\"API client\\n(with token)\"]\n  Browser([Anonymous browser])\n  API[\"Snip API\"]\n  PG[(Postgres)]\n  Log[(click_log table)]\n  Worker[\"Rollup worker\"]\n  Stats[(link_stats table)]\n  Dash[\"Owner dashboard\"]\n\n  Client -->|\"POST /links\"| API\n  API -->|\"insert link\"| PG\n  Browser -->|\"GET /:code\"| API\n  API -->|\"lookup code\"| PG\n  API -->|\"append click\"| Log\n  API -->|\"301 redirect\"| Browser\n  Worker -->|\"scan\"| Log\n  Worker -->|\"upsert\"| Stats\n  Dash -->|\"read\"| Stats\n\n  classDef blue fill:#dbeafe,stroke:#2563eb,color:#1e3a8a\n  classDef purple fill:#ede9fe,stroke:#7c3aed,color:#4c1d95\n  classDef amber fill:#fef3c7,stroke:#d97706,color:#78350f\n  class Client,Browser,Dash blue\n  class API,Worker purple\n  class PG,Log,Stats amber"},{"id":"create-flow","kind":"user flow","title":"User flow — create a short link","caption":"How an authenticated client turns a target URL into a short code, from token check through duplicate handling to the returned URL. Green ends return a short URL; red ends reject the request.","detail":"- Client sends `POST /links` with the target URL and its API token\n- API validates the token and the target URL is a real absolute URL\n- API checks whether this owner already shortened the same target:\n  - Yes: return the existing code (idempotent for the same owner + target)\n  - No: generate a new 7-character code, insert into `links`, return the new short URL\n- Collisions on the generated code retry up to 5 times before failing with 503","source":"flowchart LR\n  Start([Client wants to shorten a URL])\n  Post[\"POST /links\\n(target, token)\"]\n  AuthOK{\"Token valid?\"}\n  ValidURL{\"Target is a real URL?\"}\n  Existing{\"Owner already\\nshortened this?\"}\n  Return[\"Return existing code\"]\n  Gen[\"Generate 7-char code\"]\n  Insert[\"INSERT into links\"]\n  Retry{\"Insert succeeded?\"}\n  Fail[\"503 with retry-after\"]\n  Done[\"Return new short URL\"]\n\n  Start --> Post --> AuthOK\n  AuthOK -- no --> Reject[\"401\"]\n  AuthOK -- yes --> ValidURL\n  ValidURL -- no --> Reject422[\"422\"]\n  ValidURL -- yes --> Existing\n  Existing -- yes --> Return\n  Existing -- no --> Gen --> Insert --> Retry\n  Retry -- yes --> Done\n  Retry -- no --> Gen\n\n  classDef blue fill:#dbeafe,stroke:#2563eb,color:#1e3a8a\n  classDef purple fill:#ede9fe,stroke:#7c3aed,color:#4c1d95\n  classDef green fill:#dcfce7,stroke:#16a34a,color:#14532d\n  classDef red fill:#fee2e2,stroke:#dc2626,color:#7f1d1d\n  class Start,Post blue\n  class Gen,Insert purple\n  class Return,Done green\n  class Reject,Reject422,Fail red"},{"id":"redirect-flow","kind":"user flow","title":"User flow — anonymous redirect","caption":"The hot path: a click on a short link hits the API, gets a target back from Postgres, appends a click row, and 301s the browser. Total latency budget is 50ms. Green is the one successful exit; red nodes are the error responses.","detail":"- Browser hits `GET /:code` on the short host\n- API looks up the code in the `links` table\n- Not found → 404\n- Found + expired → 410 (gone)\n- Found + live:\n  - Append a row to `click_log` with the code, timestamp, and coarse geo bucket from IP\n  - Return a 301 with the target URL\n- Rollup happens asynchronously; the redirect never waits on it","source":"flowchart LR\n  Hit([Browser hits /:code])\n  Lookup[\"Look up code in links\"]\n  Found{\"Code found?\"}\n  NotFound[\"404\"]\n  Live{\"Not expired?\"}\n  Gone[\"410\"]\n  Log[\"Append row to click_log\"]\n  Redirect[\"301 to target URL\"]\n\n  Hit --> Lookup --> Found\n  Found -- no --> NotFound\n  Found -- yes --> Live\n  Live -- no --> Gone\n  Live -- yes --> Log --> Redirect\n\n  classDef blue fill:#dbeafe,stroke:#2563eb,color:#1e3a8a\n  classDef purple fill:#ede9fe,stroke:#7c3aed,color:#4c1d95\n  classDef green fill:#dcfce7,stroke:#16a34a,color:#14532d\n  classDef amber fill:#fef3c7,stroke:#d97706,color:#78350f\n  classDef red fill:#fee2e2,stroke:#dc2626,color:#7f1d1d\n  class Hit blue\n  class Lookup purple\n  class Redirect green\n  class Log amber\n  class NotFound,Gone red"},{"id":"decisions","kind":"dependency map","title":"v1 decisions and what they shape","caption":"Every early decision has one or two downstream constraints. Read left-to-right for consequences, right-to-left for what to revisit. Green nodes are consequences, gray is out of scope, and red is still open.","detail":"- Five load-bearing v1 decisions on the left\n- Three shapes of consequence on the right:\n  - **Required implementation** we're committed to\n  - **Out-of-scope** for v1\n  - **Open question** we still owe an answer on","source":"flowchart LR\n  D1[\"7-character random code\"]\n  D2[\"Idempotent per owner+target\"]\n  D3[\"Async analytics rollup\"]\n  D4[\"One shared short host\"]\n  D5[\"Rate-limit per token\"]\n\n  D1 --> R1[\"Handle insert collisions with retries\"]\n  D2 --> R2[\"Unique index on (owner_id, target_url)\"]\n  D3 --> R3[\"Redirect never waits on aggregation\"]\n  D3 --> OQ1[\"Open question:\\nrollup lag SLA\"]\n  D4 --> OOS1[\"Out of scope v1:\\ncustom domains, tenant column\"]\n  D5 --> R4[\"Sliding-window counter in Redis\"]\n  D5 --> OQ2[\"Open question:\\nlimit per token or per owner\"]\n\n  classDef green fill:#dcfce7,stroke:#16a34a,color:#14532d\n  classDef red fill:#fee2e2,stroke:#dc2626,color:#7f1d1d\n  classDef gray fill:#f1f5f9,stroke:#64748b,color:#1e293b\n  class R1,R2,R3,R4 green\n  class OQ1,OQ2 red\n  class OOS1 gray"},{"id":"latency-budget","kind":"data summary","title":"50ms redirect: where the budget goes","caption":"The 50ms SLO from the **why** section, broken into named contributions. **Postgres lookup** is the largest fixed cost; the click-log append is deliberately fire-and-forget so it doesn't push the total over the cap.","detail":"- These are **design targets**, not measured p50s — the numbers to protect at launch.\n- **Postgres lookup** is the single item most at risk of drifting up; if it slips past 25ms, revisit the code index or move the click-log append fully off-thread.\n- **Custom domains** (v2) would add a DNS-lookup line item, which is why they're deferred: v1 has no headroom for one.\n- Read this against the redirect user flow: the boxes there run in this order, and this chart says how many milliseconds each is allowed.","source":"pie showData\n  title Redirect latency budget (50ms cap, in ms)\n  \"Client-to-edge network\" : 12\n  \"Postgres code lookup\" : 18\n  \"App logic + serialize\" : 8\n  \"Append click_log row\" : 7\n  \"301 response back to client\" : 5"}],"demoMode":true}</script>
+<script id="specdata" type="application/json">{"title":"Snip — a lean URL shortener","subtitle":"This spec covers Snip, a small service that creates short links and sends each click on to the original address. This page is a static demo: edit anything, nothing is saved.","specPath":"snip-spec.md","serverUrl":null,"sectionMap":{"summaryWhat":"summary:what","summaryWhy":"summary:why","summaryRules":"summary:rules","summaryOpenQuestions":"summary:open-questions"},"summary":{"what":["Snip is a URL shortener: it turns a long web address into a short link and sends anyone who clicks that link on to the original address","One web service does both jobs: an API (the interface other programs call) creates links, and a redirect endpoint answers clicks on them","**Postgres**, the database, stores each short code with its target address, owner, and expiration date, plus a log of every click","A rollup worker, a background job, adds the click log up into hourly and daily totals so the owner's dashboard reads one row per link per day","Two kinds of user: creators, who identify themselves with an API token (a secret key sent with each request), and anonymous viewers, who only follow links"],"why":["Existing shorteners are either bloated dashboards or bare hosted forms that keep no record of who created a link","A **narrow shape** (one code, one target, one click log) keeps the storage and the analytics boring","Click counting runs apart from the redirect so a busy link never slows the redirect down"],"rules":["A redirect must answer within **50ms**","The redirect never waits on click counting or the rollup","The same owner shortening the same target always gets the same code back","Every link is served from one shared short host in v1; custom domains are not supported","Each API token is rate-limited"],"openQuestions":["How far behind real time may the rollup run? No lag limit is set yet.","Is the rate limit counted per API token or per owner?"]},"diagrams":[{"id":"architecture","kind":"architecture","title":"Service shape and data flow","caption":"Two entry paths (**create** and **redirect**) share Postgres; a background worker builds the analytics rollup from the click log so the redirect never blocks on aggregation. Blue nodes are callers, purple our services, and amber the tables.","detail":"- **Create path**: authenticated client → API `POST /links` → Postgres `links`\n- **Redirect path**: anonymous browser → short host `GET /:code` → Postgres `links` lookup → 301 → append a row to `click_log`\n- **Analytics**: rollup worker reads `click_log` on a schedule, upserts hourly/daily aggregates into `link_stats`\n- **How to read**: the create/redirect paths sit on top of Postgres; the worker branches off `click_log` and writes back to a separate table so the analytics load never touches the redirect path","specRefs":["Architecture > Components","Analytics rollup"],"source":"flowchart LR\n  Client[\"API client\\n(with token)\"]\n  Browser([Anonymous browser])\n  API[\"Snip API\"]\n  PG[(Postgres)]\n  Log[(click_log table)]\n  Worker[\"Rollup worker\"]\n  Stats[(link_stats table)]\n  Dash[\"Owner dashboard\"]\n\n  Client -->|\"POST /links\"| API\n  API -->|\"insert link\"| PG\n  Browser -->|\"GET /:code\"| API\n  API -->|\"lookup code\"| PG\n  API -->|\"append click\"| Log\n  API -->|\"301 redirect\"| Browser\n  Worker -->|\"scan\"| Log\n  Worker -->|\"upsert\"| Stats\n  Dash -->|\"read\"| Stats\n\n  classDef blue fill:#dbeafe,stroke:#2563eb,color:#1e3a8a\n  classDef purple fill:#ede9fe,stroke:#7c3aed,color:#4c1d95\n  classDef amber fill:#fef3c7,stroke:#d97706,color:#78350f\n  class Client,Browser,Dash blue\n  class API,Worker purple\n  class PG,Log,Stats amber","descriptions":{"node:Client":"A program that creates links on a creator's behalf and sends the creator's API token with each request.","node:Browser":"Anyone who clicks a short link. No account and no token.","node:API":"The one web service. It creates links and answers every click on a short link.","node:PG":"The links table: short code, target address, owner, and expiration date.","node:Log":"One row per click, written at redirect time and read only by the rollup worker.","node:Worker":"Background job that runs on a schedule and adds click rows up into hourly and daily totals.","node:Stats":"The totals the dashboard reads: one row per link per day.","node:Dash":"Where a creator sees how often each of their links was clicked."}},{"id":"create-flow","kind":"user flow","title":"User flow — create a short link","caption":"How an authenticated client turns a target URL into a short code, from token check through duplicate handling to the returned URL. Green ends return a short URL; red ends reject the request.","detail":"- Client sends `POST /links` with the target URL and its API token\n- API validates the token and the target URL is a real absolute URL\n- API checks whether this owner already shortened the same target:\n  - Yes: return the existing code (idempotent for the same owner + target)\n  - No: generate a new 7-character code, insert into `links`, return the new short URL\n- Collisions on the generated code retry up to 5 times before failing with 503","specRefs":["Create a short link"],"source":"flowchart LR\n  Start([Client wants to shorten a URL])\n  Post[\"POST /links\\n(target, token)\"]\n  AuthOK{\"Token valid?\"}\n  ValidURL{\"Target is a real URL?\"}\n  Existing{\"Owner already\\nshortened this?\"}\n  Return[\"Return existing code\"]\n  Gen[\"Generate 7-char code\"]\n  Insert[\"INSERT into links\"]\n  Retry{\"Insert succeeded?\"}\n  Fail[\"503 with retry-after\"]\n  Done[\"Return new short URL\"]\n\n  Start --> Post --> AuthOK\n  AuthOK -- no --> Reject[\"401\"]\n  AuthOK -- yes --> ValidURL\n  ValidURL -- no --> Reject422[\"422\"]\n  ValidURL -- yes --> Existing\n  Existing -- yes --> Return\n  Existing -- no --> Gen --> Insert --> Retry\n  Retry -- yes --> Done\n  Retry -- no --> Gen\n\n  classDef blue fill:#dbeafe,stroke:#2563eb,color:#1e3a8a\n  classDef purple fill:#ede9fe,stroke:#7c3aed,color:#4c1d95\n  classDef green fill:#dcfce7,stroke:#16a34a,color:#14532d\n  classDef red fill:#fee2e2,stroke:#dc2626,color:#7f1d1d\n  class Start,Post blue\n  class Gen,Insert purple\n  class Return,Done green\n  class Reject,Reject422,Fail red"},{"id":"collision-retry","kind":"sequence","title":"Code collision retry","caption":"What happens between the API and **Postgres** when a freshly generated code is already taken. The order of messages over time is the point here, so read top to bottom. Double-click any actor or message to rewrite it.","detail":"- The API generates a 7-character code and tries to insert it\n- Postgres rejects the insert when the code already exists\n- The API generates a new code and tries again, up to **5 times**\n- The first insert that succeeds ends the loop and the client gets its short URL\n- If all 5 attempts collide the client gets a 503 with a retry-after header (not drawn)","specRefs":["Create a short link","Key Decisions"],"source":"sequenceDiagram\n  participant Client as API client\n  participant API as Snip API\n  participant PG as Postgres\n  Client->>API: POST /links (target, token)\n  API->>PG: INSERT link with new code\n  PG-->>API: code already taken\n  loop up to 5 attempts\n    API->>PG: INSERT link with another code\n    PG-->>API: inserted\n  end\n  API-->>Client: 201 with the short URL"},{"id":"redirect-flow","kind":"user flow","title":"User flow — anonymous redirect","caption":"The hot path: a click on a short link hits the API, gets a target back from Postgres, appends a click row, and 301s the browser. Total latency budget is 50ms. Green is the one successful exit; red nodes are the error responses.","detail":"- Browser hits `GET /:code` on the short host\n- API looks up the code in the `links` table\n- Not found → 404\n- Found + expired → 410 (gone)\n- Found + live:\n  - Append a row to `click_log` with the code, timestamp, and coarse geo bucket from IP\n  - Return a 301 with the target URL\n- Rollup happens asynchronously; the redirect never waits on it","specRefs":["Follow a short link"],"source":"flowchart LR\n  Hit([Browser hits /:code])\n  Lookup[\"Look up code in links\"]\n  Found{\"Code found?\"}\n  NotFound[\"404\"]\n  Live{\"Not expired?\"}\n  Gone[\"410\"]\n  Log[\"Append row to click_log\"]\n  Redirect[\"301 to target URL\"]\n\n  Hit --> Lookup --> Found\n  Found -- no --> NotFound\n  Found -- yes --> Live\n  Live -- no --> Gone\n  Live -- yes --> Log --> Redirect\n\n  classDef blue fill:#dbeafe,stroke:#2563eb,color:#1e3a8a\n  classDef purple fill:#ede9fe,stroke:#7c3aed,color:#4c1d95\n  classDef green fill:#dcfce7,stroke:#16a34a,color:#14532d\n  classDef amber fill:#fef3c7,stroke:#d97706,color:#78350f\n  classDef red fill:#fee2e2,stroke:#dc2626,color:#7f1d1d\n  class Hit blue\n  class Lookup purple\n  class Redirect green\n  class Log amber\n  class NotFound,Gone red"},{"id":"decisions","kind":"dependency map","title":"v1 decisions and what they shape","caption":"Every early decision has one or two downstream constraints. Read left-to-right for consequences, right-to-left for what to revisit. Green nodes are consequences, gray is out of scope, and red is still open.","detail":"- Five load-bearing v1 decisions on the left\n- Three shapes of consequence on the right:\n  - **Required implementation** we're committed to\n  - **Out-of-scope** for v1\n  - **Open question** we still owe an answer on","specRefs":["Key Decisions","Out of Scope (v1)","Open Questions"],"source":"flowchart LR\n  D1[\"7-character random code\"]\n  D2[\"Idempotent per owner+target\"]\n  D3[\"Async analytics rollup\"]\n  D4[\"One shared short host\"]\n  D5[\"Rate-limit per token\"]\n\n  D1 --> R1[\"Handle insert collisions with retries\"]\n  D2 --> R2[\"Unique index on (owner_id, target_url)\"]\n  D3 --> R3[\"Redirect never waits on aggregation\"]\n  D3 --> OQ1[\"Open question:\\nrollup lag SLA\"]\n  D4 --> OOS1[\"Out of scope v1:\\ncustom domains, tenant column\"]\n  D5 --> R4[\"Sliding-window counter in Redis\"]\n  D5 --> OQ2[\"Open question:\\nlimit per token or per owner\"]\n\n  classDef green fill:#dcfce7,stroke:#16a34a,color:#14532d\n  classDef red fill:#fee2e2,stroke:#dc2626,color:#7f1d1d\n  classDef gray fill:#f1f5f9,stroke:#64748b,color:#1e293b\n  class R1,R2,R3,R4 green\n  class OQ1,OQ2 red\n  class OOS1 gray"},{"id":"latency-budget","kind":"data summary","title":"50ms redirect: where the budget goes","caption":"The 50ms limit from the **Rules**, broken into named contributions. **Postgres lookup** is the largest fixed cost; the click-log append is deliberately fire-and-forget so it doesn't push the total over the cap.","detail":"- These are **design targets**, not measured p50s — the numbers to protect at launch.\n- **Postgres lookup** is the single item most at risk of drifting up; if it slips past 25ms, revisit the code index or move the click-log append fully off-thread.\n- **Custom domains** (v2) would add a DNS-lookup line item, which is why they're deferred: v1 has no headroom for one.\n- Read this against the redirect user flow: the boxes there run in this order, and this chart says how many milliseconds each is allowed.","specRefs":["Performance Budget"],"source":"pie showData\n  title Redirect latency budget (50ms cap, in ms)\n  \"Client-to-edge network\" : 12\n  \"Postgres code lookup\" : 18\n  \"App logic + serialize\" : 8\n  \"Append click_log row\" : 7\n  \"301 response back to client\" : 5"}],"demoMode":true,"summaryRefs":{"what":["Solution Overview","Users"],"why":["Problem","Key Decisions"],"rules":["Performance Budget","Key Decisions","Out of Scope (v1)"],"openQuestions":["Open Questions"]},"specSource":"---\ntitle: Snip — a lean URL shortener\nstatus: draft\nversion: 0.1\n---\n\n# Snip — Product Spec\n\n## Summary\n\n**What we're building**\n\n<!-- spec-tacle:summary:what -->\n- Snip is a URL shortener: it turns a long web address into a short link and sends anyone who clicks that link on to the original address\n- One web service does both jobs: an API (the interface other programs call) creates links, and a redirect endpoint answers clicks on them\n- **Postgres**, the database, stores each short code with its target address, owner, and expiration date, plus a log of every click\n- A rollup worker, a background job, adds the click log up into hourly and daily totals so the owner's dashboard reads one row per link per day\n- Two kinds of user: creators, who identify themselves with an API token (a secret key sent with each request), and anonymous viewers, who only follow links\n<!-- /spec-tacle:summary:what -->\n\n**Why it earns the effort**\n\n<!-- spec-tacle:summary:why -->\n- Existing shorteners are either bloated dashboards or bare hosted forms that keep no record of who created a link\n- A **narrow shape** (one code, one target, one click log) keeps the storage and the analytics boring\n- Click counting runs apart from the redirect so a busy link never slows the redirect down\n<!-- /spec-tacle:summary:why -->\n\n**Rules it must uphold**\n\n<!-- spec-tacle:summary:rules -->\n- A redirect must answer within **50ms**\n- The redirect never waits on click counting or the rollup\n- The same owner shortening the same target always gets the same code back\n- Every link is served from one shared short host in v1; custom domains are not supported\n- Each API token is rate-limited\n<!-- /spec-tacle:summary:rules -->\n\n## Problem\n\nPeople who need a short link today choose between two bad options. Full marketing suites bury link creation under campaign dashboards, and bare hosted forms hand back a link with no record of who made it or how often it was clicked. Snip does one thing: one short code points at one target address, and every click is counted.\n\n## Users\n\n- **Creator**: makes short links through the API and reads click totals on a dashboard. Identified by an API token, a secret key sent with each request.\n- **Viewer**: anyone who clicks a short link. No account, no token. They are redirected and never see Snip itself.\n\n## Solution Overview\n\nOne web service with two surfaces:\n\n1. A **create-link API**. A creator sends a target address and gets a short URL back.\n2. A **redirect endpoint** on the short host. A click on `https://snip.example/abc1234` is answered with a redirect to the target address.\n\nBehind it: a Postgres database that stores the links and a log of every click, and a rollup worker that turns the click log into hourly and daily totals for the creator's dashboard.\n\n## Core Flows\n\n### Create a short link\n\n1. The client sends `POST /links` with the target URL and its API token.\n2. The API rejects a bad token with 401 and a target that isn't an absolute URL with 422.\n3. If this owner has already shortened the same target, the API returns the existing code.\n4. Otherwise the API generates a 7-character random code and inserts the link.\n5. If the code is already taken the insert fails, and the API generates another code and tries again, up to 5 times. After 5 collisions it returns 503 with a retry-after header.\n6. The API returns the new short URL.\n\n### Follow a short link\n\n1. The browser requests `GET /:code` on the short host.\n2. The API looks the code up in the `links` table.\n3. An unknown code returns 404. An expired link returns 410.\n4. For a live link the API appends a row to `click_log` (code, timestamp, coarse location from the IP address) and returns a 301 redirect to the target URL.\n\n## Architecture\n\n### Components\n\n- **Snip API**: the one web service. Handles `POST /links` and `GET /:code`.\n- **Postgres `links` table**: short code, target URL, owner, expiration date.\n- **Postgres `click_log` table**: one row per click.\n- **Rollup worker**: a background job that reads `click_log` and writes totals.\n- **Postgres `link_stats` table**: hourly and daily click totals, one row per link per day.\n- **Owner dashboard**: reads `link_stats` only.\n\n### Analytics rollup\n\nThe rollup worker scans `click_log` on a schedule and upserts hourly and daily totals into `link_stats`. The dashboard reads those totals and never touches `click_log`, so analytics load stays off the redirect path. The redirect never waits on the rollup.\n\n## Key Decisions\n\n- **7-character random code.** Short enough to type, long enough that collisions are rare. Rare is not never, so inserts retry on collision.\n- **Idempotent per owner and target.** The same owner shortening the same target gets the same code back, enforced by a unique index on `(owner_id, target_url)`.\n- **Asynchronous analytics rollup.** Clicks are logged at redirect time and totalled later, so the redirect never waits on aggregation.\n- **One shared short host.** Every link lives on the same host, so the schema needs no tenant column.\n- **Rate limit on link creation.** A sliding-window counter in Redis, an in-memory store, caps how many links an API token can create.\n\n## Performance Budget\n\nA redirect must answer within 50ms. These are design targets, not measurements:\n\n| Step | Budget (ms) |\n|---|---|\n| Client-to-edge network | 12 |\n| Postgres code lookup | 18 |\n| App logic and serialization | 8 |\n| Append `click_log` row | 7 |\n| 301 response back to the client | 5 |\n\n## Out of Scope (v1)\n\n- Custom domains. They would need a tenant column and a DNS lookup that the 50ms budget has no room for.\n- Editing a link's target after creation.\n- Link previews and QR codes.\n\n## Open Questions\n\n<!-- spec-tacle:summary:open-questions -->\n- How far behind real time may the rollup run? No lag limit is set yet.\n- Is the rate limit counted per API token or per owner?\n<!-- /spec-tacle:summary:open-questions -->\n\n## Diagrams\n\nEach diagram has a short caption and a longer \"About\" block. Edit them in the visualizer and use **Update spec** to write changes back here.\n\n### Service shape and data flow\n\n<!-- spec-tacle:diagram:architecture:caption -->\nTwo entry paths (**create** and **redirect**) share Postgres; a background worker builds the analytics rollup from the click log so the redirect never blocks on aggregation. Blue nodes are callers, purple our services, and amber the tables.\n<!-- /spec-tacle:diagram:architecture:caption -->\n\n<!-- spec-tacle:diagram:architecture:detail -->\n- **Create path**: authenticated client → API `POST /links` → Postgres `links`\n- **Redirect path**: anonymous browser → short host `GET /:code` → Postgres `links` lookup → 301 → append a row to `click_log`\n- **Analytics**: rollup worker reads `click_log` on a schedule, upserts hourly/daily aggregates into `link_stats`\n- **How to read**: the create/redirect paths sit on top of Postgres; the worker branches off `click_log` and writes back to a separate table so the analytics load never touches the redirect path\n<!-- /spec-tacle:diagram:architecture:detail -->\n\n<!-- spec-tacle:diagram:architecture:notes -->\n\n<!-- /spec-tacle:diagram:architecture:notes -->\n\n<!-- spec-tacle:diagram:architecture -->\n**Nodes**\n\n- `Client`: API client / (with token) — A program that creates links on a creator's behalf and sends the creator's API token with each request.\n- `Browser`: Anonymous browser — Anyone who clicks a short link. No account and no token.\n- `API`: Snip API — The one web service. It creates links and answers every click on a short link.\n- `PG`: Postgres — The links table: short code, target address, owner, and expiration date.\n- `Log`: click_log table — One row per click, written at redirect time and read only by the rollup worker.\n- `Worker`: Rollup worker — Background job that runs on a schedule and adds click rows up into hourly and daily totals.\n- `Stats`: link_stats table — The totals the dashboard reads: one row per link per day.\n- `Dash`: Owner dashboard — Where a creator sees how often each of their links was clicked.\n\n**Edges**\n\n- `Client` → `API`: \"POST /links\".\n- `API` → `PG`: \"insert link\".\n- `Browser` → `API`: \"GET /:code\".\n- `API` → `PG`: \"lookup code\".\n- `API` → `Log`: \"append click\".\n- `API` → `Browser`: \"301 redirect\".\n- `Worker` → `Log`: \"scan\".\n- `Worker` → `Stats`: \"upsert\".\n- `Dash` → `Stats`: \"read\".\n\n```mermaid\nflowchart LR\n  Client[\"API client\\n(with token)\"]\n  Browser([Anonymous browser])\n  API[\"Snip API\"]\n  PG[(Postgres)]\n  Log[(click_log table)]\n  Worker[\"Rollup worker\"]\n  Stats[(link_stats table)]\n  Dash[\"Owner dashboard\"]\n\n  Client -->|\"POST /links\"| API\n  API -->|\"insert link\"| PG\n  Browser -->|\"GET /:code\"| API\n  API -->|\"lookup code\"| PG\n  API -->|\"append click\"| Log\n  API -->|\"301 redirect\"| Browser\n  Worker -->|\"scan\"| Log\n  Worker -->|\"upsert\"| Stats\n  Dash -->|\"read\"| Stats\n\n  classDef blue fill:#dbeafe,stroke:#2563eb,color:#1e3a8a\n  classDef purple fill:#ede9fe,stroke:#7c3aed,color:#4c1d95\n  classDef amber fill:#fef3c7,stroke:#d97706,color:#78350f\n  class Client,Browser,Dash blue\n  class API,Worker purple\n  class PG,Log,Stats amber\n```\n<!-- /spec-tacle:diagram:architecture -->\n\n### User flow — create a short link\n\n<!-- spec-tacle:diagram:create-flow:caption -->\nHow an authenticated client turns a target URL into a short code, from token check through duplicate handling to the returned URL. Green ends return a short URL; red ends reject the request.\n<!-- /spec-tacle:diagram:create-flow:caption -->\n\n<!-- spec-tacle:diagram:create-flow:detail -->\n- Client sends `POST /links` with the target URL and its API token\n- API validates the token and the target URL is a real absolute URL\n- API checks whether this owner already shortened the same target:\n  - Yes: return the existing code (idempotent for the same owner + target)\n  - No: generate a new 7-character code, insert into `links`, return the new short URL\n- Collisions on the generated code retry up to 5 times before failing with 503\n<!-- /spec-tacle:diagram:create-flow:detail -->\n\n<!-- spec-tacle:diagram:create-flow:notes -->\n\n<!-- /spec-tacle:diagram:create-flow:notes -->\n\n<!-- spec-tacle:diagram:create-flow -->\n**Nodes**\n\n- `Start`: Client wants to shorten a URL.\n- `Post`: POST /links / (target, token).\n- `AuthOK`: Token valid?\n- `ValidURL`: Target is a real URL?\n- `Existing`: Owner already / shortened this?\n- `Return`: Return existing code.\n- `Gen`: Generate 7-char code.\n- `Insert`: INSERT into links.\n- `Retry`: Insert succeeded?\n- `Fail`: 503 with retry-after.\n- `Done`: Return new short URL.\n- `Reject`: 401.\n- `Reject422`: 422.\n\n**Edges**\n\n- `Start` → `Post`\n- `Post` → `AuthOK`\n- `AuthOK` → `Reject`: no.\n- `AuthOK` → `ValidURL`: yes.\n- `ValidURL` → `Reject422`: no.\n- `ValidURL` → `Existing`: yes.\n- `Existing` → `Return`: yes.\n- `Existing` → `Gen`: no.\n- `Gen` → `Insert`\n- `Insert` → `Retry`\n- `Retry` → `Done`: yes.\n- `Retry` → `Gen`: no.\n\n```mermaid\nflowchart LR\n  Start([Client wants to shorten a URL])\n  Post[\"POST /links\\n(target, token)\"]\n  AuthOK{\"Token valid?\"}\n  ValidURL{\"Target is a real URL?\"}\n  Existing{\"Owner already\\nshortened this?\"}\n  Return[\"Return existing code\"]\n  Gen[\"Generate 7-char code\"]\n  Insert[\"INSERT into links\"]\n  Retry{\"Insert succeeded?\"}\n  Fail[\"503 with retry-after\"]\n  Done[\"Return new short URL\"]\n\n  Start --> Post --> AuthOK\n  AuthOK -- no --> Reject[\"401\"]\n  AuthOK -- yes --> ValidURL\n  ValidURL -- no --> Reject422[\"422\"]\n  ValidURL -- yes --> Existing\n  Existing -- yes --> Return\n  Existing -- no --> Gen --> Insert --> Retry\n  Retry -- yes --> Done\n  Retry -- no --> Gen\n\n  classDef blue fill:#dbeafe,stroke:#2563eb,color:#1e3a8a\n  classDef purple fill:#ede9fe,stroke:#7c3aed,color:#4c1d95\n  classDef green fill:#dcfce7,stroke:#16a34a,color:#14532d\n  classDef red fill:#fee2e2,stroke:#dc2626,color:#7f1d1d\n  class Start,Post blue\n  class Gen,Insert purple\n  class Return,Done green\n  class Reject,Reject422,Fail red\n```\n<!-- /spec-tacle:diagram:create-flow -->\n\n### Code collision retry\n\n<!-- spec-tacle:diagram:collision-retry:caption -->\nWhat happens between the API and **Postgres** when a freshly generated code is already taken. The order of messages over time is the point here, so read top to bottom. Double-click any actor or message to rewrite it.\n<!-- /spec-tacle:diagram:collision-retry:caption -->\n\n<!-- spec-tacle:diagram:collision-retry:detail -->\n- The API generates a 7-character code and tries to insert it\n- Postgres rejects the insert when the code already exists\n- The API generates a new code and tries again, up to **5 times**\n- The first insert that succeeds ends the loop and the client gets its short URL\n- If all 5 attempts collide the client gets a 503 with a retry-after header (not drawn)\n<!-- /spec-tacle:diagram:collision-retry:detail -->\n\n<!-- spec-tacle:diagram:collision-retry:notes -->\n\n<!-- /spec-tacle:diagram:collision-retry:notes -->\n\n<!-- spec-tacle:diagram:collision-retry -->\n**Actors**\n\n- `Client`: API client.\n- `API`: Snip API.\n- `PG`: Postgres.\n\n**Messages**\n\n- `Client` → `API`: POST /links (target, token).\n- `API` → `PG`: INSERT link with new code.\n- `PG` → `API`: code already taken.\n- `API` → `PG`: INSERT link with another code.\n- `PG` → `API`: inserted.\n- `API` → `Client`: 201 with the short URL.\n\n```mermaid\nsequenceDiagram\n  participant Client as API client\n  participant API as Snip API\n  participant PG as Postgres\n  Client->>API: POST /links (target, token)\n  API->>PG: INSERT link with new code\n  PG-->>API: code already taken\n  loop up to 5 attempts\n    API->>PG: INSERT link with another code\n    PG-->>API: inserted\n  end\n  API-->>Client: 201 with the short URL\n```\n<!-- /spec-tacle:diagram:collision-retry -->\n\n### User flow — anonymous redirect\n\n<!-- spec-tacle:diagram:redirect-flow:caption -->\nThe hot path: a click on a short link hits the API, gets a target back from Postgres, appends a click row, and 301s the browser. Total latency budget is 50ms. Green is the one successful exit; red nodes are the error responses.\n<!-- /spec-tacle:diagram:redirect-flow:caption -->\n\n<!-- spec-tacle:diagram:redirect-flow:detail -->\n- Browser hits `GET /:code` on the short host\n- API looks up the code in the `links` table\n- Not found → 404\n- Found + expired → 410 (gone)\n- Found + live:\n  - Append a row to `click_log` with the code, timestamp, and coarse geo bucket from IP\n  - Return a 301 with the target URL\n- Rollup happens asynchronously; the redirect never waits on it\n<!-- /spec-tacle:diagram:redirect-flow:detail -->\n\n<!-- spec-tacle:diagram:redirect-flow:notes -->\n\n<!-- /spec-tacle:diagram:redirect-flow:notes -->\n\n<!-- spec-tacle:diagram:redirect-flow -->\n**Nodes**\n\n- `Hit`: Browser hits /:code.\n- `Lookup`: Look up code in links.\n- `Found`: Code found?\n- `NotFound`: 404.\n- `Live`: Not expired?\n- `Gone`: 410.\n- `Log`: Append row to click_log.\n- `Redirect`: 301 to target URL.\n\n**Edges**\n\n- `Hit` → `Lookup`\n- `Lookup` → `Found`\n- `Found` → `NotFound`: no.\n- `Found` → `Live`: yes.\n- `Live` → `Gone`: no.\n- `Live` → `Log`: yes.\n- `Log` → `Redirect`\n\n```mermaid\nflowchart LR\n  Hit([Browser hits /:code])\n  Lookup[\"Look up code in links\"]\n  Found{\"Code found?\"}\n  NotFound[\"404\"]\n  Live{\"Not expired?\"}\n  Gone[\"410\"]\n  Log[\"Append row to click_log\"]\n  Redirect[\"301 to target URL\"]\n\n  Hit --> Lookup --> Found\n  Found -- no --> NotFound\n  Found -- yes --> Live\n  Live -- no --> Gone\n  Live -- yes --> Log --> Redirect\n\n  classDef blue fill:#dbeafe,stroke:#2563eb,color:#1e3a8a\n  classDef purple fill:#ede9fe,stroke:#7c3aed,color:#4c1d95\n  classDef green fill:#dcfce7,stroke:#16a34a,color:#14532d\n  classDef amber fill:#fef3c7,stroke:#d97706,color:#78350f\n  classDef red fill:#fee2e2,stroke:#dc2626,color:#7f1d1d\n  class Hit blue\n  class Lookup purple\n  class Redirect green\n  class Log amber\n  class NotFound,Gone red\n```\n<!-- /spec-tacle:diagram:redirect-flow -->\n\n### v1 decisions and what they shape\n\n<!-- spec-tacle:diagram:decisions:caption -->\nEvery early decision has one or two downstream constraints. Read left-to-right for consequences, right-to-left for what to revisit. Green nodes are consequences, gray is out of scope, and red is still open.\n<!-- /spec-tacle:diagram:decisions:caption -->\n\n<!-- spec-tacle:diagram:decisions:detail -->\n- Five load-bearing v1 decisions on the left\n- Three shapes of consequence on the right:\n  - **Required implementation** we're committed to\n  - **Out-of-scope** for v1\n  - **Open question** we still owe an answer on\n<!-- /spec-tacle:diagram:decisions:detail -->\n\n<!-- spec-tacle:diagram:decisions:notes -->\n\n<!-- /spec-tacle:diagram:decisions:notes -->\n\n<!-- spec-tacle:diagram:decisions -->\n**Nodes**\n\n- `D1`: 7-character random code.\n- `D2`: Idempotent per owner+target.\n- `D3`: Async analytics rollup.\n- `D4`: One shared short host.\n- `D5`: Rate-limit per token.\n- `R1`: Handle insert collisions with retries.\n- `R2`: Unique index on (owner_id, target_url).\n- `R3`: Redirect never waits on aggregation.\n- `OQ1`: Open question: / rollup lag SLA.\n- `OOS1`: Out of scope v1: / custom domains, tenant column.\n- `R4`: Sliding-window counter in Redis.\n- `OQ2`: Open question: / limit per token or per owner.\n\n**Edges**\n\n- `D1` → `R1`\n- `D2` → `R2`\n- `D3` → `R3`\n- `D3` → `OQ1`\n- `D4` → `OOS1`\n- `D5` → `R4`\n- `D5` → `OQ2`\n\n```mermaid\nflowchart LR\n  D1[\"7-character random code\"]\n  D2[\"Idempotent per owner+target\"]\n  D3[\"Async analytics rollup\"]\n  D4[\"One shared short host\"]\n  D5[\"Rate-limit per token\"]\n\n  D1 --> R1[\"Handle insert collisions with retries\"]\n  D2 --> R2[\"Unique index on (owner_id, target_url)\"]\n  D3 --> R3[\"Redirect never waits on aggregation\"]\n  D3 --> OQ1[\"Open question:\\nrollup lag SLA\"]\n  D4 --> OOS1[\"Out of scope v1:\\ncustom domains, tenant column\"]\n  D5 --> R4[\"Sliding-window counter in Redis\"]\n  D5 --> OQ2[\"Open question:\\nlimit per token or per owner\"]\n\n  classDef green fill:#dcfce7,stroke:#16a34a,color:#14532d\n  classDef red fill:#fee2e2,stroke:#dc2626,color:#7f1d1d\n  classDef gray fill:#f1f5f9,stroke:#64748b,color:#1e293b\n  class R1,R2,R3,R4 green\n  class OQ1,OQ2 red\n  class OOS1 gray\n```\n<!-- /spec-tacle:diagram:decisions -->\n\n### 50ms redirect: where the budget goes\n\n<!-- spec-tacle:diagram:latency-budget:caption -->\nThe 50ms limit from the **Rules**, broken into named contributions. **Postgres lookup** is the largest fixed cost; the click-log append is deliberately fire-and-forget so it doesn't push the total over the cap.\n<!-- /spec-tacle:diagram:latency-budget:caption -->\n\n<!-- spec-tacle:diagram:latency-budget:detail -->\n- These are **design targets**, not measured p50s — the numbers to protect at launch.\n- **Postgres lookup** is the single item most at risk of drifting up; if it slips past 25ms, revisit the code index or move the click-log append fully off-thread.\n- **Custom domains** (v2) would add a DNS-lookup line item, which is why they're deferred: v1 has no headroom for one.\n- Read this against the redirect user flow: the boxes there run in this order, and this chart says how many milliseconds each is allowed.\n<!-- /spec-tacle:diagram:latency-budget:detail -->\n\n<!-- spec-tacle:diagram:latency-budget:notes -->\n\n<!-- /spec-tacle:diagram:latency-budget:notes -->\n\n<!-- spec-tacle:diagram:latency-budget -->\n```mermaid\npie showData\n  title Redirect latency budget (50ms cap, in ms)\n  \"Client-to-edge network\" : 12\n  \"Postgres code lookup\" : 18\n  \"App logic + serialize\" : 8\n  \"Append click_log row\" : 7\n  \"301 response back to client\" : 5\n```\n<!-- /spec-tacle:diagram:latency-budget -->\n"}</script>
 
 <script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/markdown-it@14.1.0/dist/markdown-it.min.js"></script>
@@ -1640,6 +1671,30 @@
   const openQuestionsOptedIn = Array.isArray(data.summary?.openQuestions) ||
     (data.sectionMap && typeof data.sectionMap.summaryOpenQuestions === 'string');
 
+  // Source-section chips. `refs` is a list of heading texts from the spec's
+  // own sections (not the ones spec-tacle added); each chip opens the drawer
+  // at that heading. "Parent > Child" picks a sub-heading under a parent.
+  const summaryRefs = (data.summaryRefs && typeof data.summaryRefs === 'object') ? data.summaryRefs : {};
+  function specRefsHtml(refs) {
+    const list = (Array.isArray(refs) ? refs : []).map((r) => String(r || '').trim()).filter(Boolean);
+    // A single source section is already the "View in spec" target.
+    if (list.length < 2) return '';
+    const chips = list.map((r) =>
+      `<button type="button" class="spec-ref" data-jump-heading="${escapeHtml(r)}" title="Open the spec drawer and jump to this section of the source file">${escapeHtml(r)}</button>`
+    ).join('');
+    return `<div class="spec-refs"><span class="spec-refs-label">From the spec</span>${chips}</div>`;
+  }
+
+  // "View in spec" goes to where the content sits in the spec's own text: the
+  // first source heading. The spec-tacle anchor is only a fallback for data
+  // JSONs written before specRefs existed.
+  function viewInSpecAttr(refs, fallbackMarker) {
+    const first = (Array.isArray(refs) ? refs : []).map((r) => String(r || '').trim()).find(Boolean);
+    return first
+      ? `data-jump-heading="${escapeHtml(first)}"`
+      : `data-jump-marker="${escapeHtml(fallbackMarker)}"`;
+  }
+
   const summarySection = document.createElement('section');
   summarySection.className = 'summary';
   summarySection.innerHTML = `
@@ -1647,22 +1702,25 @@
       <h1 id="doc-title"></h1>
       <span class="section-label">Technical summary</span>
       <span class="subtitle" id="doc-subtitle"></span>
-      <button type="button" class="jump-to-spec" data-jump-marker="summary:what" title="Open the spec drawer and jump to the summary in the source file">View in spec</button>
+      <button type="button" class="jump-to-spec" ${viewInSpecAttr(summaryRefs.what, 'summary:what')} title="Open the spec drawer and jump to the section of the spec this summary was drawn from">View in spec</button>
     </div>
     <div class="block">
       <div class="block-label">What</div>
       <ul id="summary-what-list" class="summary-list" data-summary="what"></ul>
       <button type="button" class="add-bullet" data-target="what" title="Add a new bullet to the What list">+ Add bullet</button>
+      ${specRefsHtml(summaryRefs.what)}
     </div>
     <div class="block">
       <div class="block-label">Why</div>
       <ul id="summary-why-list" class="summary-list" data-summary="why"></ul>
       <button type="button" class="add-bullet" data-target="why" title="Add a new bullet to the Why list">+ Add bullet</button>
+      ${specRefsHtml(summaryRefs.why)}
     </div>
     <div class="block">
       <div class="block-label">Rules</div>
       <ul id="summary-rules-list" class="summary-list" data-summary="rules"></ul>
       <button type="button" class="add-bullet" data-target="rules" title="Add a new bullet to the Rules list">+ Add bullet</button>
+      ${specRefsHtml(summaryRefs.rules)}
     </div>
     <div class="edit-hint">Double-click a bullet to edit. Wrap key terms in **double asterisks** to bold them. Enter commits, Esc cancels, empty commit removes the bullet.</div>
   `;
@@ -1880,6 +1938,7 @@
 
 
   const HINT_MERMAID = 'Hover a node or arrow to see a description tooltip; click the tooltip to edit it. Click a node to select it, then Delete/Backspace to remove it (and its edges). Drag a node to reposition; arrows and labels follow. Hover a node for its four side dots and shape and color picker (◇); right-click a node opens the same picker. Drag a side dot to another node to create a new arrow, or into empty space to spawn a new node in edit mode. Hover an arrow for its handles: drag the blue circle (or the label itself) to bend, drag the green/orange endpoints to reconnect. Double-click a node, edge label, caption, detail, or bullet to edit its text inline — the cursor lands where you clicked, so triple-click when you want to replace everything. Double-click an unlabeled arrow to add a new label. Click the "Add notes…" area below to jot general thoughts about this diagram. Wrap key terms in double asterisks to bold them. Ctrl/⌘+Z undoes the last edit.';
+  const HINT_TEXT = 'Double-click any text in the diagram (an actor, a message, a note, a title, a chart label) to edit it in place. Enter commits, Esc cancels. Renaming an actor renames it on every message it sends or receives. To add, remove, or reorder steps, or to change a chart\'s numbers, open the Source pane on the right, edit the source, and click Re-render. Double-click the caption, detail, or a bullet to edit its text. Click the "Add notes…" area below to jot general thoughts about this diagram. Ctrl/⌘+Z undoes the last edit.';
   const HINT_TABLE = 'Double-click a header or cell to edit it in place; the cursor lands where you clicked, triple-click to select the whole cell. Enter commits, Esc cancels. Wrap key terms in double asterisks to bold them. To add or remove columns or rows, open the Source pane on the right and edit the markdown table directly — the visualizer re-renders when you re-render. Caption, detail, and notes all edit inline the same way. Ctrl/⌘+Z undoes the last edit.';
   const SOURCE_HINT_MERMAID = 'Show or hide the mermaid source for this diagram';
   const SOURCE_HINT_TABLE = 'Show or hide the raw markdown table source';
@@ -1959,14 +2018,15 @@
       <div class="diagram-header">
         <h3>${escapeHtml(diagram.title)}</h3>
         <span class="kind" title="Diagram type">${escapeHtml(kindLabel(diagram.kind))}</span>
-        <button type="button" class="jump-to-spec" data-jump-marker="diagram:${escapeHtml(diagram.id)}" title="Open the spec drawer and jump to this diagram in the source file">View in spec</button>
+        <button type="button" class="jump-to-spec" ${viewInSpecAttr(diagram.specRefs, 'diagram:' + diagram.id)} title="Open the spec drawer and jump to the section of the spec this diagram was drawn from">View in spec</button>
         <button type="button" class="jump-to-spec expand-diagram" data-expand-idx="${idx}" aria-pressed="false" title="Expand this diagram to fill the screen (Esc to exit)">Full screen</button>
       </div>
       <div class="diagram-caption" data-caption-idx="${idx}" title="Double-click to edit (wrap key terms in **double asterisks** to bold)">${mdBold(diagram.caption || '')}</div>
+      ${specRefsHtml(diagram.specRefs)}
       <details class="diagram-detail" open>
         <summary title="Show or hide the longer description of this diagram">About the ${escapeHtml(diagram.title)}</summary>
         <div class="detail-content" data-detail-idx="${idx}" title="Double-click to edit the detail text. Use dash-space for bullets and two-space indent for nested bullets. Wrap key terms in **double asterisks** to bold.">${mdRich(diagram.detail || '')}</div>
-        <div class="hint">${isTable ? HINT_TABLE : HINT_MERMAID}</div>
+        <div class="hint">${isTable ? HINT_TABLE : (/^\s*(flowchart|graph|stateDiagram)/.test(diagram.source || '') ? HINT_MERMAID : HINT_TEXT)}</div>
       </details>
       <div class="diagram-body" data-body-idx="${idx}">
         <div class="diagram-canvas" data-canvas-idx="${idx}"></div>
@@ -2004,11 +2064,12 @@
       <div class="summary-heading">
         <h2>Open questions</h2>
         <span class="section-label">Unresolved</span>
-        <button type="button" class="jump-to-spec" data-jump-marker="${escapeHtml(sectionMap.summaryOpenQuestions)}" title="Open the spec drawer and jump to Open questions in the source file">View in spec</button>
+        <button type="button" class="jump-to-spec" ${viewInSpecAttr(summaryRefs.openQuestions, sectionMap.summaryOpenQuestions)} title="Open the spec drawer and jump to Open questions in the source file">View in spec</button>
       </div>
       <div class="block">
         <ul id="summary-open-questions-list" class="summary-list" data-summary="openQuestions"></ul>
         <button type="button" class="add-bullet" data-target="openQuestions" title="Add a new open question">+ Add question</button>
+      ${specRefsHtml(summaryRefs.openQuestions)}
       </div>
       <div class="edit-hint">Double-click a question to edit. Wrap key terms in **double asterisks** to bold them. Enter commits, Esc cancels, empty commit removes the bullet.</div>
     `;
@@ -2530,6 +2591,9 @@
       ensureViewBoxRoom(canvas);
       if (prevLayout) reconcileLayout(canvas, idx, prevLayout);
       wireInteractions(canvas, idx);
+      const plainText = !isNodeGraph(diagram.currentSource);
+      canvas.classList.toggle('text-editable', plainText);
+      if (plainText) wireTextEditing(canvas, idx);
       applyStoredPositions(canvas, idx);
       renderAnnotations(idx);
     } catch (err) {
@@ -3521,6 +3585,102 @@
     return true;
   }
 
+  // Flowcharts and state diagrams get the full node/arrow toolkit from
+  // wireInteractions. Every other mermaid kind (sequence, pie, xychart,
+  // quadrant, …) has no .node elements, so it gets wireTextEditing instead.
+  function isNodeGraph(source) {
+    return /^\s*(flowchart|graph|stateDiagram)/.test(source);
+  }
+
+  function setDiagramSource(idx, next) {
+    state.diagrams[idx].currentSource = next;
+    const ta = document.querySelector(`textarea[data-source-idx="${idx}"]`);
+    if (ta) ta.value = next;
+  }
+
+  // Replace the nth whole-token occurrence of `oldText` in the source (every
+  // occurrence when `all` is set). Returns false when it isn't there, which is
+  // the case for text mermaid computes itself (percentages, numeric ticks).
+  function replaceTextInSource(idx, oldText, newText, { nth = 0, all = false } = {}) {
+    const src = state.diagrams[idx].currentSource;
+    const escaped = oldText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const re = new RegExp(`(^|[^\\w])${escaped}(?![\\w])`, 'gm');
+    let seen = 0;
+    let hit = false;
+    const next = src.replace(re, (whole, lead) => {
+      const mine = all || seen === nth;
+      seen++;
+      if (!mine) return whole;
+      hit = true;
+      return lead + newText;
+    });
+    if (!hit) return false;
+    setDiagramSource(idx, next);
+    return true;
+  }
+
+  // Rename a sequence-diagram actor. With an alias (`participant W as Web
+  // client`) only the alias changes; without one the name is the identifier,
+  // so every message line that uses it changes too.
+  function renameSequenceActor(idx, oldText, newText) {
+    const src = state.diagrams[idx].currentSource;
+    let hit = false;
+    const next = src.split('\n').map((line) => {
+      const m = /^(\s*(?:create\s+)?(?:participant|actor)\s+\S+\s+as\s+)(.+?)\s*$/.exec(line);
+      if (!m || m[2] !== oldText) return line;
+      hit = true;
+      return m[1] + newText;
+    }).join('\n');
+    if (hit) { setDiagramSource(idx, next); return true; }
+    return replaceTextInSource(idx, oldText, newText, { all: true });
+  }
+
+  // Double-click any text in a sequence diagram or chart to edit it in place.
+  // The edit is written into the mermaid source and the diagram re-renders.
+  function wireTextEditing(canvas, idx) {
+    const svg = canvas.querySelector('svg');
+    if (!svg) return;
+    const textOf = (el) => (el.textContent || '').replace(/\s+/g, ' ').trim();
+    // Keywords mermaid draws itself ("loop", "alt", "opt"); not user text.
+    const texts = [...svg.querySelectorAll('text')].filter((t) => !t.classList.contains('labelText') && textOf(t));
+    const openSource = () => {
+      const pane = canvas.parentElement && canvas.parentElement.querySelector('details.source-pane');
+      if (pane) pane.open = true;
+    };
+    texts.forEach((t) => {
+      t.addEventListener('dblclick', (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        const shown = textOf(t);
+        const isActor = t.classList.contains('actor') || !!t.closest('.actor');
+        // Mermaid wraps loop/alt conditions in brackets and appends " [n]" to
+        // pie legend entries; neither is in the source.
+        const current = t.classList.contains('loopText')
+          ? shown.replace(/^\[\s*/, '').replace(/\s*\]$/, '')
+          : (t.closest('.legend') ? shown.replace(/\s*\[[^\]]*\]$/, '') : shown);
+        // Same text can appear more than once (two "ok" replies): edit the
+        // occurrence that matches this element's position among its twins.
+        const nth = texts.filter((o) => !(o.classList.contains('actor') || o.closest('.actor')) && textOf(o) === shown).indexOf(t);
+        const r = t.getBoundingClientRect();
+        overlayInput(canvas, r.left + r.width / 2 - 100, r.top - 6, {
+          initialValue: current,
+          placeholder: 'Edit text',
+          width: Math.max(200, r.width + 24),
+          onCommit: (next) => {
+            if (next === current) return;
+            pushUndo();
+            const ok = isActor
+              ? renameSequenceActor(idx, current, next)
+              : replaceTextInSource(idx, current, next, { nth: Math.max(0, nth) });
+            if (ok) { renderDiagram(idx); markDirty(idx); return; }
+            openSource();
+            toast(`"${current}" is not written as text in the source (mermaid computes it). Edit the numbers or structure in the Source pane on the right.`, { warn: true });
+          }
+        });
+      });
+    });
+  }
+
   function wireInteractions(canvas, idx) {
     const svg = canvas.querySelector('svg');
     if (!svg) return;
@@ -3743,9 +3903,27 @@
     // Mermaid emits label groups in the same order as edge paths (one per edge).
     const edgeLabelGroups = [...svg.querySelectorAll('g.edgeLabels > g')];
 
+    // Pair each drawn arrow with its edge in the source. Mermaid ids its paths
+    // `L-<source>-<target>-<n>`, which holds up when mermaid draws edges in a
+    // different order than the source lists them (subgraphs do this) or when
+    // parseEdges skips a line it can't read. Pairing by position alone would
+    // then attach an arrow to the wrong pair of nodes.
+    const claimed = new Set();
+    function sourceEdgeFor(pathEl, i) {
+      const m = /^L-(.+)-(.+)-(\d+)$/.exec(pathEl.id || '');
+      if (m) {
+        const byIds = edgesInSource.filter(e => e.source === m[1] && e.target === m[2] && !claimed.has(e));
+        if (byIds.length) { claimed.add(byIds[0]); return byIds[0]; }
+        return null;
+      }
+      const byIndex = edgesInSource[i];
+      if (byIndex && !claimed.has(byIndex)) { claimed.add(byIndex); return byIndex; }
+      return null;
+    }
+
     uniquePaths.forEach((edge, i) => {
       const edgeId = edge.id || `edge-${i}`;
-      const sourceEdge = edgesInSource[i] || null; // may be null if parse can't match this one
+      const sourceEdge = sourceEdgeFor(edge, i); // null if the source edge can't be identified
       const handleGroup = []; // all handles for this edge; toggled together on hover
 
       // Cache the original path once so we can rebuild with fresh waypoints or revert.
@@ -4047,6 +4225,11 @@
     // Apply pending relocations first — new nodes just added via arrow-drag get
     // moved to the user's drop point before we sync edges.
     applyPendingRelocations();
+    // Move every node to its stored offset BEFORE syncing edges. The edge
+    // redraw clips each end to the node's live outline, so a node still
+    // sitting at mermaid's base position would get its arrow drawn to where
+    // it used to be, and the arrow would float free once the node moved.
+    applyStoredPositions(canvas, idx);
     // Sync every edge to the current node-position/waypoint state (matters after
     // a re-render where some nodes have stored offsets).
     edgeRegistry.forEach(redrawEdgeEntry);
@@ -4070,7 +4253,6 @@
         };
       });
       state.diagrams[idx].pendingRelocations = {};
-      applyStoredPositions(canvas, idx);
     }
 
     function applyPendingEdit() {
@@ -5078,6 +5260,7 @@
   let specLoaded = false;
   let specLoadingPromise = null;
   let pendingJumpMarker = null;
+  let pendingJumpHeading = null;
   // Oldest backup ({ backup, text }) from /spec-history — the spec as it stood
   // before spec-tacle's first write. Null until a backup exists.
   let specBaseline = null;
@@ -5397,6 +5580,58 @@
     setTimeout(() => { chosen.classList.remove('anchor-flash'); }, 1500);
   }
 
+  const headingKey = (s) => String(s).replace(/[\u0060*_]/g, '').replace(/\s+/g, ' ').trim().toLowerCase();
+
+  // Jump to a heading in the spec's own text. `ref` is the heading text, or
+  // "Parent > Child" to pick a sub-heading under a specific parent. Flashes
+  // the heading and the section under it.
+  function jumpToHeadingInDrawer(ref) {
+    if (!specLoaded) { pendingJumpHeading = ref; return; }
+    const path = String(ref).split(' > ').map(headingKey).filter(Boolean);
+    const want = path[path.length - 1];
+    const parents = path.slice(0, -1);
+    const headings = Array.from(drawerSpecEl.querySelectorAll('h1, h2, h3, h4, h5, h6'));
+    const level = (el) => parseInt(el.tagName.slice(1), 10);
+    const ancestors = []; // keys of the open headings above the current one
+    let chosen = null;
+    let loose = null;
+    for (const h of headings) {
+      while (ancestors.length && ancestors[ancestors.length - 1].level >= level(h)) ancestors.pop();
+      const key = headingKey(h.textContent);
+      const underParents = parents.every((p) => ancestors.some((a) => a.key === p));
+      if (key === want && underParents) { chosen = h; break; }
+      if (!loose && want && key.includes(want)) loose = h;
+      ancestors.push({ level: level(h), key });
+    }
+    chosen = chosen || loose;
+    if (!chosen) {
+      setDrawerStatus(`Could not find the section "${ref}" in the spec. Its heading may have been renamed.`, 'err');
+      return;
+    }
+    setDrawerStatus('', null);
+    const flashed = [chosen];
+    for (let el = chosen.nextElementSibling; el; el = el.nextElementSibling) {
+      if (/^H[1-6]$/.test(el.tagName) && level(el) <= level(chosen)) break;
+      flashed.push(el);
+    }
+    flashed.forEach((el) => el.classList.add('anchor-flash'));
+    chosen.scrollIntoView({ block: 'start', behavior: 'auto' });
+    setTimeout(() => { flashed.forEach((el) => el.classList.remove('anchor-flash')); }, 1500);
+  }
+
+  function flushPendingJump() {
+    if (pendingJumpMarker) {
+      const m = pendingJumpMarker;
+      pendingJumpMarker = null;
+      jumpToMarkerInDrawer(m);
+    }
+    if (pendingJumpHeading) {
+      const h = pendingJumpHeading;
+      pendingJumpHeading = null;
+      jumpToHeadingInDrawer(h);
+    }
+  }
+
   function openDrawer() {
     drawer.hidden = false;
     drawerOverlay.hidden = false;
@@ -5455,6 +5690,18 @@
     else pendingJumpMarker = marker;
   });
 
+  // Source-section chips (data-jump-heading) open the drawer at a heading in
+  // the spec's own text rather than at a spec-tacle anchor.
+  document.addEventListener('click', (e) => {
+    const chip = e.target && e.target.closest && e.target.closest('[data-jump-heading]');
+    if (!chip) return;
+    const heading = chip.dataset.jumpHeading;
+    if (!heading) return;
+    e.preventDefault();
+    openDrawer();
+    jumpToHeadingInDrawer(heading);
+  });
+
   async function loadSpecAndDiffs(opts) {
     opts = opts || {};
     const wantHighlight = !!opts.highlightChanges;
@@ -5475,11 +5722,7 @@
         drawerDiffsCt.textContent = '';
         drawerDiffsBd.innerHTML = '<div class="diff-empty">Static demo — no update history.</div>';
         setDrawerStatus('Static demo — spec source is embedded and read-only.', null);
-        if (pendingJumpMarker) {
-          const m = pendingJumpMarker;
-          pendingJumpMarker = null;
-          jumpToMarkerInDrawer(m);
-        }
+        flushPendingJump();
         return;
       }
       setDrawerStatus('Spec drawer needs the round-trip server — the file:// preview cannot fetch the spec source.', 'err');
@@ -5521,11 +5764,7 @@
       const entries = (histBody && histBody.ok && Array.isArray(histBody.entries)) ? histBody.entries : [];
       renderDiffs(entries);
       setDrawerStatus('', null);
-      if (pendingJumpMarker) {
-        const m = pendingJumpMarker;
-        pendingJumpMarker = null;
-        jumpToMarkerInDrawer(m);
-      }
+      flushPendingJump();
     })();
     try {
       await specLoadingPromise;
@@ -5729,7 +5968,7 @@
         // No hook armed — user is the pickup path. Quiet nudge, not a warning.
         consistencyBanner.classList.add('queued');
         if (consistencyBannerTitle) consistencyBannerTitle.textContent = 'Consistency pass queued';
-        if (consistencyBannerSub) consistencyBannerSub.textContent = 'no auto-agent hook is armed — ping your agent to run the pass.';
+        if (consistencyBannerSub) consistencyBannerSub.textContent = 'no auto-agent is running. In an agent session in this folder, invoke the spec-tacle skill and ask it to run the pending consistency pass.';
         addBannerButton('Copy prompt', () => copyAgentPrompt(e));
       }
     }
@@ -5856,6 +6095,8 @@
     const dc = Object.keys((msg && msg.appliedDiagrams) || {}).length;
     if (sc) parts.push(`${sc} section${sc === 1 ? '' : 's'}`);
     if (dc) parts.push(`${dc} diagram${dc === 1 ? '' : 's'}`);
+    const pc = (msg && msg.appliedProse) || 0;
+    if (pc) parts.push(`${pc} spec passage${pc === 1 ? '' : 's'}`);
     if (consistencyBannerTitle) consistencyBannerTitle.textContent = 'Consistency pass applied';
     if (consistencyBannerSub) consistencyBannerSub.textContent = `updated ${parts.join(' + ') || 'nothing'}.`;
     bannerFlashTimer = setTimeout(() => {

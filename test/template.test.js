@@ -83,3 +83,40 @@ test('the template has no unmatched backtick count in inline scripts', () => {
   assert.deepEqual(oddScripts, [],
     'Inline script(s) have an odd backtick count — likely an unclosed template literal:\n  ' + oddScripts.join('\n  '));
 });
+
+test('source-section chips render from specRefs/summaryRefs and jump by heading', () => {
+  assert.match(TEMPLATE, /specRefsHtml\(diagram\.specRefs\)/, 'diagram cards must render specRefs chips');
+  for (const key of ['what', 'why', 'rules', 'openQuestions']) {
+    assert.match(TEMPLATE, new RegExp(`specRefsHtml\\(summaryRefs\\.${key}\\)`), `summary ${key} block must render its refs`);
+  }
+  assert.match(TEMPLATE, /data-jump-heading=/, 'chips carry the heading to jump to');
+  assert.match(TEMPLATE, /function\s+jumpToHeadingInDrawer\s*\(/, 'heading jump handler missing');
+});
+
+test('sequence diagrams and charts get in-picture text editing', () => {
+  // Only flowchart/state SVGs have .node elements for wireInteractions; every
+  // other mermaid kind must fall through to wireTextEditing or it renders as
+  // a picture nobody can edit.
+  assert.match(TEMPLATE, /if \(plainText\) wireTextEditing\(canvas, idx\)/, 'renderDiagram must wire text editing for non-graph kinds');
+  assert.match(TEMPLATE, /function\s+renameSequenceActor\s*\(/, 'actor rename helper missing');
+  assert.match(TEMPLATE, /function\s+replaceTextInSource\s*\(/, 'text replace helper missing');
+  assert.match(TEMPLATE, /const HINT_TEXT = /, 'sequence/chart cards need their own editing hint');
+});
+
+test('"View in spec" targets the original section, with the spec-tacle anchor only as a fallback', () => {
+  assert.match(TEMPLATE, /viewInSpecAttr\(diagram\.specRefs, 'diagram:' \+ diagram\.id\)/);
+  assert.match(TEMPLATE, /viewInSpecAttr\(summaryRefs\.what, 'summary:what'\)/);
+  assert.match(TEMPLATE, /viewInSpecAttr\(summaryRefs\.openQuestions, sectionMap\.summaryOpenQuestions\)/);
+  assert.doesNotMatch(TEMPLATE, /class="jump-to-spec" data-jump-marker=/, 'no button should hard-wire a spec-tacle anchor');
+});
+
+test('edges are synced only after nodes sit at their stored offsets', () => {
+  // The edge redraw clips each arrow end to the node's live outline. If the
+  // nodes haven't been moved to their stored offsets yet, a re-render (adding
+  // a node, renaming one) draws arrows to where the nodes used to be.
+  const apply = TEMPLATE.indexOf('applyStoredPositions(canvas, idx);\n    // Sync every edge');
+  const sync = TEMPLATE.indexOf('edgeRegistry.forEach(redrawEdgeEntry);');
+  assert.ok(apply > 0, 'wireInteractions must apply stored positions before the edge sync');
+  assert.ok(apply < sync, 'applyStoredPositions must run before the edge sync');
+  assert.match(TEMPLATE, /function sourceEdgeFor\(pathEl, i\)/, 'arrows must be paired to source edges by id, not position');
+});
