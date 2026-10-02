@@ -222,7 +222,7 @@ Every arrow that isn't a plain solid line (dotted `-.->`, `-.-`, or `-. label .-
 ```json
 {
   "title": "<spec title>",
-  "subtitle": "<one-line context: source file, date, or empty>",
+  "subtitle": "<one-sentence context line shown below the title: what this spec covers, in plain words. Always present.>",
   "specPath": "<path to the spec, RELATIVE TO `--root` — not the repo root, not the data JSON's directory. Get this wrong and Update spec fails with 'spec not found: <resolved path>'. The server will fall back to a same-basename lookup under `--root` if the direct resolve misses (and log `[spec-tacle] specPath fallback: …`), but only when exactly one match exists — fix the value here so the fallback stops firing.>",
   "serverUrl": null,
   "sectionMap": {
@@ -259,6 +259,7 @@ Save to `_project-management/personal/mike/spec-tacle/generated/<spec-slug>-data
 
 Notes on the shape:
 
+- `subtitle` is a **one-sentence context line** that renders directly below the title. Always write one. It tells a reader who has never seen the spec what the document covers and for which product or system (e.g. "This spec covers what a clerk sees and can do on one delivered report in Platform Reporting."). One complete sentence, sourced from the spec's own summary, held to the writing rules in the appendix. Don't spend it on the file path, date, or status; the spec drawer already shows the file.
 - `summary.what`, `summary.why`, `summary.rules`, and `summary.openQuestions` are arrays of short bullet strings. Never use paragraph text there — the visualizer renders each element as its own `<li>`. `summary.what` is always present. `summary.why` is optional — omit the key (or leave `[]`) when the reasons are already obvious from the What list; when included, default to 2-3 bullets and go longer only when the spec has more genuinely load-bearing motivations. `summary.rules` is optional — omit the key (or leave `[]`) for specs with no non-negotiable constraints. `summary.openQuestions` is optional — omit the key entirely when the spec has no open items, so the visualizer skips rendering the section. When you include it, the section renders as its own pane below the diagrams (not inside the top summary block).
 - `caption` is two or three sentences of italic subtext directly above the diagram. `detail` is a longer paragraph or bulleted list in an "About the <diagram title>" block that starts expanded (the reader can collapse it). Both accept `**bold**` markdown for key terms; `detail` also accepts `- ` / `  - ` nested bullet lists.
 - `descriptions` is optional — a map from `node:<id>` / `edge:L-<source>-<target>-<n>` keys to one-sentence descriptions shown on hover, editable on click.

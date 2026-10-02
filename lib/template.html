@@ -182,9 +182,13 @@
     letter-spacing: 0.5px;
   }
   section.summary .summary-heading .subtitle {
-    font-size: 12px;
+    /* One-sentence context line: its own row below the title. */
+    flex-basis: 100%;
+    order: 1;
+    font-size: 13px;
     color: var(--ink-dim);
   }
+  section.summary .summary-heading .subtitle:empty { display: none; }
   section.summary .block { margin-bottom: 14px; }
   section.summary .block:last-child { margin-bottom: 0; }
   section.summary .block-label { font-size: 12px; font-weight: 600; color: var(--accent); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
