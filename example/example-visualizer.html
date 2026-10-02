@@ -414,7 +414,39 @@
     background: var(--bg);
     position: relative;
   }
-  .diagram-body { min-height: 360px; }
+  .diagram-body { min-height: 360px; position: relative; }
+
+  /* --- Zoom: pinch or Ctrl/⌘+scroll on a diagram, or the buttons --- */
+  .diagram-canvas.zoomed { overflow: hidden; cursor: grab; }
+  .diagram-canvas.zoomed.panning { cursor: grabbing; }
+  .diagram-canvas > svg { transform-origin: 0 0; }
+  .zoom-controls {
+    position: absolute;
+    left: 10px;
+    bottom: 10px;
+    display: flex;
+    align-items: center;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: var(--panel);
+    overflow: hidden;
+    opacity: 0.55;
+    transition: opacity 0.15s ease;
+    z-index: 3;
+  }
+  .diagram-body:hover .zoom-controls,
+  .zoom-controls:focus-within { opacity: 1; }
+  .zoom-controls button {
+    border: none;
+    background: transparent;
+    color: var(--ink-dim);
+    font-size: 13px;
+    line-height: 1;
+    padding: 5px 9px;
+    cursor: pointer;
+  }
+  .zoom-controls button:hover { color: var(--accent); background: var(--accent-soft); }
+  .zoom-controls .zoom-level { font-size: 11px; min-width: 46px; font-variant-numeric: tabular-nums; }
   .diagram-resize-handle {
     height: 9px;
     cursor: ns-resize;
@@ -1937,8 +1969,8 @@
   });
 
 
-  const HINT_MERMAID = 'Hover a node or arrow to see a description tooltip; click the tooltip to edit it. Click a node to select it, then Delete/Backspace to remove it (and its edges). Drag a node to reposition; arrows and labels follow. Hover a node for its four side dots and shape and color picker (◇); right-click a node opens the same picker. Drag a side dot to another node to create a new arrow, or into empty space to spawn a new node in edit mode. Hover an arrow for its handles: drag the blue circle (or the label itself) to bend, drag the green/orange endpoints to reconnect. Double-click a node, edge label, caption, detail, or bullet to edit its text inline — the cursor lands where you clicked, so triple-click when you want to replace everything. Double-click an unlabeled arrow to add a new label. Click the "Add notes…" area below to jot general thoughts about this diagram. Wrap key terms in double asterisks to bold them. Ctrl/⌘+Z undoes the last edit.';
-  const HINT_TEXT = 'Double-click any text in the diagram (an actor, a message, a note, a title, a chart label) to edit it in place. Enter commits, Esc cancels. Renaming an actor renames it on every message it sends or receives. To add, remove, or reorder steps, or to change a chart\'s numbers, open the Source pane on the right, edit the source, and click Re-render. Double-click the caption, detail, or a bullet to edit its text. Click the "Add notes…" area below to jot general thoughts about this diagram. Ctrl/⌘+Z undoes the last edit.';
+  const HINT_MERMAID = 'Hover a node or arrow to see a description tooltip; click the tooltip to edit it. Click a node to select it, then Delete/Backspace to remove it (and its edges). Drag a node to reposition; arrows and labels follow. Hover a node for its four side dots and shape and color picker (◇); right-click a node opens the same picker. Drag a side dot to another node to create a new arrow, or into empty space to spawn a new node in edit mode. Hover an arrow for its handles: drag the blue circle (or the label itself) to bend, drag the green/orange endpoints to reconnect. Double-click a node, edge label, caption, detail, or bullet to edit its text inline — the cursor lands where you clicked, so triple-click when you want to replace everything. Double-click an unlabeled arrow to add a new label. Click the "Add notes…" area below to jot general thoughts about this diagram. Wrap key terms in double asterisks to bold them. Ctrl/⌘+Z undoes the last edit. Pinch, or hold Ctrl/⌘ and scroll, to zoom in on the diagram (in Full screen a plain scroll zooms); drag the background to pan while zoomed, and use the − 100% + buttons in the corner to step or reset.';
+  const HINT_TEXT = 'Double-click any text in the diagram (an actor, a message, a note, a title, a chart label) to edit it in place. Enter commits, Esc cancels. Renaming an actor renames it on every message it sends or receives. To add, remove, or reorder steps, or to change a chart\'s numbers, open the Source pane on the right, edit the source, and click Re-render. Double-click the caption, detail, or a bullet to edit its text. Click the "Add notes…" area below to jot general thoughts about this diagram. Ctrl/⌘+Z undoes the last edit. Pinch, or hold Ctrl/⌘ and scroll, to zoom in on the diagram (in Full screen a plain scroll zooms); drag the background to pan while zoomed, and use the − 100% + buttons in the corner to step or reset.';
   const HINT_TABLE = 'Double-click a header or cell to edit it in place; the cursor lands where you clicked, triple-click to select the whole cell. Enter commits, Esc cancels. Wrap key terms in double asterisks to bold them. To add or remove columns or rows, open the Source pane on the right and edit the markdown table directly — the visualizer re-renders when you re-render. Caption, detail, and notes all edit inline the same way. Ctrl/⌘+Z undoes the last edit.';
   const SOURCE_HINT_MERMAID = 'Show or hide the mermaid source for this diagram';
   const SOURCE_HINT_TABLE = 'Show or hide the raw markdown table source';
@@ -2078,6 +2110,7 @@
   }
 
   state.diagrams.forEach((_, idx) => renderDiagram(idx));
+  state.diagrams.forEach((d, idx) => { if (d.kind !== 'table') wireZoom(idx); });
 
   // Click on empty diagram-canvas background → clear selection.
   document.querySelectorAll('.diagram-canvas').forEach(cv => {
@@ -2596,6 +2629,7 @@
       if (plainText) wireTextEditing(canvas, idx);
       applyStoredPositions(canvas, idx);
       renderAnnotations(idx);
+      applyZoom(canvas); // the SVG is new; carry the zoom level over
     } catch (err) {
       canvas.innerHTML = `<pre style="color: var(--warn); white-space: pre-wrap;">Mermaid parse error:\n\n${escapeHtml(err.message || String(err))}</pre>`;
     }
@@ -3583,6 +3617,142 @@
     const ta = document.querySelector(`textarea[data-source-idx="${idx}"]`);
     if (ta) ta.value = next;
     return true;
+  }
+
+  // --- Zoom and pan ---
+  //
+  // Zoom is a CSS transform on the rendered SVG, kept per canvas so it survives
+  // re-renders. It deliberately leaves the viewBox alone: fitContentToView owns
+  // that, and every drag handler maps pointer positions through getScreenCTM,
+  // which already accounts for CSS transforms.
+  const _zoom = new WeakMap();
+  const ZOOM_MIN = 0.25, ZOOM_MAX = 8;
+  function zoomState(canvas) {
+    let z = _zoom.get(canvas);
+    if (!z) { z = { s: 1, tx: 0, ty: 0 }; _zoom.set(canvas, z); }
+    return z;
+  }
+  function applyZoom(canvas) {
+    const svg = canvas.querySelector(':scope > svg');
+    const z = zoomState(canvas);
+    const identity = z.s === 1 && z.tx === 0 && z.ty === 0;
+    if (svg) svg.style.transform = identity ? '' : `translate(${z.tx}px, ${z.ty}px) scale(${z.s})`;
+    canvas.classList.toggle('zoomed', !identity);
+    const label = canvas.parentElement && canvas.parentElement.querySelector('.zoom-level');
+    if (label) label.textContent = Math.round(z.s * 100) + '%';
+  }
+  // Scale by `factor` while keeping the point under (clientX, clientY) fixed.
+  function zoomAt(canvas, clientX, clientY, factor) {
+    const svg = canvas.querySelector(':scope > svg');
+    if (!svg) return;
+    const z = zoomState(canvas);
+    const next = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, z.s * factor));
+    if (next === z.s) return;
+    const r = svg.getBoundingClientRect();
+    const layoutLeft = r.left - z.tx, layoutTop = r.top - z.ty;
+    const ux = (clientX - r.left) / z.s, uy = (clientY - r.top) / z.s;
+    z.s = next;
+    z.tx = clientX - layoutLeft - ux * next;
+    z.ty = clientY - layoutTop - uy * next;
+    // Snap back to the untouched layout when the user returns to 100%.
+    if (Math.abs(next - 1) < 0.02) { z.s = 1; z.tx = 0; z.ty = 0; }
+    applyZoom(canvas);
+  }
+  function resetZoom(canvas) {
+    _zoom.set(canvas, { s: 1, tx: 0, ty: 0 });
+    applyZoom(canvas);
+  }
+
+  function wireZoom(idx) {
+    const canvas = document.querySelector(`[data-canvas-idx="${idx}"]`);
+    if (!canvas) return;
+    const body = canvas.parentElement;
+    const center = () => {
+      const r = canvas.getBoundingClientRect();
+      return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+    };
+
+    const controls = document.createElement('div');
+    controls.className = 'zoom-controls';
+    controls.innerHTML =
+      '<button type="button" data-zoom="out" title="Zoom out" aria-label="Zoom out">−</button>' +
+      '<button type="button" class="zoom-level" data-zoom="reset" title="Reset zoom to 100%">100%</button>' +
+      '<button type="button" data-zoom="in" title="Zoom in (or pinch, or Ctrl/⌘+scroll on the diagram)" aria-label="Zoom in">+</button>';
+    body.appendChild(controls);
+    controls.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-zoom]');
+      if (!btn) return;
+      const c = center();
+      if (btn.dataset.zoom === 'reset') resetZoom(canvas);
+      else zoomAt(canvas, c.x, c.y, btn.dataset.zoom === 'in' ? 1.25 : 0.8);
+    });
+
+    // Trackpad pinch arrives as a wheel event with ctrlKey set; Ctrl/⌘+scroll
+    // is the mouse equivalent. A plain scroll is left to the page so moving
+    // down the document never gets trapped by a diagram. In full screen there
+    // is no page to scroll, so a plain scroll zooms too.
+    canvas.addEventListener('wheel', (e) => {
+      if (!canvas.querySelector(':scope > svg')) return;
+      const expanded = !!canvas.closest('.diagram-card.expanded');
+      if (!(e.ctrlKey || e.metaKey || expanded)) return;
+      e.preventDefault();
+      const unit = e.deltaMode === 1 ? 16 : 1; // lines → pixels
+      const speed = e.ctrlKey ? 0.01 : 0.002;  // pinch deltas are small
+      zoomAt(canvas, e.clientX, e.clientY, Math.exp(-e.deltaY * unit * speed));
+    }, { passive: false });
+
+    // Safari reports trackpad pinch as gesture events, not ctrl+wheel.
+    let gestureLast = 1;
+    canvas.addEventListener('gesturestart', (e) => { e.preventDefault(); gestureLast = 1; });
+    canvas.addEventListener('gesturechange', (e) => {
+      e.preventDefault();
+      zoomAt(canvas, e.clientX, e.clientY, e.scale / gestureLast);
+      gestureLast = e.scale;
+    });
+
+    // Two-finger pinch on a touch screen.
+    let pinch = null;
+    const spread = (t) => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+    canvas.addEventListener('touchstart', (e) => {
+      if (e.touches.length === 2) { pinch = spread(e.touches); e.preventDefault(); }
+    }, { passive: false });
+    canvas.addEventListener('touchmove', (e) => {
+      if (pinch == null || e.touches.length !== 2) return;
+      e.preventDefault();
+      const d = spread(e.touches);
+      const mx = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+      const my = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+      if (pinch > 0) zoomAt(canvas, mx, my, d / pinch);
+      pinch = d;
+    }, { passive: false });
+    canvas.addEventListener('touchend', (e) => { if (e.touches.length < 2) pinch = null; });
+
+    // While zoomed, drag empty background to pan.
+    let pan = null;
+    canvas.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0 || !canvas.classList.contains('zoomed')) return;
+      const t = e.target;
+      if (t.closest && (t.closest('.node') || t.closest('.edgeLabel') || t.closest('.edge-hover-overlay') ||
+          t.closest('.edge-handle-wrap') || t.closest('.edge-endpoint-wrap') || t.closest('.connect-dot-wrap') ||
+          t.closest('.node-tool-wrap') || t.closest('input, textarea, [contenteditable="true"]'))) return;
+      const z = zoomState(canvas);
+      pan = { x: e.clientX, y: e.clientY, tx: z.tx, ty: z.ty, id: e.pointerId };
+    });
+    canvas.addEventListener('pointermove', (e) => {
+      if (!pan || e.pointerId !== pan.id) return;
+      const dx = e.clientX - pan.x, dy = e.clientY - pan.y;
+      if (!canvas.classList.contains('panning')) {
+        if (Math.hypot(dx, dy) < 3) return;
+        canvas.classList.add('panning');
+        try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
+      }
+      const z = zoomState(canvas);
+      z.tx = pan.tx + dx; z.ty = pan.ty + dy;
+      applyZoom(canvas);
+    });
+    const endPan = () => { pan = null; canvas.classList.remove('panning'); };
+    canvas.addEventListener('pointerup', endPan);
+    canvas.addEventListener('pointercancel', endPan);
   }
 
   // Flowcharts and state diagrams get the full node/arrow toolkit from

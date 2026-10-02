@@ -120,3 +120,12 @@ test('edges are synced only after nodes sit at their stored offsets', () => {
   assert.ok(apply < sync, 'applyStoredPositions must run before the edge sync');
   assert.match(TEMPLATE, /function sourceEdgeFor\(pathEl, i\)/, 'arrows must be paired to source edges by id, not position');
 });
+
+test('diagrams zoom by pinch / Ctrl+scroll without trapping page scroll', () => {
+  assert.match(TEMPLATE, /function\s+wireZoom\s*\(/, 'wireZoom missing');
+  assert.match(TEMPLATE, /if \(d\.kind !== 'table'\) wireZoom\(idx\)/, 'every non-table diagram must be wired for zoom');
+  assert.match(TEMPLATE, /applyZoom\(canvas\); \/\/ the SVG is new/, 'zoom must be re-applied after a re-render');
+  // A plain wheel must fall through to the page unless the card is full screen.
+  assert.match(TEMPLATE, /if \(!\(e\.ctrlKey \|\| e\.metaKey \|\| expanded\)\) return;/);
+  assert.match(TEMPLATE, /addEventListener\('gesturechange'/, 'Safari pinch handler missing');
+});

@@ -1,6 +1,6 @@
 {
   "name": "spec-tacle_skill",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Turn dense info into diagrams you can read at a glance, then edit the diagrams to rewrite the spec.",
   "engines": {
     "node": ">=18"
