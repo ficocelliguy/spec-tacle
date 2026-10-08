@@ -1,6 +1,6 @@
 {
   "title": "Tasky — a shared to-do list webapp",
-  "subtitle": "Example spec-tacle output · example-spec.md",
+  "subtitle": "This page is a visual summary of the product spec for Tasky, a made-up to-do app that ships with spec-tacle as its example, built so a small team can keep one shared list in place of scattered ones.\nThis spec covers how Tasky stores a team's tasks, shows every change to the whole team as it happens, and limits what each kind of user can do.",
   "specPath": "example-spec.md",
   "serverUrl": null,
   "sectionMap": {

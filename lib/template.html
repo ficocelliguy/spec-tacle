@@ -182,9 +182,10 @@
     letter-spacing: 0.5px;
   }
   section.summary .summary-heading .subtitle {
-    /* One-sentence context line: its own row below the title. */
+    /* Context lines: their own row below the title, one per "\n". */
     flex-basis: 100%;
     order: 1;
+    white-space: pre-line;
     font-size: 13px;
     color: var(--ink-dim);
   }

@@ -1,6 +1,6 @@
 {
   "title": "Snip — a lean URL shortener",
-  "subtitle": "This spec covers Snip, a small service that creates short links and sends each click on to the original address. This page is a static demo: edit anything, nothing is saved.",
+  "subtitle": "This page is a visual summary of the product spec for Snip, a made-up URL shortener used as the spec-tacle demo, built to keep redirects fast and record who created each link.\nThis spec covers how Snip creates short links, sends each click on to the original address, and counts the clicks.\nThis is a static demo: edit anything, nothing is saved.",
   "specPath": "snip-spec.md",
   "serverUrl": null,
   "sectionMap": {
