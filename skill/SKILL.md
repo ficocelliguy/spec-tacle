@@ -131,10 +131,10 @@ Then run the writing rules from the appendix over every bullet. Cut em-dashes an
 
 | Kind | Use when the spec describes… | Form |
 |---|---|---|
-| `architecture` | Components, services, stores, and how requests/data flow between them | mermaid `flowchart LR` with directional edges labeled by protocol/payload |
+| `architecture` | Components, services, stores, and how requests/data flow between them | mermaid `flowchart LR` with directional edges labeled by protocol/payload (`TD` when it is mostly one chain; see Step 4) |
 | `user flow` | A sequence of user actions with system responses and branches | mermaid `flowchart TD` with a Start node, decision diamonds, and terminal states |
-| `information flow` | How a **piece of information** (a task, a document, an event, a payload) moves through the system — who reads it, who writes it, who transforms it — from the data's point of view rather than the components' | mermaid `flowchart LR` with the data item as the noun on each edge; nodes are the actors/stores that hold or process it |
-| `dependency map` | Decisions, constraints, or scope items that shape downstream outcomes | mermaid `flowchart LR` from decisions to their consequences |
+| `information flow` | How a **piece of information** (a task, a document, an event, a payload) moves through the system — who reads it, who writes it, who transforms it — from the data's point of view rather than the components' | mermaid `flowchart LR`, or `TD` when the path is mostly one chain (see Step 4), with the data item as the noun on each edge; nodes are the actors/stores that hold or process it |
+| `dependency map` | Decisions, constraints, or scope items that shape downstream outcomes | mermaid `flowchart LR` from decisions to their consequences (`TD` when it is mostly one chain; see Step 4) |
 | `decision chart` | A **decision the reader has to make**, branching on a small set of questions (a triage flow, a "should I use X or Y" chart) | mermaid `flowchart TD` with a question at the top, diamond branches for each answer, terminal recommendations at the leaves |
 | `state` | An entity with clear states and transitions | mermaid `stateDiagram-v2` |
 | `sequence` | Messages between named actors over time (auth, handshake, retries) | mermaid `sequenceDiagram` |
@@ -170,7 +170,10 @@ A `histogram` is a specific shape of data-summary chart: **one variable, buckete
 
 **Step 4 — write mermaid for each chosen diagram.**
 
-- **Default direction is left-to-right** (`flowchart LR`, `graph LR`). Only use top-down (`flowchart TD`) when the longest linear path is 8 or more nodes — deep sequences read better vertically. Everything else, including architecture, dependency maps, and shorter user flows, is LR.
+- **Pick the direction from the shape the graph will render in, not from its kind.** Left-to-right (`flowchart LR`, `graph LR`) suits graphs that branch: an architecture with several services side by side, a dependency map that fans out, a flow with two or three parallel paths. Those fill the card's height as well as its width.
+- **A mostly linear graph goes top-down (`flowchart TD`).** If the longest path is 5 or more nodes and most nodes have one arrow in and one arrow out, LR renders as a very wide, very thin strip: the reader has to zoom or scroll sideways and the arrows are hard to follow. Draw a chain like that TD. Long node or edge labels make it worse, so lean toward TD sooner when labels run past three or four words.
+- When a wide graph has to stay LR (the reading order really is left to right), make it less linear before you ship it: group stages into two or three `subgraph` blocks that stack, or pull side inputs and outputs above and below the main line so the picture has some height.
+- Say the reading direction in the caption ("read top to bottom") so it matches the source.
 - Use the spec's own vocabulary for node labels. Don't rename things.
 - Every edge in an architecture diagram carries a label (protocol, event name, or payload).
 - Every user-flow branch labels its condition (`ok`, `fail`, `yes`, `no`, `if <predicate>`).
